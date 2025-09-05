@@ -636,7 +636,7 @@ class ConfigurationSAASUpdateView(LoginRequiredMixin, UpdateView):
         'devise_principale'
     ]
     template_name = 'parametres/config_saas_form.html'
-    success_url = reverse_lazy('config_saas')
+    success_url = reverse_lazy('parametres:config_saas')
     
     def get_object(self):
         # Provide a default primary currency when creating a new ConfigurationSAAS

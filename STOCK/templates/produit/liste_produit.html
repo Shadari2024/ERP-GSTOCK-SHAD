@@ -536,7 +536,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const productName = btn.getAttribute('data-nom');
         
         document.getElementById('modalProductName').textContent = productName;
-        document.getElementById('deleteForm').action = `/produit/supprimer/${productId}/`;
+       document.getElementById('deleteForm').action = `/STOCK/supprimer/${productId}/`;
         
         const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
         modal.show();

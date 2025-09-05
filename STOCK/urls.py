@@ -20,7 +20,7 @@ urlpatterns = [
     path('produits/etiquette_produit/<int:pk>/', ticket_produit_pdf, name='etiquette_produit'),
     path('produits/search/', produits_search, name='produits_search'),
     path('produits/details/<int:id>/', produit_detail, name='produit_detail'),
-    # path('ajouter_commande/',creer_commande, name='creer_commande')
+  path('supprimer/<int:pk>/', DeleteProduitView.as_view(), name='supprimer_produit'),
     # ,
  
 

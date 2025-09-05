@@ -1020,6 +1020,34 @@ from django.db.models import F, Avg
 from .models import Produit, Categorie # Assurez-vous d'importer vos modèles
 
 
+
+
+@method_decorator([
+    login_required,
+    permission_required('STOCK.delete_produit', raise_exception=True)
+], name='dispatch')
+class DeleteProduitView(EntrepriseAccessMixin, View):
+    def post(self, request, pk):
+        produit = get_object_or_404(
+            Produit, 
+            pk=pk, 
+            entreprise=request.entreprise
+        )
+        
+        try:
+            produit.delete()
+            messages.success(request, f"Le produit '{produit.nom}' a été supprimé avec succès.")
+        except Exception as e:
+            messages.error(request, f"Erreur lors de la suppression du produit : {e}")
+            
+        return redirect('produits_par_categorie')
+
+
+
+
+
+
+
 @login_required
 @permission_required('STOCK.view_produit', raise_exception=True)
 def produit_detail(request, id):
@@ -1028,6 +1056,23 @@ def produit_detail(request, id):
     """
     # Récupération du produit avec filtre entreprise pour la sécurité
     produit = get_object_or_404(Produit, id=id, entreprise=request.entreprise)
+    
+    # DEBUG: Ajoutez ces prints pour voir ce qui se passe
+    print(f"=== DEBUG PRODUIT {produit.id} ===")
+    print(f"Photo: {produit.photo}")
+    print(f"Photo name: {produit.photo.name if produit.photo else 'None'}")
+    print(f"Photo path: {produit.photo.path if produit.photo else 'None'}")
+    print(f"Photo URL: {produit.photo.url if produit.photo else 'None'}")
+    print(f"Code-barres: {produit.code_barre}")
+    print(f"Code-barres name: {produit.code_barre.name if produit.code_barre else 'None'}")
+    
+    # Vérifiez l'existence physique des fichiers
+    import os
+    if produit.photo:
+        print(f"Photo exists: {os.path.exists(produit.photo.path)}")
+    if produit.code_barre:
+        print(f"Code-barres exists: {os.path.exists(produit.code_barre.path)}")
+    
     
     # Initialisation des variables pour la devise et la configuration
     devise_principale = None
