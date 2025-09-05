@@ -1,0 +1,203 @@
+<!-- ventes/pos/resume_fermeture.html -->
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "Résumé de Fermeture" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-cash-register me-2"></i>
+                    {% trans "Résumé de Fermeture" %} - Session {{ session.id }}
+                </h1>
+                <div>
+                    <a href="{% url 'ventes:pos_dashboard' pk=session.point_de_vente.id %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        {% trans "Retour" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        {% trans "Informations de la Session" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <strong>{% trans "Ouverture:" %}</strong><br>
+                            {{ session.date_ouverture|date:"d/m/Y H:i" }}
+                        </div>
+                        <div class="col-6">
+                            <strong>{% trans "Fermeture:" %}</strong><br>
+                            {{ session.date_fermeture|date:"d/m/Y H:i" }}
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-6">
+                            <strong>{% trans "Caissier:" %}</strong><br>
+                            {{ session.utilisateur.get_full_name }}
+                        </div>
+                        <div class="col-6">
+                            <strong>{% trans "Point de vente:" %}</strong><br>
+                            {{ session.point_de_vente.nom }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-calculator me-2"></i>
+                        {% trans "Calcul de Caisse" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-8">{% trans "Fonds d'ouverture:" %}</div>
+                        <div class="col-4 text-end">{{ session.fonds_ouverture|floatformat:2 }} €</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-8">{% trans "Total espèces encaissés:" %}</div>
+                        <div class="col-4 text-end">{{ session.total_especes|floatformat:2 }} €</div>
+                    </div>
+                    <hr>
+                    <div class="row mb-2 fw-bold">
+                        <div class="col-8">{% trans "Fonds théorique:" %}</div>
+                        <div class="col-4 text-end">{{ session.fonds_theorique|floatformat:2 }} €</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-8">{% trans "Fonds réel (fermeture):" %}</div>
+                        <div class="col-4 text-end">{{ session.fonds_fermeture|floatformat:2 }} €</div>
+                    </div>
+                    <hr>
+                    <div class="row mb-2 fw-bold fs-5 {% if session.ecart_caisse > 0 %}text-success{% elif session.ecart_caisse < 0 %}text-danger{% endif %}">
+                        <div class="col-8">{% trans "Écart de caisse:" %}</div>
+                        <div class="col-4 text-end">
+                            {{ session.ecart_caisse|floatformat:2 }} €
+                            {% if session.ecart_caisse > 0 %}
+                            <span class="badge bg-success">{% trans "Excédent" %}</span>
+                            {% elif session.ecart_caisse < 0 %}
+                            <span class="badge bg-danger">{% trans "Manquant" %}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{% trans "Aucun écart" %}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Détails des ventes -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-receipt me-2"></i>
+                {% trans "Détail des Ventes" %} ({{ session.ventes.count }})
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>{% trans "N° Vente" %}</th>
+                            <th>{% trans "Client" %}</th>
+                            <th>{% trans "Total TTC" %}</th>
+                            <th>{% trans "Espèces" %}</th>
+                            <th>{% trans "Autres modes" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vente in session.ventes.all %}
+                        <tr>
+                            <td>{{ vente.numero }}</td>
+                            <td>{{ vente.client.nom|default:"-" }}</td>
+                            <td>{{ vente.total_ttc|floatformat:2 }} €</td>
+                            <td>
+                                {% with especes=vente.paiementpos_set.filter|filter_mode_paiement:'espece' %}
+                                    {{ especes|sum_paiements|floatformat:2 }} €
+                                {% endwith %}
+                            </td>
+                            <td>
+                                {% with autres=vente.paiementpos_set.exclude|exclude_mode_paiement:'espece' %}
+                                    {{ autres|sum_paiements|floatformat:2 }} €
+                                {% endwith %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="fw-bold">
+                        <tr>
+                            <td colspan="2">{% trans "TOTAUX" %}</td>
+                            <td>{{ session.total_ventes|floatformat:2 }} €</td>
+                            <td>{{ session.total_especes|floatformat:2 }} €</td>
+                            <td>{{ session.total_ventes|subtract:session.total_especes|floatformat:2 }} €</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Écarts enregistrés -->
+    {% if session.ecarts_caisse.exists %}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-money-bill-wave me-2"></i>
+                {% trans "Écarts de Caisse Enregistrés" %}
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Type" %}</th>
+                            <th>{% trans "Montant" %}</th>
+                            <th>{% trans "Motif" %}</th>
+                            <th>{% trans "Enregistré par" %}</th>
+                            <th>{% trans "Date" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ecart in session.ecarts_caisse.all %}
+                        <tr>
+                            <td>
+                                <span class="badge bg-{% if ecart.type_ecart == 'excedent' %}success{% else %}danger{% endif %}">
+                                    {{ ecart.get_type_ecart_display }}
+                                </span>
+                            </td>
+                            <td class="fw-bold {% if ecart.type_ecart == 'excedent' %}text-success{% else %}text-danger{% endif %}">
+                                {{ ecart.montant }} €
+                            </td>
+                            <td>{{ ecart.motif|default:"-" }}</td>
+                            <td>{{ ecart.created_by.get_full_name|default:"-" }}</td>
+                            <td>{{ ecart.date_creation|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

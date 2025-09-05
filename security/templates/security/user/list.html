@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gestion des Utilisateurs{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mt-4"><i class="fas fa-users-cog me-2"></i>Gestion des Utilisateurs</h1>
+        <a href="{% url 'security:creer_utilisateur' %}" class="btn btn-primary">
+            <i class="fas fa-user-plus me-1"></i> Nouvel Utilisateur
+        </a>
+    </div>
+
+    <!-- Filtres améliorés -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+            <h5 class="mb-0"><i class="fas fa-filter me-2 text-primary"></i>Filtres</h5>
+            <button class="btn btn-sm btn-link text-decoration-none" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                <i class="fas fa-chevron-down"></i>
+            </button>
+        </div>
+        <div class="card-body collapse show" id="filterCollapse">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label for="roleFilter" class="form-label small text-muted">Rôle</label>
+                    <select class="form-select form-select-sm" id="roleFilter" name="role">
+                        <option value="">Tous les rôles</option>
+                        {% for role in role_choices %}
+                        <option value="{{ role.0 }}" {% if request.GET.role == role.0 %}selected{% endif %}>{{ role.1 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="statusFilter" class="form-label small text-muted">Statut</label>
+                    <select class="form-select form-select-sm" id="statusFilter" name="status">
+                        <option value="">Tous</option>
+                        <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Actifs</option>
+                        <option value="inactive" {% if request.GET.status == 'inactive' %}selected{% endif %}>Inactifs</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="searchFilter" class="form-label small text-muted">Recherche</label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control" id="searchFilter" name="q" placeholder="Nom, email..." value="{{ request.GET.q }}">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-2 d-grid">
+                    <a href="{% url 'security:liste_utilisateurs' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-sync-alt me-1"></i> Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tableau amélioré -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+            <h5 class="mb-0"><i class="fas fa-list me-2 text-primary"></i>Liste des Utilisateurs</h5>
+            <span class="badge bg-primary rounded-pill">{{ utilisateurs.count }} utilisateur(s)</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="40px">#</th>
+                            <th><i class="fas fa-user me-1 text-primary"></i> Utilisateur</th>
+                            <th><i class="fas fa-envelope me-1 text-primary"></i> Email</th>
+                            <th><i class="fas fa-user-tag me-1 text-primary"></i> Rôle</th>
+                            <th width="120px"><i class="fas fa-calendar-alt me-1 text-primary"></i> Création</th>
+                            <th width="100px"><i class="fas fa-circle me-1 text-primary"></i> Statut</th>
+                            <th width="150px" class="text-end"><i class="fas fa-cogs me-1 text-primary"></i> Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for utilisateur in utilisateurs %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if utilisateur.profil.avatar %}
+                                    <img src="{{ utilisateur.profil.avatar.url }}" alt="Avatar" class="rounded-circle me-2" width="32" height="32">
+                                    {% else %}
+                                    <div class="avatar-placeholder rounded-circle me-2 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; background-color: #{{ utilisateur.username|slice:'0:6' }}; color: white;">
+                                        {{ utilisateur.username|first|upper }}
+                                    </div>
+                                    {% endif %}
+                                    <div>
+                                        <div class="fw-semibold">{{ utilisateur.get_full_name|default:utilisateur.username }}</div>
+                                        <small class="text-muted">@{{ utilisateur.username }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <a href="mailto:{{ utilisateur.email }}" class="text-decoration-none">{{ utilisateur.email|default:"-" }}</a>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill 
+                                    {% if utilisateur.role == 'ADMIN' %}bg-danger
+                                    {% elif utilisateur.role == 'MANAGER' %}bg-warning text-dark
+                                    {% elif utilisateur.role == 'CAISSIER' %}bg-info
+                                    {% else %}bg-secondary
+                                    {% endif %}">
+                                    {{ utilisateur.get_role_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ utilisateur.date_joined|date:"d/m/Y" }}</small>
+                            </td>
+                            <td>
+                                {% if utilisateur.est_actif %}
+                                <span class="badge bg-success rounded-pill"><i class="fas fa-check-circle me-1"></i> Actif</span>
+                                {% else %}
+                                <span class="badge bg-secondary rounded-pill"><i class="fas fa-times-circle me-1"></i> Inactif</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'security:editer_utilisateur' utilisateur.pk %}" class="btn btn-outline-primary" data-bs-toggle="tooltip" title="Éditer">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'security:gestion_utilisateur' utilisateur.pk %}" class="btn btn-outline-primary" data-bs-toggle="tooltip" title="Affecter un rôle">
+                                        <i class="fas fa-user-tag"></i>
+                                    </a>
+                                    {% if utilisateur != request.user %}
+                                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" 
+                                        data-bs-target="#deleteModal{{ utilisateur.pk }}" title="Supprimer">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <div class="py-4">
+                                    <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+                                    <h5 class="text-muted">Aucun utilisateur trouvé</h5>
+                                    <p class="text-muted">Essayez de modifier vos filtres de recherche</p>
+                                    <a href="{% url 'security:liste_utilisateurs' %}" class="btn btn-sm btn-outline-primary mt-2">
+                                        <i class="fas fa-sync-alt me-1"></i> Réinitialiser les filtres
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination améliorée -->
+            {% if is_paginated %}
+            <div class="card-footer bg-white border-top-0">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination pagination-sm justify-content-center mb-0">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1" aria-label="Premier">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Précédent">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                        {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+                        {% endif %}
+                        {% endfor %}
+                        
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Suivant">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Dernier">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modals de suppression (placés en dehors du tableau pour éviter les problèmes de DOM) -->
+{% for utilisateur in utilisateurs %}
+{% if utilisateur != request.user %}
+<div class="modal fade" id="deleteModal{{ utilisateur.pk }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Confirmer la suppression
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex align-items-start mb-4">
+                    <div class="flex-shrink-0 me-3">
+                        {% if utilisateur.profil.avatar %}
+                        <img src="{{ utilisateur.profil.avatar.url }}" alt="Avatar" class="rounded-circle" width="64" height="64">
+                        {% else %}
+                        <div class="avatar-placeholder rounded-circle d-flex align-items-center justify-content-center" style="width: 64px; height: 64px; background-color: #{{ utilisateur.username|slice:'0:6' }}; color: white; font-size: 24px;">
+                            {{ utilisateur.username|first|upper }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <h5 class="mt-0 mb-1">{{ utilisateur.get_full_name|default:utilisateur.username }}</h5>
+                        <p class="text-muted mb-1">@{{ utilisateur.username }}</p>
+                        <p class="mb-0">
+                            <span class="badge rounded-pill 
+                                {% if utilisateur.role == 'ADMIN' %}bg-danger
+                                {% elif utilisateur.role == 'MANAGER' %}bg-warning text-dark
+                                {% elif utilisateur.role == 'CAISSIER' %}bg-info
+                                {% else %}bg-secondary
+                                {% endif %}">
+                                {{ utilisateur.get_role_display }}
+                            </span>
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="alert alert-danger d-flex align-items-center">
+                    <i class="fas fa-exclamation-circle fs-4 me-3"></i>
+                    <div>
+                        <strong>Attention !</strong> Cette action est irréversible. Toutes les données associées à cet utilisateur seront également supprimées.
+                    </div>
+                </div>
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="confirmDelete{{ utilisateur.pk }}" required>
+                    <label class="form-check-label" for="confirmDelete{{ utilisateur.pk }}">
+                        Je confirme vouloir supprimer cet utilisateur
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Annuler
+                </button>
+                <form method="post" action="{% url 'security:supprimer_utilisateur' utilisateur.pk %}" class="ms-2">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger" id="deleteButton{{ utilisateur.pk }}" disabled>
+                        <i class="fas fa-trash-alt me-1"></i> Supprimer définitivement
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .avatar-placeholder {
+        font-weight: bold;
+        text-transform: uppercase;
+    }
+    
+    .table-hover tbody tr {
+        transition: all 0.15s ease;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(13, 110, 253, 0.07);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .card {
+        border: none;
+        border-radius: 0.5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .card-header {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+    }
+    
+    .modal-content {
+        border-radius: 0.75rem;
+        overflow: hidden;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    
+    .modal-header {
+        padding: 1.25rem 1.5rem;
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+    }
+    
+    .modal-footer {
+        padding: 1rem 1.5rem;
+        background-color: #f8f9fa;
+    }
+    
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+    }
+    
+    /* Animation pour le modal */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .modal.fade .modal-dialog {
+        animation: fadeIn 0.3s ease-out;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Activation des tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Soumission automatique des filtres
+    const filterForm = document.querySelector('form[method="get"]');
+    if (filterForm) {
+        const selects = filterForm.querySelectorAll('select');
+        selects.forEach(select => {
+            select.addEventListener('change', function() {
+                filterForm.submit();
+            });
+        });
+    }
+    
+    // Gestion de la confirmation de suppression
+    {% for utilisateur in utilisateurs %}
+    {% if utilisateur != request.user %}
+    const confirmCheckbox{{ utilisateur.pk }} = document.getElementById('confirmDelete{{ utilisateur.pk }}');
+    const deleteButton{{ utilisateur.pk }} = document.getElementById('deleteButton{{ utilisateur.pk }}');
+    
+    if (confirmCheckbox{{ utilisateur.pk }} && deleteButton{{ utilisateur.pk }}) {
+        confirmCheckbox{{ utilisateur.pk }}.addEventListener('change', function() {
+            deleteButton{{ utilisateur.pk }}.disabled = !this.checked;
+        });
+    }
+    {% endif %}
+    {% endfor %}
+    
+    // Animation des modals
+    const deleteModals = document.querySelectorAll('.modal');
+    deleteModals.forEach(modal => {
+        modal.addEventListener('show.bs.modal', function() {
+            const backdrop = document.createElement('div');
+            backdrop.className = 'modal-backdrop fade';
+            document.body.appendChild(backdrop);
+            
+            setTimeout(() => {
+                backdrop.classList.add('show');
+            }, 10);
+        });
+        
+        modal.addEventListener('hidden.bs.modal', function() {
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) {
+                backdrop.classList.remove('show');
+                setTimeout(() => {
+                    backdrop.remove();
+                }, 150);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

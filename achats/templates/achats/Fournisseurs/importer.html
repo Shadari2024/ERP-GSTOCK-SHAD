@@ -1,0 +1,457 @@
+{# achats/fournisseurs/importer.html #}
+{% extends "achats/base_achats.html" %}
+{% load crispy_forms_tags %}
+
+{% block page_title %}Importer des Fournisseurs{% endblock %}
+
+{% block achats_content %}
+<div class="erp-import-container">
+    <div class="erp-card animated fadeIn">
+        <div class="erp-card-header">
+            <h2 class="erp-card-title">
+                <i class="bi bi-upload"></i> Importer des Fournisseurs
+            </h2>
+            <div class="erp-card-subtitle">
+                Importez vos fournisseurs via un fichier Excel
+            </div>
+        </div>
+        
+        <div class="erp-card-body">
+            {% if messages %}
+                <div class="erp-messages-container">
+                    {% for message in messages %}
+                        <div class="erp-alert erp-alert-{{ message.tags }} slideInRight" role="alert">
+                            <div class="erp-alert-content">
+                                <i class="bi {% if message.tags == 'success' %}bi-check-circle{% elif message.tags == 'error' %}bi-exclamation-circle{% else %}bi-info-circle{% endif %}"></i>
+                                {{ message }}
+                            </div>
+                            <button type="button" class="erp-alert-close" data-dismiss="alert" aria-label="Close"
+                                    data-tooltip="Fermer cette notification">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data" class="erp-form">
+                {% csrf_token %}
+                <div class="erp-form-group">
+                    {{ form|crispy }}
+                </div>
+                
+                <div class="erp-form-actions">
+                    <button type="submit" class="erp-btn erp-btn-primary pulse-on-hover"
+                            data-tooltip="Lancer l'importation des fournisseurs depuis le fichier sélectionné">
+                        <i class="bi bi-upload"></i> Importer
+                    </button>
+                    <a href="{% url 'achats:liste_fournisseurs' %}" class="erp-btn erp-btn-outline"
+                       data-tooltip="Annuler l'opération et retourner à la liste des fournisseurs">
+                        <i class="bi bi-arrow-left"></i> Annuler
+                    </a>
+                </div>
+            </form>
+
+            <div class="erp-import-guide">
+                <div class="erp-guide-header">
+                    <i class="bi bi-info-circle"></i>
+                    <h3>Instructions d'importation</h3>
+                </div>
+                
+                <div class="erp-guide-content">
+                    <p>Votre fichier Excel doit contenir les colonnes suivantes :</p>
+                    
+                    <div class="erp-columns-grid">
+                        <div class="erp-column-card">
+                            <div class="erp-column-header">
+                                <span class="erp-column-badge required">Obligatoire</span>
+                                <h4>Nom</h4>
+                            </div>
+                            <p>Nom complet du fournisseur</p>
+                        </div>
+                        
+                        <div class="erp-column-card">
+                            <div class="erp-column-header">
+                                <span class="erp-column-badge required">Obligatoire</span>
+                                <h4>Code</h4>
+                            </div>
+                            <p>Code unique (sera mis à jour si existe déjà)</p>
+                        </div>
+                        
+                        <div class="erp-column-card">
+                            <div class="erp-column-header">
+                                <span class="erp-column-badge required">Obligatoire</span>
+                                <h4>Email</h4>
+                            </div>
+                            <p>Adresse email valide</p>
+                        </div>
+                        
+                        <div class="erp-column-card">
+                            <div class="erp-column-header">
+                                <span class="erp-column-badge required">Obligatoire</span>
+                                <h4>Téléphone</h4>
+                            </div>
+                            <p>Numéro de contact principal</p>
+                        </div>
+                        
+                        <div class="erp-column-card">
+                            <div class="erp-column-header">
+                                <span class="erp-column-badge required">Obligatoire</span>
+                                <h4>Adresse</h4>
+                            </div>
+                            <p>Adresse postale complète</p>
+                        </div>
+                    </div>
+                    
+                    <div class="erp-download-example">
+                        <a href="{% url 'achats:exporter_fournisseurs_excel' %}" 
+                           class="erp-btn erp-btn-secondary"
+                           data-tooltip="Télécharger un modèle Excel pré-rempli pour l'importation">
+                            <i class="bi bi-file-earmark-excel"></i> Télécharger le modèle
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock achats_content %}
+
+{% block extra_css %}
+<style>
+    /* Main Container */
+    .erp-import-container {
+        padding: 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    /* Card Styles */
+    .erp-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .erp-card:hover {
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+    }
+
+    .erp-card-header {
+        padding: 1.5rem 2rem;
+        background: linear-gradient(135deg, #714B67, #9D6B84);
+        color: white;
+    }
+
+    .erp-card-title {
+        font-size: 1.75rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .erp-card-subtitle {
+        font-size: 0.95rem;
+        opacity: 0.9;
+        margin-top: 0.5rem;
+    }
+
+    .erp-card-body {
+        padding: 2rem;
+    }
+
+    /* Form Styles */
+    .erp-form {
+        margin-bottom: 2.5rem;
+    }
+
+    .erp-form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .erp-form-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    /* Button Styles */
+    .erp-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        border: none;
+        text-decoration: none;
+    }
+
+    .erp-btn-primary {
+        background: linear-gradient(135deg, #714B67, #9D6B84);
+        color: white;
+        box-shadow: 0 4px 12px rgba(113, 75, 103, 0.3);
+    }
+
+    .erp-btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(113, 75, 103, 0.4);
+    }
+
+    .erp-btn-outline {
+        background: transparent;
+        color: #714B67;
+        border: 1px solid #714B67;
+    }
+
+    .erp-btn-outline:hover {
+        background: rgba(113, 75, 103, 0.08);
+        transform: translateY(-2px);
+    }
+
+    .erp-btn-secondary {
+        background: #f5f7fa;
+        color: #2D2D2D;
+        border: 1px solid #e5e5e5;
+    }
+
+    .erp-btn-secondary:hover {
+        background: #e9ecef;
+        transform: translateY(-2px);
+    }
+
+    /* Pulse Animation */
+    .pulse-on-hover:hover {
+        animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+        0% { transform: translateY(-2px) scale(1); }
+        50% { transform: translateY(-2px) scale(1.05); }
+        100% { transform: translateY(-2px) scale(1); }
+    }
+
+    /* Import Guide */
+    .erp-import-guide {
+        background: #f9f9f9;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+
+    .erp-guide-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .erp-guide-header h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #2D2D2D;
+        margin: 0;
+    }
+
+    .erp-guide-header i {
+        color: #714B67;
+        font-size: 1.5rem;
+    }
+
+    .erp-columns-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin: 2rem 0;
+    }
+
+    .erp-column-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1.25rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        transition: transform 0.3s ease;
+    }
+
+    .erp-column-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .erp-column-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .erp-column-header h4 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #2D2D2D;
+        margin: 0;
+    }
+
+    .erp-column-badge {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 50px;
+        font-weight: 600;
+    }
+
+    .erp-column-badge.required {
+        background: rgba(244, 67, 54, 0.1);
+        color: #F44336;
+    }
+
+    .erp-download-example {
+        margin-top: 2rem;
+        text-align: center;
+    }
+
+    /* Alert Messages */
+    .erp-messages-container {
+        margin-bottom: 2rem;
+    }
+
+    .erp-alert {
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .erp-alert-content {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .erp-alert-success {
+        background: rgba(76, 175, 80, 0.1);
+        color: #2E7D32;
+        border-left: 4px solid #4CAF50;
+    }
+
+    .erp-alert-error {
+        background: rgba(244, 67, 54, 0.1);
+        color: #C62828;
+        border-left: 4px solid #F44336;
+    }
+
+    .erp-alert-warning {
+        background: rgba(255, 152, 0, 0.1);
+        color: #EF6C00;
+        border-left: 4px solid #FF9800;
+    }
+
+    .erp-alert-close {
+        background: none;
+        border: none;
+        color: inherit;
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 0.2s ease;
+    }
+
+    .erp-alert-close:hover {
+        opacity: 1;
+    }
+
+    /* Animations */
+    .animated {
+        animation-duration: 0.5s;
+        animation-fill-mode: both;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .fadeIn {
+        animation-name: fadeIn;
+    }
+
+    @keyframes slideInRight {
+        from { 
+            transform: translateX(50px);
+            opacity: 0;
+        }
+        to { 
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    .slideInRight {
+        animation-name: slideInRight;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .erp-import-container {
+            padding: 1rem;
+        }
+        
+        .erp-card-header {
+            padding: 1.25rem;
+        }
+        
+        .erp-card-body {
+            padding: 1.5rem;
+        }
+        
+        .erp-form-actions {
+            flex-direction: column;
+        }
+        
+        .erp-btn {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .erp-columns-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock extra_css %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Close alert messages
+        document.querySelectorAll('.erp-alert-close').forEach(button => {
+            button.addEventListener('click', function() {
+                this.closest('.erp-alert').style.animation = 'fadeOut 0.3s forwards';
+                setTimeout(() => {
+                    this.closest('.erp-alert').remove();
+                }, 300);
+            });
+        });
+
+        // Add animation to file input when selected
+        const fileInput = document.querySelector('input[type="file"]');
+        if (fileInput) {
+            fileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    const label = this.nextElementSibling;
+                    label.classList.add('pulse-once');
+                    setTimeout(() => {
+                        label.classList.remove('pulse-once');
+                    }, 1000);
+                }
+            });
+        }
+    });
+</script>
+{% endblock extra_js %}

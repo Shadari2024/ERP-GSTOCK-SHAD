@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Activer le module pour une entreprise</h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <strong>Module :</strong> {{ module.nom }} ({{ module.get_categorie_display }})
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <div class="form-group">
+                <label for="{{ form.entreprise.id_for_label }}">{{ form.entreprise.label }}</label>
+                {{ form.entreprise }}
+                {% for error in form.entreprise.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+                <small class="form-text text-muted">Sélectionnez l'entreprise pour laquelle activer ce module</small>
+            </div>
+            
+            <div class="form-group">
+                <div class="form-check">
+                    {{ form.est_actif }}
+                    <label class="form-check-label" for="{{ form.est_actif.id_for_label }}">
+                        {{ form.est_actif.label }}
+                    </label>
+                    <small class="form-text text-muted">Décochez cette case pour désactiver le module pour cette entreprise</small>
+                </div>
+            </div>
+            
+            <div class="form-group text-right">
+                {% comment %} <a href="{% url 'parametres:module_detail' module.pk %}" class="btn btn-secondary"> {% endcomment %}
+                    Annuler
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

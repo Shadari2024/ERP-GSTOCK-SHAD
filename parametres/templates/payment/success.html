@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h2>{% translate "Paiement réussi" %}</h2>
+        </div>
+        <div class="card-body">
+            {% if success %}
+                <div class="alert alert-success">
+                    <h4 class="alert-heading">{% translate "Merci pour votre achat !" %}</h4>
+                    <p>
+                        {% translate "Votre abonnement" %} <strong>{{ abonnement.plan_actuel.nom }}</strong> 
+                        {% translate "a été activé avec succès." %}
+                    </p>
+                    <hr>
+                    <p class="mb-0">
+                        {% translate "Référence" %}: {{ abonnement.id }}
+                    </p>
+                </div>
+            {% elif hors_ligne %}
+                <div class="alert alert-info">
+                    <h4 class="alert-heading">{% translate "Demande enregistrée" %}</h4>
+                    <p>
+                        {% translate "Votre demande d'abonnement a été enregistrée. Veuillez compléter le paiement selon les instructions reçues par email." %}
+                    </p>
+                </div>
+            {% else %}
+                <div class="alert alert-warning">
+                    <h4 class="alert-heading">{% translate "Paiement en traitement" %}</h4>
+                    <p>
+                        {% translate "Votre paiement est en cours de validation. Vous recevrez une confirmation par email sous peu." %}
+                    </p>
+                </div>
+            {% endif %}
+            
+            <a href="{% url 'parametres:abonnement_list' %}" class="btn btn-primary">
+                {% translate "Retour à mes abonnements" %}
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

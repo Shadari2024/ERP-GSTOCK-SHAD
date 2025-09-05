@@ -1,0 +1,87 @@
+{% extends 'parametres/base.html' %}
+{% load i18n %}
+
+
+{% block title %}{{ entreprise.nom }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-building"></i> {{ entreprise.nom }}
+    </h1>
+    
+    <div class="btn-toolbar mb-2 mb-md-0">
+        {% if perms.parametres.change_entreprise %}
+        <a href="{% url 'parametres:entreprise_update' entreprise.slug %}" class="btn btn-outline-primary me-2">
+            <i class="bi bi-pencil"></i> {% trans "Modifier" %}
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>{% trans "Informations générales" %}</h5>
+            </div>
+            <div class="card-body">
+                {% if entreprise.logo %}
+                <img src="{{ entreprise.logo.url }}" class="img-fluid mb-3" style="max-height: 100px;">
+                {% endif %}
+                
+                <dl class="row">
+                    <dt class="col-sm-4">{% trans "Domaine" %}</dt>
+                    <dd class="col-sm-8">{{ entreprise.domaine }}</dd>
+                    
+                    <dt class="col-sm-4">{% trans "Statut" %}</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-{% if entreprise.est_active %}success{% else %}warning{% endif %}">
+                            {{ entreprise.get_statut_display }}
+                        </span>
+                    </dd>
+                    
+                    <dt class="col-sm-4">{% trans "Numéro fiscal" %}</dt>
+                    <dd class="col-sm-8">{{ entreprise.numero_fiscal|default:"-" }}</dd>
+                    
+                    <dt class="col-sm-4">{% trans "Slogan" %}</dt>
+                    <dd class="col-sm-8">{{ entreprise.slogan|default:"-" }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>{% trans "Coordonnées" %}</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">{% trans "Adresse" %}</dt>
+                    <dd class="col-sm-8">{{ entreprise.adresse|linebreaksbr|default:"-" }}</dd>
+                    
+                    <dt class="col-sm-4">{% trans "Téléphone" %}</dt>
+                    <dd class="col-sm-8">{{ entreprise.telephone|default:"-" }}</dd>
+                    
+                    <dt class="col-sm-4">{% trans "Email" %}</dt>
+                    <dd class="col-sm-8">{{ entreprise.email|default:"-" }}</dd>
+                    
+                    <dt class="col-sm-4">{% trans "Site web" %}</dt>
+                    <dd class="col-sm-8">
+                        {% if entreprise.site_web %}
+                        <a href="{{ entreprise.site_web }}" target="_blank">{{ entreprise.site_web }}</a>
+                        {% else %}-{% endif %}
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        {% include 'parametres/abonnement/_status.html' with abonnement=abonnement %}
+    </div>
+</div>
+{% endblock %}

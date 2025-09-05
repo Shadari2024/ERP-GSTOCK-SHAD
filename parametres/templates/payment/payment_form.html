@@ -1,0 +1,87 @@
+<!-- payment/payment_form.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Paiement de l'abonnement</h2>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>{{ abonnement.plan_actuel.nom }}</h4>
+                </div>
+                <div class="card-body">
+                    <p>Prix: {{ abonnement.plan_actuel.prix_mensuel }}€</p>
+                    <p>Durée: {{ abonnement.plan_actuel.duree_mois }} mois</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Méthode de paiement</h4>
+                </div>
+                <div class="card-body">
+                    <form id="payment-form">
+                        <input type="hidden" name="abonnement_id" value="{{ abonnement.id }}">
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="methode_paiement" id="stripe" value="STRIPE" checked>
+                            <label class="form-check-label" for="stripe">
+                                <i class="fab fa-cc-stripe"></i> Paiement par carte (Stripe)
+                            </label>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="methode_paiement" id="paypal" value="PAYPAL">
+                            <label class="form-check-label" for="paypal">
+                                <i class="fab fa-cc-paypal"></i> Paiement par PayPal
+                            </label>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" id="submit-payment">
+                            Payer maintenant
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('payment-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitBtn = document.getElementById('submit-payment');
+    submitBtn.disabled = true;
+    
+    fetch('{% url "initier_paiement" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.session_id) {
+            // Redirection vers Stripe
+            const stripe = Stripe('{{ STRIPE_PUBLIC_KEY }}');
+            stripe.redirectToCheckout({ sessionId: data.session_id });
+        } else if (data.order_id) {
+            // Redirection vers PayPal
+            window.location.href = data.links.find(link => link.rel === 'approve').href;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        submitBtn.disabled = false;
+        alert('Une erreur est survenue lors du traitement du paiement');
+    });
+});
+</script>
+{% endblock %}

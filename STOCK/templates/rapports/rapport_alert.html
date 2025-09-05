@@ -1,0 +1,52 @@
+{% load custom_filters %}
+
+{% extends 'base.html' %}
+
+{% block title %}Rapports{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-file-alt mr-2"></i>Génération de Rapports
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <a href="{% url 'rapport_alertes_pdf' %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-1 text-danger">
+                                        <i class="fas fa-exclamation-triangle mr-2"></i>Produits en Alerte de Stock
+                                    </h5>
+                                    <p class="mb-1">Liste des produits dont le stock est inférieur au seuil d'alerte</p>
+                                </div>
+                                <i class="fas fa-download text-primary"></i>
+                            </div>
+                        </a>
+
+                        <!-- Vous pouvez ajouter d'autres rapports ici -->
+                        <a href="#" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 class="mb-1 text-info">
+                                        <i class="fas fa-chart-line mr-2"></i>Rapport des Ventes
+                                    </h5>
+                                    <p class="mb-1">Statistiques et analyse des ventes</p>
+                                </div>
+                                <i class="fas fa-download text-primary"></i>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                <div class="card-footer text-muted">
+                    <small>Les rapports sont générés au format PDF</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

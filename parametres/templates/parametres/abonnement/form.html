@@ -1,0 +1,54 @@
+{% extends 'parametres/base.html' %}
+{% load i18n crispy_forms_tags %}
+
+{% block content %}
+<div class="card border-0 shadow">
+    <div class="card-header bg-primary text-white">
+        <h3 class="card-title mb-0">
+            <i class="bi bi-credit-card me-2"></i>
+            {% trans "Gestion d'abonnement" %} - {{ abonnement.entreprise.nom }}
+        </h3>
+    </div>
+    
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 border-end">
+                    <h5 class="mb-4"><i class="bi bi-info-circle"></i> {% trans "Informations actuelles" %}</h5>
+                    <dl class="row">
+                        <dt class="col-sm-5">{% trans "Plan actuel" %}</dt>
+                        <dd class="col-sm-7">{{ abonnement.plan_actuel }}</dd>
+                        
+                        <dt class="col-sm-5">{% trans "Date début" %}</dt>
+                        <dd class="col-sm-7">{{ abonnement.date_debut|date:"d/m/Y" }}</dd>
+                        
+                        <dt class="col-sm-5">{% trans "Statut" %}</dt>
+                        <dd class="col-sm-7">
+                            <span class="badge bg-{% if abonnement.est_actif %}success{% else %}danger{% endif %}">
+                                {% if abonnement.est_actif %}{% trans "Actif" %}{% else %}{% trans "Inactif" %}{% endif %}
+                            </span>
+                        </dd>
+                    </dl>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="mb-4"><i class="bi bi-pencil-square"></i> {% trans "Modification" %}</h5>
+                    {{ form.plan_actuel|as_crispy_field }}
+                    {{ form.methode_paiement|as_crispy_field }}
+                    {{ form.date_fin|as_crispy_field }}
+                    {{ form.prochain_paiement|as_crispy_field }}
+                    {{ form.id_abonnement_paiement|as_crispy_field }}
+                </div>
+            </div>
+        </div>
+        <div class="card-footer bg-light d-flex justify-content-between">
+            <a href="{{ abonnement.entreprise.get_absolute_url }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> {% trans "Annuler" %}
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> {% trans "Enregistrer" %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

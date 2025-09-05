@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-lg animate__animated animate__fadeIn">
+        <div class="card-header bg-primary text-white">
+            <h2 class="mb-0">
+                <i class="bi bi-megaphone me-2"></i>Créer une nouvelle promotion
+            </h2>
+        </div>
+        
+        <div class="card-body">
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" id="promotionForm">
+                {% csrf_token %}
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Nom de la promotion*</label>
+                            <input type="text" class="form-control" name="nom" value="{{ request.POST.nom }}" required>
+                            <small class="text-muted">Donnez un nom clair à votre promotion</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-control" name="description" rows="3">{{ request.POST.description }}</textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Type de remise*</label>
+                                <select class="form-select" name="type_remise" required>
+                                    <option value="">Sélectionnez...</option>
+                                    {% for value, label in type_remise_choices %}
+                                    <option value="{{ value }}" {% if request.POST.type_remise == value or value == defaults.type_remise %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Valeur*</label>
+                                <div class="input-group">
+                                    <input type="number" step="0.01" class="form-control" name="valeur" 
+                                           value="{{ request.POST.valeur|default:'0' }}" required>
+                                    <span class="input-group-text">
+                                        {% if request.POST.type_remise == 'pourcentage' or defaults.type_remise == 'pourcentage' %}
+                                        %
+                                        {% else %}
+                                        {{ request.session.devise|default:'Fc' }}
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Applicable à*</label>
+                            <select class="form-select" name="appliquer_a" id="appliquerA" required>
+                                <option value="">Sélectionnez...</option>
+                                {% for value, label in appliquer_a_choices %}
+                                <option value="{{ value }}" {% if request.POST.appliquer_a == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3" id="produitField" style="display:{% if request.POST.appliquer_a == 'produit' %}block{% else %}none{% endif %};">
+                            <label class="form-label">Produit concerné*</label>
+                            <select class="form-select" name="produit" {% if request.POST.appliquer_a == 'produit' %}required{% endif %}>
+                                <option value="">Sélectionnez un produit...</option>
+                                {% for produit in produits %}
+                                <option value="{{ produit.id }}" {% if request.POST.produit == produit.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ produit.nom }} ({{ produit.code_barre_numero|default:"N/A" }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3" id="categorieField" style="display:{% if request.POST.appliquer_a == 'categorie' %}block{% else %}none{% endif %};">
+                            <label class="form-label">Catégorie concernée*</label>
+                            <select class="form-select" name="categorie" {% if request.POST.appliquer_a == 'categorie' %}required{% endif %}>
+                                <option value="">Sélectionnez une catégorie...</option>
+                                {% for categorie in categories %}
+                                <option value="{{ categorie.id }}" {% if request.POST.categorie == categorie.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ categorie.nom }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <label class="form-label">Date de début*</label>
+                        <input type="datetime-local" class="form-control" name="date_debut" 
+                               value="{{ request.POST.date_debut }}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Date de fin*</label>
+                        <input type="datetime-local" class="form-control" name="date_fin" 
+                               value="{{ request.POST.date_fin }}" required>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Code promotionnel</label>
+                        <input type="text" class="form-control" name="code_promo" 
+                               value="{{ request.POST.code_promo }}" placeholder="Généré automatiquement si vide">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Utilisations max*</label>
+                        <input type="number" class="form-control" name="utilisations_max" 
+                               value="{{ request.POST.utilisations_max|default:defaults.utilisations_max }}" min="1" required>
+                    </div>
+                </div>
+                
+                <div class="mb-3 form-check form-switch">
+                    <input type="checkbox" class="form-check-input" name="actif" id="actifCheck" 
+                           {% if request.POST.actif != 'off' or defaults.actif %}checked{% endif %}>
+                    <label class="form-check-label" for="actifCheck">Promotion active</label>
+                </div>
+                
+                <div class="mb-3 form-check form-switch">
+                    <input type="checkbox" class="form-check-input" name="usage_unique" id="usageUniqueCheck"
+                           {% if request.POST.usage_unique %}checked{% endif %}>
+                    <label class="form-check-label" for="usageUniqueCheck">Usage unique</label>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'liste_promotions' %}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left me-1"></i> Annuler
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle me-1"></i> Créer la promotion
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion de l'affichage dynamique des champs
+    const appliquerA = document.getElementById('appliquerA');
+    const produitField = document.getElementById('produitField');
+    const categorieField = document.getElementById('categorieField');
+    
+    function toggleFields() {
+        const value = appliquerA.value;
+        produitField.style.display = value === 'produit' ? 'block' : 'none';
+        categorieField.style.display = value === 'categorie' ? 'block' : 'none';
+        
+        // Mise à jour des attributs required
+        produitField.querySelector('select').required = value === 'produit';
+        categorieField.querySelector('select').required = value === 'categorie';
+    }
+    
+    appliquerA.addEventListener('change', toggleFields);
+    toggleFields(); // Initialisation
+    
+    // Changement du suffixe selon le type de remise
+    const typeRemise = document.querySelector('[name="type_remise"]');
+    const valeurInput = document.querySelector('[name="valeur"]');
+    const suffixSpan = document.querySelector('.input-group-text');
+    
+    typeRemise.addEventListener('change', function() {
+        suffixSpan.textContent = this.value === 'pourcentage' ? '%' : '{{ request.session.devise|default:"Fc" }}';
+    });
+    
+    // Validation des dates
+    const form = document.getElementById('promotionForm');
+    form.addEventListener('submit', function(e) {
+        const dateDebut = new Date(this.elements['date_debut'].value);
+        const dateFin = new Date(this.elements['date_fin'].value);
+        
+        if (dateFin <= dateDebut) {
+            e.preventDefault();
+            alert('La date de fin doit être postérieure à la date de début');
+            return false;
+        }
+        
+        // Validation supplémentaire pour les champs produit/catégorie
+        const appliquerAValue = appliquerA.value;
+        if (appliquerAValue === 'produit' && !produitField.querySelector('select').value) {
+            e.preventDefault();
+            alert('Veuillez sélectionner un produit');
+            return false;
+        }
+        
+        if (appliquerAValue === 'categorie' && !categorieField.querySelector('select').value) {
+            e.preventDefault();
+            alert('Veuillez sélectionner une catégorie');
+            return false;
+        }
+        
+        return true;
+    });
+});
+</script>
+{% endblock %}

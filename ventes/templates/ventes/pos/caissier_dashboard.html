@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Tableau de Bord Caissier{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-tachometer-alt me-2"></i>Tableau de Bord Caissier
+        </h1>
+        <span class="badge bg-primary">
+            {{ request.user.get_full_name }}
+        </span>
+    </div>
+
+    {% if main_pos %}
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card border-left-primary shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-cash-register me-2"></i>
+                        Votre Point de Vente Principal
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <h4 class="card-title">{{ main_pos.nom }}</h4>
+                    <p class="card-text">
+                        <strong>Code:</strong> {{ main_pos.code }}<br>
+                        <strong>Statut:</strong> 
+                        <span class="badge bg-{% if main_pos.actif %}success{% else %}danger{% endif %}">
+                            {% if main_pos.actif %}Actif{% else %}Inactif{% endif %}
+                        </span>
+                    </p>
+                    
+                    <div class="mt-4">
+                        <a href="{% url 'ventes:pos_dashboard' main_pos.pk %}" class="btn btn-primary me-2">
+                            <i class="fas fa-tachometer-alt me-2"></i>Ouvrir la Caisse
+                        </a>
+                        <a href="{% url 'ventes:vente_create' main_pos.pk %}" class="btn btn-success">
+                            <i class="fas fa-cash-register me-2"></i>Nouvelle Vente
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="card border-left-success shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                        Ventes Aujourd'hui
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ nombre_ventes|intcomma }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-shopping-cart fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-4">
+                    <div class="card border-left-info shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                        Chiffre d'Affaires
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ chiffre_affaires|floatformat:2|intcomma }} {{ devise_symbole }}</div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas fa-money-bill-wave fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if all_pos.count > 1 %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-list me-2"></i>
+                        Vos Autres Points de Vente
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for pos in all_pos %}
+                            {% if pos != main_pos %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ pos.nom }}</h6>
+                                        <small class="text-muted">{{ pos.code }}</small>
+                                    </div>
+                                    <a href="{% url 'ventes:pos_dashboard' pos.pk %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-external-link-alt me-2"></i>Ouvrir
+                                    </a>
+                                </div>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-cash-register fa-4x text-muted mb-4"></i>
+                    <h4 class="text-muted">Aucun point de vente assigné</h4>
+                    <p class="text-muted">
+                        Vous n'êtes actuellement assigné à aucun point de vente.
+                    </p>
+                    <p class="text-muted">
+                        Contactez votre administrateur pour être assigné à un point de vente.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Configuration des Devises</h3>
+    </div>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="card-body">
+            <!-- Section Devises -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        {{ form.devise_principale.label_tag }}
+                        {{ form.devise_principale }}
+                        <small class="form-text text-muted">Devise utilisée par défaut dans l'application</small>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label>Devises disponibles:</label>
+                        <div id="available-currencies" class="badge-container">
+                            <!-- JS va peupler cette zone -->
+                            <span class="badge badge-secondary">Chargement...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                {{ form.devises_acceptees.label_tag }}
+                <div class="row">
+                    {% for choice in form.devises_acceptees %}
+                    <div class="col-md-3">
+                        <div class="form-check">
+                            {{ choice.tag }}
+                            <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                {{ choice.choice_label }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Section Open Exchange Rates -->
+            <div class="card card-secondary">
+                <div class="card-header">
+                    <h3 class="card-title">Configuration API Open Exchange Rates</h3>
+                </div>
+                <div class="card-body">
+                    <div class="form-group">
+                        {{ form.openexchangerates_app_id.label_tag }}
+                        {{ form.openexchangerates_app_id }}
+                        <small class="form-text text-muted">Obtenez votre clé sur <a href="https://openexchangerates.org" target="_blank">openexchangerates.org</a></small>
+                    </div>
+                    <div class="form-group">
+                        {{ form.openexchangerates_base_devise.label_tag }}
+                        {{ form.openexchangerates_base_devise }}
+                        <small class="form-text text-muted">USD obligatoire pour le plan gratuit</small>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-check">
+                            {{ form.taux_change_auto }}
+                            {{ form.taux_change_auto.label_tag }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <button type="button" id="test-api-btn" class="btn btn-info">
+                            <i class="fas fa-plug"></i> Tester la connexion API
+                        </button>
+                        <div id="api-status" class="mt-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Taux Actuels -->
+            <div class="card card-primary">
+                <div class="card-header">
+                    <h3 class="card-title">Taux de Change Actuels</h3>
+                    <div class="card-tools">
+                        <button type="button" id="refresh-rates" class="btn btn-tool" title="Actualiser">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Devise Source</th>
+                                <th>Devise Cible</th>
+                                <th>Taux</th>
+                                <th>Mise à jour</th>
+                                <th>Source</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rates-table-body">
+                            {% for taux in taux_change %}
+                            <tr>
+                                <td>{{ taux.devise_source }}</td>
+                                <td>{{ taux.devise_cible }}</td>
+                                <td>{{ taux.taux }}</td>
+                                <td>{{ taux.date_mise_a_jour|timesince }}</td>
+                                <td>
+                                    {% if taux.est_manuel %}
+                                    <span class="badge badge-warning">Manuel</span>
+                                    {% else %}
+                                    <span class="badge badge-success">Auto</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5">Aucun taux configuré</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Enregistrer
+            </button>
+            <a href="{% url 'liste_devises' %}" class="btn btn-default">Annuler</a>
+            <button type="button" id="update-rates-btn" class="btn btn-success float-right">
+                <i class="fas fa-exchange-alt"></i> Mettre à jour les taux
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+$(document).ready(function() {
+    // Charger les devises disponibles
+    function loadAvailableCurrencies() {
+        $.get('{% url "devises_disponibles" %}', function(data) {
+            if(data.status === 'success') {
+                let badges = '';
+                $.each(data.devises, function(code, name) {
+                    badges += `<span class="badge badge-info mr-1" title="${name}">${code}</span>`;
+                });
+                $('#available-currencies').html(badges);
+            }
+        });
+    }
+
+    // Tester la connexion API
+    $('#test-api-btn').click(function() {
+        const appId = $('#id_openexchangerates_app_id').val();
+        if(!appId) {
+            $('#api-status').html('<div class="alert alert-warning">Veuillez entrer votre App ID</div>');
+            return;
+        }
+
+        $('#api-status').html('<div class="alert alert-info">Test en cours...</div>');
+        
+        $.ajax({
+            url: '{% url "maj_taux_auto" %}',
+            method: 'POST',
+            data: {
+                'csrfmiddlewaretoken': '{{ csrf_token }}',
+                'test_only': true
+            },
+            success: function(data) {
+                if(data.status === 'success') {
+                    $('#api-status').html('<div class="alert alert-success">Connexion API réussie</div>');
+                    loadAvailableCurrencies();
+                } else {
+                    $('#api-status').html(`<div class="alert alert-danger">Erreur: ${data.message}</div>`);
+                }
+            },
+            error: function(xhr) {
+                $('#api-status').html(`<div class="alert alert-danger">Erreur: ${xhr.responseJSON?.message || 'Erreur serveur'}</div>`);
+            }
+        });
+    });
+
+    // Mettre à jour les taux
+    $('#update-rates-btn').click(function() {
+        if(confirm('Voulez-vous vraiment mettre à jour tous les taux de change ?')) {
+            $.ajax({
+                url: '{% url "maj_taux_auto" %}',
+                method: 'POST',
+                data: {
+                    'csrfmiddlewaretoken': '{{ csrf_token }}'
+                },
+                beforeSend: function() {
+                    $('#update-rates-btn').prop('disabled', true)
+                        .html('<i class="fas fa-spinner fa-spin"></i> Mise à jour...');
+                },
+                success: function(data) {
+                    if(data.status === 'success') {
+                        location.reload(); // Recharger pour voir les nouveaux taux
+                    } else {
+                        alert('Erreur: ' + (data.message || 'Échec de la mise à jour'));
+                    }
+                },
+                complete: function() {
+                    $('#update-rates-btn').prop('disabled', false)
+                        .html('<i class="fas fa-exchange-alt"></i> Mettre à jour les taux');
+                }
+            });
+        }
+    });
+
+    // Actualiser les taux sans recharger
+    $('#refresh-rates').click(function() {
+        $.get('{% url "liste_devises" %}?partial=1', function(data) {
+            $('#rates-table-body').html(data);
+        });
+    });
+
+    // Charger au démarrage si App ID existe
+    if($('#id_openexchangerates_app_id').val()) {
+        loadAvailableCurrencies();
+    }
+});
+</script>
+{% endblock %}

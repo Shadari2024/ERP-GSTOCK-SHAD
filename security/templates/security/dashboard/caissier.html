@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de Bord - Caissier{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="mb-4">Tableau de Bord Caissier</h1>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h3>Actions Disponibles</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Exemple de boutons d'action -->
+                        <div class="col-md-4 mb-3">
+                            {% comment %} <a href="{% url 'stock:liste_produits' %}" class="btn btn-primary btn-block"> {% endcomment %}
+                                <i class="fas fa-boxes"></i> Voir les Produits
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {% comment %} <a href="{% url 'ventes:creer' %}" class="btn btn-success btn-block"> {% endcomment %}
+                                <i class="fas fa-cash-register"></i> Nouvelle Vente
+                            </a>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {% comment %} <a href="{% url 'ventes:historique' %}" class="btn btn-info btn-block"> {% endcomment %}
+                                <i class="fas fa-history"></i> Historique des Ventes
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section Statistiques -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h3>Mes Statistiques</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="stat-card bg-light p-3 text-center">
+                                <h4>Ventes Aujourd'hui</h4>
+                                <p class="display-4">12</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card bg-light p-3 text-center">
+                                <h4>Chiffre d'Affaires</h4>
+                                <p class="display-4">1,450.00 €</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-card bg-light p-3 text-center">
+                                <h4>Objectif</h4>
+                                <div class="progress">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: 75%;" 
+                                         aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">75%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dernières ventes -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h3>Dernières Ventes</h3>
+                </div>
+                <div class="card-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>N° Vente</th>
+                                <th>Date</th>
+                                <th>Client</th>
+                                <th>Montant</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Exemple de données statiques - À remplacer par des données dynamiques -->
+                            <tr>
+                                <td>#1254</td>
+                                <td>Aujourd'hui, 14:30</td>
+                                <td>Client A</td>
+                                <td>120.00 €</td>
+                                <td><span class="badge bg-success">Payé</span></td>
+                            </tr>
+                            <tr>
+                                <td>#1253</td>
+                                <td>Aujourd'hui, 11:45</td>
+                                <td>Client B</td>
+                                <td>85.50 €</td>
+                                <td><span class="badge bg-success">Payé</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

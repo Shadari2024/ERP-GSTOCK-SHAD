@@ -1,0 +1,191 @@
+<!-- ventes/pos/caissiers.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gestion des Caissiers{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-users me-2"></i>Gestion des Caissiers
+        </h1>
+        <div>
+            {% comment %} <a href="{% url 'security:user_create' %}" class="btn btn-success btn-icon-split me-2"> {% endcomment %}
+                <span class="icon text-white-50">
+                    <i class="fas fa-user-plus"></i>
+                </span>
+                <span class="text">Nouveau Caissier</span>
+            </a>
+            <a href="{% url 'ventes:pos_create' %}" class="btn btn-primary btn-icon-split">
+                <span class="icon text-white-50">
+                    <i class="fas fa-plus"></i>
+                </span>
+                <span class="text">Nouveau POS</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Colonne des Caissiers -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-primary text-white">
+                    <h6 class="m-0 font-weight-bold">
+                        <i class="fas fa-user-tie me-2"></i>Caissiers ({{ caissiers.count }})
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if caissiers %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Email</th>
+                                    <th>POS Assignés</th>
+                                    <th>Responsable</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for caissier in caissiers %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ caissier.get_full_name }}</strong>
+                                    </td>
+                                    <td>{{ caissier.email }}</td>
+                                    <td>
+                                        {% with assigned_pos=caissier.get_assigned_pos %}
+                                            {% if assigned_pos %}
+                                                {% for pos in assigned_pos %}
+                                                    <span class="badge bg-info text-white mb-1">{{ pos.nom }}</span>
+                                                {% endfor %}
+                                            {% else %}
+                                                <span class="badge bg-warning">Aucun POS</span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </td>
+                                    <td>
+                                        {% with main_pos=caissier.get_main_pos %}
+                                            {% if main_pos %}
+                                                <span class="badge bg-success">Responsable</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Aucun caissier trouvé dans votre entreprise.</p>
+                        <a href="{% url 'security:user_create' %}" class="btn btn-primary">
+                            <i class="fas fa-user-plus me-2"></i>Créer un caissier
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne des Points de Vente -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-success text-white">
+                    <h6 class="m-0 font-weight-bold">
+                        <i class="fas fa-cash-register me-2"></i>Points de Vente ({{ points_de_vente.count }})
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if points_de_vente %}
+                    <div class="list-group">
+                        {% for pos in points_de_vente %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="mb-1">{{ pos.nom }}</h6>
+                                    <small class="text-muted">Code: {{ pos.code }}</small>
+                                </div>
+                                <span class="badge bg-{% if pos.actif %}success{% else %}secondary{% endif %}">
+                                    {% if pos.actif %}Actif{% else %}Inactif{% endif %}
+                                </span>
+                            </div>
+                            
+                            <!-- Responsable -->
+                            <div class="mb-2">
+                                <small class="text-muted">Responsable:</small>
+                                {% if pos.responsable %}
+                                <div class="d-flex align-items-center mt-1">
+                                    <i class="fas fa-crown text-warning me-2"></i>
+                                    <span class="fw-bold">{{ pos.responsable.get_full_name }}</span>
+                                </div>
+                                {% else %}
+                                <span class="text-muted fst-italic">Aucun responsable</span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Caissiers assignés -->
+                            <div>
+                                <small class="text-muted">Caissiers ({{ pos.caissiers.count }}):</small>
+                                {% if pos.caissiers.all %}
+                                <div class="mt-1">
+                                    {% for caissier in pos.caissiers.all %}
+                                    <span class="badge bg-light text-dark me-1 mb-1">
+                                        {{ caissier.get_full_name }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <span class="text-muted fst-italic">Aucun caissier</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-cash-register fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Aucun point de vente créé.</p>
+                        <a href="{% url 'ventes:pos_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Créer un POS
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Tooltips
+    $('[data-toggle="tooltip"]').tooltip();
+    
+    // Confirmation avant actions
+    $('.btn-danger').on('click', function(e) {
+        if (!confirm('Êtes-vous sûr de vouloir effectuer cette action ?')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+
+<style>
+.badge {
+    font-size: 0.75em;
+}
+.list-group-item {
+    border-left: 4px solid #4e73df;
+}
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+</style>
+{% endblock %}

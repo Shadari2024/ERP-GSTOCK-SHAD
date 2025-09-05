@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <h5 class="mb-0">Supprimer le Module</h5>
+    </div>
+    <div class="card-body">
+        <p>Êtes-vous sûr de vouloir supprimer le module <strong>{{ object.nom }}</strong> ?</p>
+        <p class="text-danger">Cette action est irréversible et supprimera toutes les données associées.</p>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group text-right">
+                <a href="{% url 'parametres:module_detail' object.pk %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Annuler
+                </a>
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Confirmer la suppression
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

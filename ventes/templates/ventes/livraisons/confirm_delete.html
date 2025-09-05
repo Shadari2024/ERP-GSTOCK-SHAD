@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Confirmer la suppression du Bon de Livraison{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0">Confirmer la suppression</h4>
+        </div>
+        <div class="card-body">
+            <p>Êtes-vous sûr de vouloir supprimer le bon de livraison <strong>#{{ bon_livraison.numero }}</strong> de la commande <strong>{{ bon_livraison.commande.numero }}</strong>?</p>
+            <p class="text-danger">Cette action est irréversible.</p>
+
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger me-2"><i class="fas fa-trash"></i> Supprimer</button>
+                {# USE object_pk WHICH IS EXPLICITLY PASSED #}
+                <a href="{% url 'ventes:livraison_detail' object_pk %}" class="btn btn-secondary">Annuler</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

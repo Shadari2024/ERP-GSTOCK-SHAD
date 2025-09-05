@@ -1,0 +1,105 @@
+{% extends "comptabilite/base.html" %}
+{% load static %}
+
+{% block title %}Supprimer le compte {{ object.code }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'comptabilite:compte_auxiliaire_list' %}">Comptes Auxiliaires</a></li>
+<li class="breadcrumb-item active" aria-current="page">Supprimer {{ object.code }}</li>
+{% endblock %}
+
+{% block page_title %}Supprimer le compte: {{ object.code }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmation de suppression
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-exclamation-circle me-2"></i>Attention!
+                    </h6>
+                    <p class="mb-0">Vous êtes sur le point de supprimer définitivement ce compte auxiliaire.</p>
+                </div>
+
+                <div class="border rounded p-3 mb-4">
+                    <h6>Détails du compte:</h6>
+                    <table class="table table-borderless table-sm">
+                        <tr>
+                            <th width="30%">Code:</th>
+                            <td><strong>{{ object.code }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Intitulé:</th>
+                            <td>{{ object.intitule }}</td>
+                        </tr>
+                        <tr>
+                            <th>Type:</th>
+                            <td>
+                                {% if object.type_compte == 'client' %}
+                                    <span class="badge bg-info">Client</span>
+                                {% elif object.type_compte == 'fournisseur' %}
+                                    <span class="badge bg-warning">Fournisseur</span>
+                                {% elif object.type_compte == 'autre' %}
+                                    <span class="badge bg-secondary">Autre</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Compte Général:</th>
+                            <td>{{ object.compte_general.numero }} - {{ object.compte_general.intitule }}</td>
+                        </tr>
+                        <tr>
+                            <th>Statut:</th>
+                            <td>
+                                {% if object.actif %}
+                                    <span class="badge bg-success">Actif</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactif</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                {% if object.ligneecriture_set.exists %}
+                <div class="alert alert-warning">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-warning me-2"></i>Impossible de supprimer
+                    </h6>
+                    <p class="mb-0">
+                        Ce compte a {{ object.ligneecriture_set.count }} écriture(s) associée(s). 
+                        Vous devez d'abord supprimer ou modifier ces écritures avant de pouvoir supprimer le compte.
+                    </p>
+                </div>
+                {% endif %}
+
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'comptabilite:compte_auxiliaire_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Annuler
+                    </a>
+                    
+                    {% if not object.ligneecriture_set.exists %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i> Confirmer la suppression
+                        </button>
+                    </form>
+                    {% else %}
+                    <a href="{% url 'comptabilite:ecriture_list' %}?compte={{ object.code }}" 
+                       class="btn btn-warning">
+                        <i class="fas fa-list me-1"></i> Voir les écritures
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

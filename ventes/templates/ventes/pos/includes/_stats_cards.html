@@ -1,0 +1,84 @@
+{% load i18n %} {# Assurez-vous que ce tag est chargé pour les traductions #}
+{% load humanize %} {# Si vous utilisez des filtres de formatage de nombres comme intcomma, etc. #}
+
+<div class="row mb-4">
+    <!-- Chiffre d'affaires du jour -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card success h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-uppercase text-muted mb-0">{% trans "CA Aujourd'hui" %}</h6>
+                        <h3 class="mb-0">
+                            {{ ca_aujourdhui|floatformat:2 }} {% if devise_principale_symbole %}{{ devise_principale_symbole }}{% endif %}
+                        </h3>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-dollar-sign fa-2x text-success"></i> {# Icône plus générique pour la devise #}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ventes du jour -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-uppercase text-muted mb-0">{% trans "Ventes Aujourd'hui" %}</h6>
+                        <h3 class="mb-0">
+                            {{ nombre_ventes_jour }}
+                        </h3>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-shopping-cart fa-2x text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session active -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card warning h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-uppercase text-muted mb-0">{% trans "Fonds Session" %}</h6>
+                        <h3 class="mb-0">
+                            {% if session_ouverte %}
+                                {{ session_ouverte.fonds_ouverture|floatformat:2 }} {% if devise_principale_symbole %}{{ devise_principale_symbole }}{% endif %}
+                            {% else %}
+                                0,00 {% if devise_principale_symbole %}{{ devise_principale_symbole }}{% endif %}
+                            {% endif %}
+                        </h3>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-money-bill-wave fa-2x text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Articles vendus -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card danger h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-center">
+                    <div class="flex-grow-1">
+                        <h6 class="text-uppercase text-muted mb-0">{% trans "Articles Vendus" %}</h6>
+                        <h3 class="mb-0">
+                            {{ articles_vendus_jour|default:0 }}
+                        </h3>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-boxes fa-2x text-danger"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

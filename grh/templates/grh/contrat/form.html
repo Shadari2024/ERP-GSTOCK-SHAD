@@ -1,0 +1,361 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if object %}{% trans "Modifier le contrat" %}{% else %}{% trans "Nouveau contrat" %}{% endif %} - {{ block.super }}{% endblock %}
+
+{% block page_title %}
+    {% if object %}
+        <i class="fas fa-edit me-2"></i>{% trans "Modifier le contrat" %}
+    {% else %}
+        <i class="fas fa-file-contract me-2"></i>{% trans "Nouveau contrat" %}
+    {% endif %}
+{% endblock %}
+
+{% block page_description %}
+    {% if object %}
+        {% trans "Modifier les informations du contrat" %} {{ object.reference }}
+    {% else %}
+        {% trans "Créer un nouveau contrat de travail" %}
+    {% endif %}
+{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'grh:contrat_list' %}">{% trans "Contrats" %}</a></li>
+    <li class="breadcrumb-item active">{% if object %}{% trans "Modifier" %}{% else %}{% trans "Nouveau" %}{% endif %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        {% if object %}
+                            <i class="fas fa-edit me-2"></i>{% trans "Modifier le contrat" %} {{ object.reference }}
+                        {% else %}
+                            <i class="fas fa-file-contract me-2"></i>{% trans "Nouveau contrat" %}
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="contrat-form">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <!-- Colonne de gauche - Informations générales -->
+                            <div class="col-md-6">
+                                <div class="card mb-4">
+                                    <div class="card-header bg-light">
+                                        <h6 class="card-title mb-0">
+                                            <i class="fas fa-info-circle me-2"></i>{% trans "Informations générales" %}
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {{ form.reference|as_crispy_field }}
+                                        {{ form.employe|as_crispy_field }}
+                                        {{ form.type_contrat|as_crispy_field }}
+                                        
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                {{ form.date_debut|as_crispy_field }}
+                                            </div>
+                                            <div class="col-md-6">
+                                                {{ form.date_fin|as_crispy_field }}
+                                                <small class="form-text text-muted">
+                                                    {% trans "Laissez vide pour un contrat sans date de fin déterminée" %}
+                                                </small>
+                                            </div>
+                                        </div>
+                                        
+                                        {{ form.poste|as_crispy_field }}
+                                        {{ form.salaire_base|as_crispy_field }}
+                                        {{ form.statut|as_crispy_field }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Colonne de droite - Détails et documents -->
+                            <div class="col-md-6">
+                                <div class="card mb-4">
+                                    <div class="card-header bg-light">
+                                        <h6 class="card-title mb-0">
+                                            <i class="fas fa-clock me-2"></i>{% trans "Période d'essai" %}
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                {{ form.duree_essai|as_crispy_field }}
+                                                <small class="form-text text-muted">
+                                                    {% trans "Durée en jours" %}
+                                                </small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                {{ form.date_fin_essai|as_crispy_field }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card mb-4">
+                                    <div class="card-header bg-light">
+                                        <h6 class="card-title mb-0">
+                                            <i class="fas fa-calendar-alt me-2"></i>{% trans "Conditions de travail" %}
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                {{ form.heures_semaine|as_crispy_field }}
+                                                <small class="form-text text-muted">
+                                                    {% trans "Heures par semaine" %}
+                                                </small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                {{ form.jours_conges_an|as_crispy_field }}
+                                                <small class="form-text text-muted">
+                                                    {% trans "Jours de congés annuels" %}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="card">
+                                    <div class="card-header bg-light">
+                                        <h6 class="card-title mb-0">
+                                            <i class="fas fa-file-pdf me-2"></i>{% trans "Document du contrat" %}
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {{ form.fichier_contrat|as_crispy_field }}
+                                        
+                                        {% if object and object.fichier_contrat %}
+                                        <div class="mt-3 p-3 bg-light rounded">
+                                            <h6 class="text-primary">{% trans "Fichier actuel" %}</h6>
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-file-pdf text-danger me-2 fa-2x"></i>
+                                                <div class="flex-grow-1">
+                                                    <p class="mb-1">{{ object.fichier_contrat.name|cut:"contrats/" }}</p>
+                                                    <small class="text-muted">
+                                                        {% trans "Taille:" %} {{ object.fichier_contrat.size|filesizeformat }}
+                                                    </small>
+                                                </div>
+                                                <a href="{{ object.fichier_contrat.url }}" 
+                                                   target="_blank" 
+                                                   class="btn btn-sm btn-outline-primary ms-2"
+                                                   title="{% trans 'Télécharger' %}">
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Actions du formulaire -->
+                        <div class="form-actions mt-4 pt-3 border-top">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save me-2"></i>
+                                {% if object %}
+                                    {% trans "Mettre à jour le contrat" %}
+                                {% else %}
+                                    {% trans "Créer le contrat" %}
+                                {% endif %}
+                            </button>
+                            
+                            <a href="{% url 'grh:contrat_list' %}" class="btn btn-secondary btn-lg ms-2">
+                                <i class="fas fa-times me-2"></i>{% trans "Annuler" %}
+                            </a>
+                            
+                            {% if object %}
+                            <a href="{% url 'grh:contrat_detail' object.pk %}" class="btn btn-info btn-lg ms-2">
+                                <i class="fas fa-eye me-2"></i>{% trans "Voir le détail" %}
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Éléments du DOM
+    const dateDebutInput = document.getElementById('id_date_debut');
+    const dureeEssaiInput = document.getElementById('id_duree_essai');
+    const dateFinEssaiInput = document.getElementById('id_date_fin_essai');
+    const dateFinInput = document.getElementById('id_date_fin');
+    const typeContratSelect = document.getElementById('id_type_contrat');
+    
+    // Formater les dates existantes pour le type date
+    function formaterDatePourInput(date) {
+        if (date) {
+            return date.split(' ')[0]; // Enlève l'heure si présente
+        }
+        return '';
+    }
+    
+    // Initialiser les valeurs des champs date
+    if (dateDebutInput && dateDebutInput.value) {
+        dateDebutInput.value = formaterDatePourInput(dateDebutInput.value);
+    }
+    if (dateFinInput && dateFinInput.value) {
+        dateFinInput.value = formaterDatePourInput(dateFinInput.value);
+    }
+    if (dateFinEssaiInput && dateFinEssaiInput.value) {
+        dateFinEssaiInput.value = formaterDatePourInput(dateFinEssaiInput.value);
+    }
+    
+    // Fonction pour calculer la date de fin de période d'essai
+    function calculerDateFinEssai() {
+        if (dateDebutInput.value && dureeEssaiInput.value) {
+            const dateDebut = new Date(dateDebutInput.value);
+            const dureeEssai = parseInt(dureeEssaiInput.value);
+            
+            if (!isNaN(dureeEssai) && dureeEssai > 0) {
+                const dateFinEssai = new Date(dateDebut);
+                dateFinEssai.setDate(dateFinEssai.getDate() + dureeEssai);
+                
+                // Formater la date en YYYY-MM-DD pour l'input
+                const formattedDate = dateFinEssai.toISOString().split('T')[0];
+                dateFinEssaiInput.value = formattedDate;
+            }
+        }
+    }
+    
+    // Fonction pour gérer la visibilité du champ date_fin selon le type de contrat
+    function gererVisibiliteDateFin() {
+        const typeContrat = typeContratSelect.value;
+        const dateFinGroup = dateFinInput.closest('.form-group');
+        
+        // CDI et certains types n'ont pas de date de fin obligatoire
+        if (typeContrat === 'CDI' || typeContrat === 'FREELANCE') {
+            dateFinGroup.style.display = 'none';
+            dateFinInput.required = false;
+            dateFinInput.value = ''; // Vider le champ
+        } else {
+            dateFinGroup.style.display = 'block';
+            dateFinInput.required = true;
+        }
+    }
+    
+    // Événements
+    if (dateDebutInput && dureeEssaiInput && dateFinEssaiInput) {
+        dateDebutInput.addEventListener('change', calculerDateFinEssai);
+        dureeEssaiInput.addEventListener('input', calculerDateFinEssai);
+        
+        // Initialiser au chargement
+        calculerDateFinEssai();
+    }
+    
+    if (typeContratSelect && dateFinInput) {
+        typeContratSelect.addEventListener('change', gererVisibiliteDateFin);
+        // Initialiser au chargement
+        gererVisibiliteDateFin();
+    }
+    
+    // Validation personnalisée
+    const form = document.getElementById('contrat-form');
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        const dateDebut = dateDebutInput.value ? new Date(dateDebutInput.value) : null;
+        const dateFin = dateFinInput.value ? new Date(dateFinInput.value) : null;
+        const dateFinEssai = dateFinEssaiInput.value ? new Date(dateFinEssaiInput.value) : null;
+        
+        // Vérifier que la date de fin est après la date de début
+        if (dateFin && dateDebut && dateFin < dateDebut) {
+            isValid = false;
+            alert('{% trans "La date de fin ne peut pas être antérieure à la date de début." %}');
+            dateFinInput.focus();
+        }
+        
+        // Vérifier la période d'essai
+        if (dateFinEssai && dateDebut && dateFinEssai < dateDebut) {
+            isValid = false;
+            alert('{% trans "La date de fin d\\'essai ne peut pas être antérieure à la date de début." %}');
+            dateFinEssaiInput.focus();
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+    
+    // Afficher un aperçu du fichier sélectionné
+    const fileInput = document.getElementById('id_fichier_contrat');
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            const fileName = e.target.files[0]?.name;
+            if (fileName) {
+                console.log('Fichier sélectionné:', fileName);
+            }
+        });
+    }
+    
+    // Forcer le type date sur tous les inputs de date
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    dateInputs.forEach(input => {
+        input.type = 'date';
+        input.classList.add('form-control');
+    });
+});
+</script>
+
+<style>
+/* Styles pour les champs date */
+input[type="date"] {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    height: calc(1.5em + 0.75rem + 2px);
+}
+
+/* Styles personnalisés pour le formulaire */
+.card {
+    border: 1px solid #e3e6f0;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+}
+
+.card-header {
+    border-bottom: 1px solid #e3e6f0;
+    background-color: #f8f9fc;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 1rem;
+    }
+    
+    .btn-lg {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .row > .col-md-6 {
+        margin-bottom: 1rem;
+    }
+}
+</style>
+{% endblock %}

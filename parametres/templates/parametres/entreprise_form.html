@@ -1,0 +1,20 @@
+<!-- parametres/templates/parametres/entreprise_form.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <div class="card-header">
+            <h3>{% if object.id %}Modifier{% else %}Créer{% endif %} une entreprise</h3>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" class="btn btn-primary">{% if object.id %}Modifier{% else %}Créer{% endif %}</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

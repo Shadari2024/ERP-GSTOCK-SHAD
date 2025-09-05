@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="card shadow-sm border-0">
+    <div class="card-header bg-primary text-white">
+      <div class="d-flex justify-content-between align-items-center">
+        <h2 class="h5 mb-0">
+          <i class="bi bi-person-plus me-2"></i>Création d'un nouvel utilisateur
+        </h2>
+        <a href="{% url 'liste_utilisateurs' %}" class="btn btn-light btn-sm">
+          <i class="bi bi-arrow-left me-1"></i> Retour à la liste
+        </a>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <form method="post" class="needs-validation" novalidate>
+        {% csrf_token %}
+        
+        <div class="row g-3 mb-4">
+          <!-- Colonne de gauche -->
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="username" class="form-label fw-bold">
+                <i class="bi bi-person-badge me-1"></i>Nom d'utilisateur
+              </label>
+              <input type="text" name="username" id="username" class="form-control form-control-lg" required>
+              <div class="invalid-feedback">
+                Veuillez saisir un nom d'utilisateur valide.
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="email" class="form-label fw-bold">
+                <i class="bi bi-envelope me-1"></i>Adresse email
+              </label>
+              <input type="email" name="email" id="email" class="form-control form-control-lg" required>
+              <div class="invalid-feedback">
+                Veuillez saisir une adresse email valide.
+              </div>
+            </div>
+          </div>
+
+          <!-- Colonne de droite -->
+          <div class="col-md-6">
+            <div class="mb-3">
+              <label for="password" class="form-label fw-bold">
+                <i class="bi bi-lock me-1"></i>Mot de passe
+              </label>
+              <div class="input-group">
+                <input type="text" name="password" id="password" class="form-control form-control-lg" required>
+                <button class="btn btn-outline-secondary" type="button" id="generatePassword">
+                  <i class="bi bi-arrow-repeat"></i> Générer
+                </button>
+              </div>
+              <div class="invalid-feedback">
+                Veuillez saisir un mot de passe.
+              </div>
+              <small class="text-muted">Minimum 8 caractères</small>
+            </div>
+
+            <div class="mb-3">
+              <label for="groupe" class="form-label fw-bold">
+                <i class="bi bi-people me-1"></i>Groupe
+              </label>
+              <select name="groupe" id="groupe" class="form-select form-select-lg" required>
+                <option value="" selected disabled>Sélectionnez un groupe</option>
+                {% for group in groupes %}
+                <option value="{{ group.id }}">{{ group.name }}</option>
+                {% endfor %}
+              </select>
+              <div class="invalid-feedback">
+                Veuillez sélectionner un groupe.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-3 mt-4">
+          <a href="{% url 'liste_utilisateurs' %}" class="btn btn-lg btn-outline-secondary">
+            <i class="bi bi-x-circle me-1"></i> Annuler
+          </a>
+          <button type="submit" class="btn btn-lg btn-success">
+            <i class="bi bi-check-circle me-1"></i> Créer l'utilisateur
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+  .card {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  
+  .form-control-lg, .form-select-lg {
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+  }
+  
+  .input-group-text {
+    background-color: #f8f9fa;
+  }
+  
+  .btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+</style>
+
+<script>
+  // Génération de mot de passe aléatoire
+  document.getElementById('generatePassword').addEventListener('click', function() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    document.getElementById('password').value = password;
+  });
+
+  // Validation du formulaire
+  (function() {
+    'use strict';
+    const forms = document.querySelectorAll('.needs-validation');
+    
+    Array.from(forms).forEach(form => {
+      form.addEventListener('submit', event => {
+        if (!form.checkValidity()) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+      }, false);
+    });
+  })();
+</script>
+{% endblock %}

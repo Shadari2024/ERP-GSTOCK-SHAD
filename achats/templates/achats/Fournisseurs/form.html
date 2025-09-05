@@ -1,0 +1,364 @@
+{% extends "achats/base_achats.html" %}
+{% load crispy_forms_tags %}
+
+{% block achats_content %}
+<style>
+    /* Odoo-inspired CSS - ADAPTED FOR DARK THEME */
+    .o_content {
+        /* This div usually wraps the entire form content, if it doesn't already have padding from base_achats.html,
+           you might want to add some here or rely on the main content padding. */
+    }
+
+    .o_form_view {
+        background-color: var(--card-background); /* Dark background for the form view */
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow); /* Darker shadow for dark theme */
+        overflow: hidden; /* Ensures rounded corners are respected */
+    }
+    
+    .o_control_panel {
+        background-color: var(--card-background); /* Consistent with card background */
+        border-bottom: 1px solid var(--border-color); /* Subtle border for separation */
+        padding: 1.25rem 2rem; /* Adjusted padding for a modern feel */
+        display: flex; /* Ensure flex behavior */
+        flex-direction: column; /* Stack elements vertically on smaller screens */
+        gap: 1rem; /* Space between top and bottom parts */
+    }
+
+    .o_cp_top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start; /* Align breadcrumb and title to the top */
+        width: 100%; /* Take full width */
+        flex-wrap: wrap; /* Allow wrapping on smaller screens */
+        gap: 1rem; /* Gap between left and right sections */
+    }
+
+    .o_cp_top_left {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1; /* Allow to grow */
+    }
+    
+    /* Breadcrumb styles */
+    .breadcrumb {
+        padding: 0;
+        margin-bottom: 0.5rem; /* Space below breadcrumb */
+        background-color: transparent; /* No background */
+        font-size: 0.85rem;
+        color: var(--text-color-dark); /* Darker text for breadcrumb */
+    }
+
+    .breadcrumb-item a {
+        color: var(--accent-color); /* Accent color for links */
+        text-decoration: none;
+        transition: var(--transition);
+    }
+    .breadcrumb-item a:hover {
+        color: var(--primary-color);
+    }
+    .breadcrumb-item.active {
+        color: var(--text-color-light); /* Lighter text for active item */
+        font-weight: 500;
+    }
+
+    .o_cp_title {
+        font-size: 2rem; /* Larger title for prominence */
+        font-weight: 700; /* Bolder */
+        margin: 0;
+        color: var(--text-color-light); /* Lighter text for title */
+        line-height: 1.2;
+    }
+    
+    .o_cp_top_right {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem; /* Space between button groups if any */
+    }
+
+    .o_cp_buttons .erp-btn {
+        /* Inherit general .erp-btn styles */
+        padding: 0.6rem 1.25rem; /* Slightly adjusted padding for toolbar buttons */
+        font-size: 0.9rem;
+    }
+
+    .o_form_button_save {
+        background-color: var(--primary-color); /* Primary color for save */
+        color: white;
+        border: none;
+        box-shadow: 0 4px 12px rgba(var(--primary-color-rgb), 0.3);
+    }
+    
+    .o_form_button_save:hover {
+        background-color: var(--secondary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(var(--primary-color-rgb), 0.5);
+    }
+    
+    .o_form_button_cancel {
+        background-color: var(--background-body); /* Body background for cancel */
+        color: var(--text-color-light); /* Light text for cancel button */
+        border: 1px solid var(--border-color); /* Subtle border */
+        box-shadow: none; /* No shadow */
+    }
+    
+    .o_form_button_cancel:hover {
+        background-color: var(--dark-color); /* Slightly darker on hover */
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .o_form_sheet_bg {
+        background-color: var(--background-body); /* Main background of the content area */
+        padding: 2rem; /* Consistent padding */
+        min-height: calc(100vh - 200px); /* Adjust height to fill viewport */
+        display: flex;
+        justify-content: center;
+        align-items: flex-start; /* Align content to the top */
+    }
+    
+    .o_form_sheet {
+        background-color: var(--card-background); /* Card background for the form sheet */
+        border: 1px solid var(--border-color); /* Subtle border */
+        border-radius: var(--border-radius);
+        padding: 2.5rem; /* Generous padding inside the form */
+        max-width: 1000px; /* Max width for content, adjust as needed */
+        width: 100%;
+        box-shadow: var(--box-shadow);
+        animation: fadeIn 0.8s ease-out; /* Fade in animation */
+    }
+    
+    .o_horizontal_separator {
+        color: var(--accent-color); /* Accent color for separators */
+        font-weight: 600; /* Bolder */
+        margin-bottom: 1.5rem; /* More space below separator */
+        text-transform: uppercase;
+        font-size: 0.9rem; /* Slightly smaller font for separator */
+        border-bottom: 1px solid var(--border-color); /* Subtle border */
+        padding-bottom: 0.5rem;
+        letter-spacing: 0.05em; /* Add slight letter spacing */
+    }
+    
+    .o_field_widget {
+        margin-bottom: 1rem; /* Space between form fields */
+    }
+    
+    /* Crispy Forms adjustments for dark theme */
+    .form-group label {
+        color: var(--text-color-light); /* Label text color */
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control, .select2-container--bootstrap4 .select2-selection--single {
+        background-color: var(--background-body); /* Input background color */
+        color: var(--text-color-light); /* Input text color */
+        border: 1px solid var(--border-color); /* Input border color */
+        border-radius: var(--border-radius); /* Rounded inputs */
+        padding: 0.75rem 1rem; /* Padding inside inputs */
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2); /* Subtle inner shadow */
+        transition: border-color var(--transition), box-shadow var(--transition);
+    }
+
+    .form-control:focus, .select2-container--bootstrap4.select2-container--focus .select2-selection--single {
+        border-color: var(--accent-color); /* Accent color on focus */
+        box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.2); /* Glow effect on focus */
+        background-color: var(--background-body); /* Keep background consistent on focus */
+        color: var(--text-color-light);
+    }
+
+    .form-control::placeholder {
+        color: var(--text-color-dark); /* Placeholder text color */
+        opacity: 0.7;
+    }
+
+    .invalid-feedback {
+        color: var(--danger-color-text); /* Error text color */
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+    }
+
+    .o_form_error {
+        border-left: 4px solid var(--danger-color-text); /* Stronger error border */
+        background-color: var(--danger-color-bg); /* Darker error background */
+        color: var(--danger-color-text); /* Error text color */
+        padding: 1rem 1.5rem;
+        margin-bottom: 1.5rem;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+    }
+    
+    /* Font Awesome icons (if still used, convert to BI as well if possible) */
+    .fas {
+        margin-right: 0.5rem;
+    }
+
+    /* General ERP button style (re-define if not imported via base_achats.html) */
+    .erp-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius);
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        transition: var(--transition);
+        border: none;
+    }
+
+    /* Ensure RGB values are accessible for rgba() */
+    :root {
+        --primary-color-rgb: 91, 33, 182; /* RGB for #5b21b6 */
+        --accent-color-rgb: 124, 58, 237; /* RGB for #7c3aed */
+        /* Add other RGB values if needed for rgba() calculations */
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .o_control_panel {
+            padding: 1rem;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .o_cp_top {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .o_cp_title {
+            font-size: 1.5rem;
+        }
+
+        .o_form_sheet_bg {
+            padding: 1rem;
+        }
+        
+        .o_form_sheet {
+            padding: 1.5rem;
+        }
+        
+        .o_cp_buttons .btn {
+            width: 100%; /* Full width buttons on small screens */
+            margin-bottom: 0.5rem;
+        }
+    }
+</style>
+
+<div class="o_content">
+    <div class="o_form_view">
+        <div class="o_control_panel">
+            <div class="o_cp_top">
+                <div class="o_cp_top_left">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{% url 'achats:dashboard' %}">Achats</a></li>
+                            <li class="breadcrumb-item"><a href="{% url 'achats:liste_fournisseurs' %}">Fournisseurs</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">
+                                {% if object %}Modifier{% else %}Créer{% endif %} un fournisseur
+                            </li>
+                        </ol>
+                    </nav>
+                    <h1 class="o_cp_title">
+                        {% if object %}Modifier{% else %}Nouveau{% endif %} Fournisseur
+                    </h1>
+                </div>
+                <div class="o_cp_top_right">
+                    <div class="btn-group o_cp_buttons" role="toolbar">
+                        <button type="submit" form="fournisseur_form" class="erp-btn o_form_button_save">
+                            <i class="bi bi-save"></i> Enregistrer
+                        </button>
+                        <a href="{% if object %}{% url 'achats:detail_fournisseur' object.pk %}{% else %}{% url 'achats:liste_fournisseurs' %}{% endif %}"
+                           class="erp-btn o_form_button_cancel">
+                            <i class="bi bi-x-lg"></i> Annuler
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="o_form_sheet_bg">
+            <div class="o_form_sheet">
+                <form id="fournisseur_form" method="post" enctype="multipart/form-data" class="o_form_editable">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                        <div class="alert o_form_error"> {# Removed 'alert-danger' class to use custom styling #}
+                            {% for error in form.non_field_errors %}
+                                <p>{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="o_group">
+                        <div class="o_horizontal_separator">Informations Générales</div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="o_field_widget">
+                                    {{ form.nom|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                </div>
+                        </div>
+
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <div class="o_field_widget">
+                                    {{ form.email|as_crispy_field }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="o_field_widget">
+                                    {{ form.telephone|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="o_group mt-4">
+                        <div class="o_horizontal_separator">Adresse</div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="o_field_widget">
+                                    {{ form.adresse|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascript %}
+<script>
+$(document).ready(function() {
+    // Initialisation de Select2 pour les champs de sélection
+    $('select').select2({
+        theme: 'bootstrap4',
+        placeholder: "Sélectionnez une option",
+        allowClear: true,
+        width: '100%'
+    });
+
+    // Formatage automatique du numéro de téléphone
+    $('#id_telephone').inputmask('(+99) 999 999 999', {
+        placeholder: '(__) ___ ___ ___',
+        showMaskOnHover: false
+    });
+
+    // Odoo-style form submission
+    $('#fournisseur_form').on('submit', function(e) {
+        // Add loading indicator
+        $('.o_form_button_save').html('<i class="bi bi-arrow-clockwise bi-spin"></i> Enregistrement...');
+    });
+});
+</script>
+{% endblock %}

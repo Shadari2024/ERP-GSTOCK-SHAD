@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="card card-primary card-outline">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-title">
+            <i class="fas fa-exchange-alt"></i> Gestion des Devises
+        </h3>
+        <div class="card-tools">
+            <a href="{% url 'ajouter_devise' %}" class="btn btn-sm btn-primary">
+                <i class="fas fa-cog"></i> Configurer Devises
+            </a>
+            <a href="{% url 'ajouter_taux' %}" class="btn btn-sm btn-success">
+                <i class="fas fa-plus-circle"></i> Nouveau Taux
+            </a>
+            <button id="maj-auto" class="btn btn-sm btn-info">
+                <i class="fas fa-sync-alt"></i> Actualiser Taux
+            </button>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="info-box bg-light">
+                    <span class="info-box-icon bg-primary"><i class="fas fa-money-bill-wave"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Devise Principale</span>
+                        <span class="info-box-number">{{ parametres.devise_principale }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="info-box bg-light">
+                    <span class="info-box-icon bg-success"><i class="fas fa-check-circle"></i></span>
+                    <div class="info-box-content">
+                        <span class="info-box-text">Devises Acceptées</span>
+                        <span class="info-box-number">
+                            {% for devise in parametres.devises_acceptees %}
+                                <span class="badge bg-secondary">{{ devise }}</span>
+                            {% endfor %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <table class="table table-bordered table-hover">
+            <thead class="thead-dark">
+                <tr>
+                    <th>Devise Source</th>
+                    <th>Devise Cible</th>
+                    <th>Taux</th>
+                    <th>Mise à jour</th>
+                    <th>Type</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% include 'tresorerie/devises/partials/rates_table.html' %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card-footer clearfix">
+        <div class="float-right">
+            <a href="{% url 'historique_taux' %}" class="btn btn-default btn-sm">
+                <i class="fas fa-history"></i> Voir l'historique complet
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+$(document).ready(function() {
+    // Bouton de mise à jour automatique
+    $('#maj-auto').click(function() {
+        const btn = $(this);
+        btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Mise à jour...');
+
+        $.ajax({
+            url: "{% url 'maj_taux_auto' %}",
+            method: 'POST',
+            data: {
+                csrfmiddlewaretoken: '{{ csrf_token }}'
+            },
+            success: function(response) {
+                if (response.status === 'success') {
+                    location.reload();
+                } else {
+                    alert('Erreur : ' + response.message);
+                    btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Actualiser Taux');
+                }
+            },
+            error: function() {
+                alert('Une erreur est survenue lors de la mise à jour.');
+                btn.prop('disabled', false).html('<i class="fas fa-sync-alt"></i> Actualiser Taux');
+            }
+        });
+    });
+
+    // Tooltips
+    $('[title]').tooltip();
+});
+</script>
+{% endblock %}

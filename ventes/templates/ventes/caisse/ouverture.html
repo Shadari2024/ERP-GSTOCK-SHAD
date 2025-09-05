@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Ouvrir Caisse{% endblock %}
+
+{% block content %}
+<div class="odoo-view">
+    <div class="o_control_panel d-flex justify-content-between align-items-center mb-4">
+        <div class="o_cp_left">
+            <h1 class="text-white mb-0">Ouvrir Caisse</h1>
+        </div>
+    </div>
+
+    <div class="o_content">
+        <div class="card o_form_sheet p-4">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3 row">
+                        <label for="{{ form.montant_ouverture.id_for_label }}" class="col-sm-3 col-form-label text-end">Montant d'Ouverture :</label>
+                        <div class="col-sm-9">
+                            {{ form.montant_ouverture }}
+                            {% if form.montant_ouverture.errors %}
+                                <div class="text-danger mt-1">{{ form.montant_ouverture.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label for="{{ form.commentaire.id_for_label }}" class="col-sm-3 col-form-label text-end">Commentaire :</label>
+                        <div class="col-sm-9">
+                            {{ form.commentaire }}
+                            {% if form.commentaire.errors %}
+                                <div class="text-danger mt-1">{{ form.commentaire.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger mt-3">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-end mt-4">
+                        <button type="submit" class="btn btn-primary me-2">Ouvrir la Caisse</button>
+                        <a href="{% url 'ventes:etat_caisse' %}" class="btn btn-outline-secondary">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

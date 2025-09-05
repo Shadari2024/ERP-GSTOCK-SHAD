@@ -1,0 +1,197 @@
+{% extends "comptabilite/base.html" %}
+{% load i18n %}
+
+{% block title %}Détails du journal {{ object.code }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'comptabilite:journal_list' %}">Journaux</a></li>
+<li class="breadcrumb-item active" aria-current="page">Détails {{ object.code }}</li>
+{% endblock %}
+
+{% block page_title %}Détails du journal: {{ object.code }} - {{ object.intitule }}{% endblock %}
+
+{% block actions %}
+<div class="btn-group">
+    <a href="{% url 'comptabilite:journal_update' object.pk %}" class="btn btn-outline-primary">
+        <i class="fas fa-edit me-1"></i> Modifier
+    </a>
+    <a href="{% url 'comptabilite:journal_list' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-list me-1"></i> Retour à la liste
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Informations du journal</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="40%">Code:</th>
+                                <td><span class="badge bg-primary fs-6">{{ object.code }}</span></td>
+                            </tr>
+                            <tr>
+                                <th>Intitulé:</th>
+                                <td>{{ object.intitule }}</td>
+                            </tr>
+                            <tr>
+                                <th>Type:</th>
+                                <td>
+                                    {% if object.type_journal == 'achat' %}
+                                        <span class="badge bg-info">Achats</span>
+                                    {% elif object.type_journal == 'vente' %}
+                                        <span class="badge bg-success">Ventes</span>
+                                    {% elif object.type_journal == 'banque' %}
+                                        <span class="badge bg-primary">Banque</span>
+                                    {% elif object.type_journal == 'caisse' %}
+                                        <span class="badge bg-warning">Caisse</span>
+                                    {% elif object.type_journal == 'divers' %}
+                                        <span class="badge bg-secondary">Divers</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="40%">Statut:</th>
+                                <td>
+                                    {% if object.actif %}
+                                        <span class="badge bg-success">Actif</span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Inactif</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Entreprise:</th>
+                                <td>{{ object.entreprise }}</td>
+                            </tr>
+                            <tr>
+                                <th>Date création:</th>
+                                <td>{{ object.created_at|date:"d/m/Y H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Dernière modification:</th>
+                                <td>{{ object.updated_at|date:"d/m/Y H:i" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Statistiques d'utilisation -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title">Statistiques d'utilisation</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <div class="border rounded p-3">
+                            <h3 class="text-primary">0</h3>
+                            <p class="text-muted mb-0">Écritures ce mois</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3">
+                            <h3 class="text-success">0</h3>
+                            <p class="text-muted mb-0">Écritures totales</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3">
+                            <h3 class="text-info">{{ devise_principale_symbole }} 0.00</h3>
+                            <p class="text-muted mb-0">Montant total</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Actions rapides -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'comptabilite:ecriture_create' %}?journal={{ object.code }}" 
+                       class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Nouvelle écriture
+                    </a>
+                    <a href="{% url 'comptabilite:ecriture_list' %}?journal={{ object.code }}" 
+                       class="btn btn-outline-primary">
+                        <i class="fas fa-list me-2"></i>Voir les écritures
+                    </a>
+                    {% if perms.comptabilite.delete_journalcomptable %}
+                    <button type="button" class="btn btn-outline-danger" 
+                            data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="fas fa-trash me-2"></i>Supprimer le journal
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Journaux du même type -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Journaux du même type</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for journal in journaux_meme_type %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <a href="{% url 'comptabilite:journal_detail' journal.pk %}" 
+                           class="text-decoration-none">
+                            {{ journal.code }} - {{ journal.intitule|truncatewords:3 }}
+                        </a>
+                        <span class="badge bg-{% if journal.actif %}success{% else %}danger{% endif %}">
+                            {% if journal.actif %}Actif{% else %}Inactif{% endif %}
+                        </span>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-muted">Aucun autre journal de ce type</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de suppression -->
+{% if perms.comptabilite.delete_journalcomptable %}
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmer la suppression</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer le journal <strong>{{ object.code }} - {{ object.intitule }}</strong> ?</p>
+                <p class="text-danger">Cette action est irréversible. Toutes les écritures associées devront être modifiées.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form method="post" action="{% url 'comptabilite:journal_delete' object.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Supprimer définitivement</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

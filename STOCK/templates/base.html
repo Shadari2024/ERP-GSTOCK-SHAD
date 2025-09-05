@@ -1,0 +1,431 @@
+{% load static %}
+{% load security_filters %}
+{% load tz %}
+{% load permissions_tags %}
+{% load custom_tags %}
+
+<!DOCTYPE html>
+<html lang="fr" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}{{ request.entreprise.nom |default:"Gestion Vente & Stock" }}{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- CSS Libraries -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+  
+  <!-- CSS Personnalisé -->
+  <link rel="stylesheet" href="{% static 'css/main.css' %}">
+  
+  {% block extra_css %}{% endblock %}
+  
+  <style>
+    :root {
+      --primary-dark: #212529;
+      --primary-yellow: #ffc107;
+      --light-bg: #f8f9fa;
+      --dark-bg: #1a1a1a;
+      --dark-card: #2d2d2d;
+    }
+    
+    [data-bs-theme="dark"] {
+      --bs-body-bg: var(--dark-bg);
+      --bs-light: var(--dark-card);
+      --bs-card-bg: var(--dark-card);
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      transition: background-color 0.3s ease;
+      padding-top: 70px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Navbar améliorée */
+    .navbar {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      background-color: var(--primary-dark) !important;
+    }
+    
+    .navbar-brand {
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+    }
+    
+    .nav-link.nav-anim {
+      position: relative;
+      transition: all 0.3s ease;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      margin: 0 0.1rem;
+    }
+    
+    .nav-link.nav-anim:hover {
+      color: var(--primary-yellow) !important;
+      background-color: rgba(255, 193, 7, 0.1);
+    }
+    
+    .nav-link.active {
+      color: var(--primary-yellow) !important;
+      font-weight: 600;
+    }
+    
+    /* Section utilisateur */
+    .user-info {
+      display: flex;
+      align-items: center;
+      color: white;
+    }
+    
+    .user-role {
+      background-color: var(--primary-yellow);
+      color: var(--primary-dark);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin: 0 0.5rem;
+    }
+    
+    /* Toast messages */
+    .toast-container {
+      z-index: 1100;
+    }
+    
+    /* Loader */
+    #loadingOverlay {
+      background-color: rgba(0, 0, 0, 0.7);
+      z-index: 2000;
+    }
+
+    /* Logo entreprise */
+    .entreprise-logo {
+      height: 40px;
+      width: auto;
+      margin-right: 10px;
+    }
+
+    /* Contenu principal */
+    main {
+      flex: 1;
+      padding-bottom: 20px;
+    }
+
+    /* Footer */
+    footer {
+      margin-top: auto;
+    }
+  </style>
+  <link rel="icon" href="{% static 'images/favicon.png' %}" type="image/png">
+  <link rel="shortcut icon" href="{% static 'images/favicon.png' %}" type="image/png">
+</head>
+
+<body>
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="{% url 'security:admin_dashboard' %}">
+        {% if request.entreprise %}
+          {% if request.entreprise.logo %}
+            <img src="{{ request.entreprise.logo.url }}" 
+                 alt="{{ request.entreprise.nom }}"
+                 class="entreprise-logo">
+          {% endif %}
+          <span>{{ request.entreprise.nom }} </span>
+           {% comment %} <span>{{ request.entreprise.slogan }}</span> {% endcomment %}
+        {% else %}
+          <span>StockVentePRO</span>
+        {% endif %}
+      </a>
+      
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      
+      <!-- Menu mobile -->
+      <div class="mobile-user-menu d-lg-none ms-auto">
+        <div class="dropdown">
+          <button class="btn btn-outline-warning dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            <i class="bi bi-person-fill"></i>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            {% if user.is_authenticated %}
+              <li><span class="dropdown-item-text">Connecté: {{ user.username }}</span></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="{% url 'security:mon_profil' %}" data-bs-toggle="tooltip" data-bs-placement="right" title="Gérer votre profil utilisateur"><i class="bi bi-person me-2"></i>Profil</a></li>
+              <li><a class="dropdown-item" href="{% url 'security:changement_mdp' %}" data-bs-toggle="tooltip" data-bs-placement="right" title="Changer votre mot de passe"><i class="bi bi-lock me-2"></i>Mot de passe</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item text-danger" href="{% url 'security:deconnexion' %}" data-bs-toggle="tooltip" data-bs-placement="right" title="Se déconnecter du système"><i class="bi bi-box-arrow-right me-2"></i>Déconnexion</a></li>
+            {% else %}
+              <li><a class="dropdown-item" href="{% url 'security:connexion' %}" data-bs-toggle="tooltip" data-bs-placement="right" title="Accéder à votre compte"><i class="bi bi-box-arrow-in-right me-2"></i>Connexion</a></li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+
+      <!-- Menu desktop -->
+      <div class="collapse navbar-collapse" id="mainNavbar">
+        <ul class="navbar-nav me-auto">
+          {% if user.is_authenticated %}
+            <!-- Menu Admin -->
+            {% if user.role == 'ADMIN' or user.is_superuser %}
+         <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'comptabilite:plan_comptable_list' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion des entrées/sorties de fonds et états financiers">
+                  <i class="fas fa-money-bill-wave me-1"></i> Finance
+                </a>
+              </li> 
+              <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'gestion_stock_et_produit' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion des produits, stocks et inventaires">
+                  <i class="fas fa-boxes me-1"></i> Stock
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'venteModule' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion des ventes en ligne et commandes clients">
+                  <i class="fas fa-store me-1"></i> Vente
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'Liste_parametres' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Configuration du système et paramètres">
+                  <i class="fas fa-cogs me-1"></i> Configuration
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'security:journal_activite' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Historique des activités du système">
+                  <i class="bi bi-journal-text me-1"></i> Journal
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'achats:liste_commandes' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion des achats et fournisseurs">
+                  <i class="fas fa-shopping-cart me-1"></i> Achats
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'inventaitre_liste' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Statistiques et rapports d'activité">
+                  <i class="fas fa-chart-bar me-1"></i> Statistiques
+                </a>
+              </li>
+       
+                <a class="nav-link nav-anim" href="{% url 'grh:grh' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Outils d'intelligence artificielle pour l'analyse">
+                  <i class="fas fa-robot me-1"></i> GRH
+                </a>
+              </li>  
+            {% endif %}
+            
+            <!-- Menu Caissier -->
+            {% if user.role == 'CAISSIER' %}
+              <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'ventes:caissier_dashboard' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Interface de caisse pour les ventes physiques">
+                  <i class="fas fa-cash-register me-1"></i> Point de vente
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'liste_client' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion de la clientèle et fiches clients">
+                  <i class="fas fa-users me-1"></i> Clients
+                </a>
+              </li>
+            {% endif %}
+            
+            <!-- Menu Vendeur -->
+            {% if user.role == 'VENDEUR' %}
+        
+              <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'gestion_stock_et_produit' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Consultation des produits disponibles">
+                  <i class="fas fa-boxes me-1"></i> Stock
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'vente_enligne_' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion des ventes et commandes clients">
+                  <i class="fas fa-store me-1"></i> Vente
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'Liste_parametres' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Paramètres de l'application">
+                  <i class="fas fa-cogs me-1"></i> Configuration
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'security:journal_activite' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Consultation des activités">
+                  <i class="bi bi-journal-text me-1"></i> Journal
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'Achats_gestion' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Passation de commandes fournisseurs">
+                  <i class="fas fa-shopping-cart me-1"></i> Achats
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'inventaitre_liste' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Statistiques de vente et performance">
+                  <i class="fas fa-chart-bar me-1"></i> Statistiques
+                </a>
+              </li>
+              {% comment %} <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'fonctionnamlites_IA' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Suggestions et analyses intelligentes">
+                  <i class="fas fa-robot me-1"></i> IA
+                </a>
+              </li> {% endcomment %}
+            {% endif %}
+            
+            <!-- Menu Stock -->
+            {% if user.role == 'STOCK' %}
+              <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'produits_par_categorie' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion complète des produits et références">
+                  <i class="fas fa-box-open me-1"></i> Produits
+                </a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'liste_cat' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Organisation des catégories et familles de produits">
+                  <i class="fas fa-tags me-1"></i> Catégories
+                </a>
+              </li>
+            {% endif %}
+          {% endif %}
+        </ul>
+        
+        <!-- User info desktop -->
+        {% if user.is_authenticated %}
+        <div class="d-none d-lg-flex align-items-center">
+          <span class="text-white me-2">{{ user.get_full_name|default:user.username }}</span>
+          <span class="user-role">{{ user.get_role_display }}</span>
+          
+          <div class="dropdown ms-3">
+            <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Menu utilisateur">
+              <i class="bi bi-person-circle"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="{% url 'security:mon_profil' %}" data-bs-toggle="tooltip" data-bs-placement="right" title="Gérer votre profil utilisateur"><i class="bi bi-person me-2"></i>Mon profil</a></li>
+              <li><a class="dropdown-item" href="{% url 'security:changement_mdp' %}" data-bs-toggle="tooltip" data-bs-placement="right" title="Changer votre mot de passe"><i class="bi bi-lock me-2"></i>Mot de passe</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item text-danger" href="{% url 'security:deconnexion' %}" data-bs-toggle="tooltip" data-bs-placement="right" title="Se déconnecter du système"><i class="bi bi-box-arrow-right me-2"></i>Déconnexion</a></li>
+            </ul>
+          </div>
+          
+          <button class="btn btn-link text-warning ms-2 theme-toggle" id="themeToggle" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Basculer mode clair/sombre">
+            <i class="bi bi-sun-fill d-none"></i>
+            <i class="bi bi-moon-fill"></i>
+          </button>
+        </div>
+        {% else %}
+        <div class="d-none d-lg-block">
+          <a href="{% url 'security:connexion' %}" class="btn btn-outline-warning" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Accéder à votre compte">Connexion</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+
+  <!-- Messages -->
+  {% if messages %}
+  <div class="toast-container position-fixed top-0 end-0 p-3">
+    {% for message in messages %}
+    <div class="toast show align-items-center text-badge-success {% if message.tags %}{{ message.tags }}{% else %}bg-primary{% endif %} border-0" role="alert">
+      <div class="d-flex">
+        <div class="toast-body">
+          {{ message }}
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Contenu principal -->
+  <main class="container-fluid mt-4">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-dark text-white py-3">
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-md-6 text-center text-md-start">
+          <span class="text-muted">&copy; {{ now|date:"Y" }} {{ parametre.nom_societe|default:"StockVentePRO" }}</span>
+        </div>
+        <div class="col-md-6 text-center text-md-end">
+          <span class="text-muted">Version 1.0.0</span>
+          {% if user.is_authenticated %}
+            <span class="text-muted mx-2">|</span>
+            <span class="text-warning">Connecté en tant que {{ user.username }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Loader -->
+  <div id="loadingOverlay" class="d-none position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center">
+    <div class="spinner-border text-warning" style="width: 3rem; height: 3rem;" role="status">
+      <span class="visually-hidden">Chargement...</span>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{% static 'js/main.js' %}"></script>
+  
+  <script>
+    // Gestion du dark/light mode
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialisation des tooltips
+      const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+      });
+
+      const themeToggle = document.getElementById('themeToggle');
+      const sunIcon = themeToggle.querySelector('.bi-sun-fill');
+      const moonIcon = themeToggle.querySelector('.bi-moon-fill');
+      const html = document.documentElement;
+      
+      // Vérifier le thème stocké
+      const savedTheme = localStorage.getItem('theme') || 'light';
+      if (savedTheme === 'dark') {
+        html.setAttribute('data-bs-theme', 'dark');
+        sunIcon.classList.remove('d-none');
+        moonIcon.classList.add('d-none');
+      }
+      
+      // Basculer entre les thèmes
+      themeToggle.addEventListener('click', function() {
+        if (html.getAttribute('data-bs-theme') === 'dark') {
+          html.setAttribute('data-bs-theme', 'light');
+          localStorage.setItem('theme', 'light');
+          sunIcon.classList.add('d-none');
+          moonIcon.classList.remove('d-none');
+        } else {
+          html.setAttribute('data-bs-theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+          sunIcon.classList.remove('d-none');
+          moonIcon.classList.add('d-none');
+        }
+      });
+      
+      // Fermeture automatique des toasts
+      const toastElList = document.querySelectorAll('.toast');
+      const toastList = [...toastElList].map(toastEl => {
+        const toast = new bootstrap.Toast(toastEl, {
+          autohide: true,
+          delay: 5000
+        });
+        toast.show();
+        return toast;
+      });
+      
+      // Gestion du loader sur les formulaires
+      document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', function() {
+          document.getElementById('loadingOverlay').classList.remove('d-none');
+        });
+      });
+    });
+  </script>
+  
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

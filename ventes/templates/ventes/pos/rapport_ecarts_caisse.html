@@ -1,0 +1,418 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+{% load ventes_filters %}
+
+{% block title %}{% trans "Rapport des Écarts de Caisse" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    {% trans "Rapport des Écarts de Caisse" %} - {{ point_de_vente.nom }}
+                </h1>
+                <div>
+                    <a href="{% url 'ventes:ecarts_caisse' pk=point_de_vente.id %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        {% trans "Retour" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">{% trans "Date début" %}</label>
+                    <input type="date" name="date_debut" class="form-control" value="{{ date_debut }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{% trans "Date fin" %}</label>
+                    <input type="date" name="date_fin" class="form-control" value="{{ date_fin }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{% trans "Caissier" %}</label>
+                    <select name="caissier" class="form-select">
+                        <option value="">{% trans "Tous les caissiers" %}</option>
+                        {% for caissier in caissiers %}
+                        <option value="{{ caissier.id }}" {% if request.GET.caissier == caissier.id|stringformat:"s" %}selected{% endif %}>
+                            {{ caissier.get_full_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-filter me-1"></i> {% trans "Actualiser" %}
+                        </button>
+                        <a href="{% url 'ventes:rapport_ecarts_caisse' pk=point_de_vente.id %}" class="btn btn-secondary">
+                            <i class="fas fa-undo me-1"></i> {% trans "Réinitialiser" %}
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h5 class="card-title">{% trans "Total Excédents" %}</h5>
+                    <h2 class="stat-number">{{ total_excedent|floatformat:2 }} {{ devise_symbole }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body text-center">
+                    <h5 class="card-title">{% trans "Total Manquants" %}</h5>
+                    <h2 class="stat-number">{{ total_manquant|floatformat:2 }} {{ devise_symbole }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-{% if solde_total >= 0 %}info{% else %}warning{% endif %} text-white">
+                <div class="card-body text-center">
+                    <h5 class="card-title">{% trans "Solde Total" %}</h5>
+                    <h2 class="stat-number">{{ solde_total|floatformat:2 }} {{ devise_symbole }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-secondary text-white">
+                <div class="card-body text-center">
+                    <h5 class="card-title">{% trans "Total Écarts" %}</h5>
+                    <h2 class="stat-number">{{ total_ecarts }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-users me-2"></i>
+                {% trans "Écarts par Caissier" %}
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Caissier" %}</th>
+                            <th>{% trans "Sessions" %}</th>
+                            <th>{% trans "Excédents" %}</th>
+                            <th>{% trans "Manquants" %}</th>
+                            <th>{% trans "Solde" %}</th>
+                            <th>{% trans "Nombre d'écarts" %}</th>
+                            <th>{% trans "Moyenne par session" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stat in stats_caissiers %}
+                        <tr>
+                            <td>
+                                <strong>{{ stat.caissier.get_full_name }}</strong>
+                                <br>
+                                <small class="text-muted">{{ stat.caissier.email }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ stat.nombre_sessions }}</span>
+                            </td>
+                            <td class="text-success">{{ stat.total_excedent|floatformat:2 }} {{ devise_symbole }}</td>
+                            <td class="text-danger">{{ stat.total_manquant|floatformat:2 }} {{ devise_symbole }}</td>
+                            <td class="fw-bold {% if stat.solde >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ stat.solde|floatformat:2 }} {{ devise_symbole }}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ stat.nombre_ecarts }}</span>
+                            </td>
+                            <td class="{% if stat.moyenne_session >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ stat.moyenne_session|floatformat:2 }} {{ devise_symbole }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fas fa-users-slash fa-2x mb-2"></i>
+                                <p>{% trans "Aucun écart enregistré pour cette période" %}</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="fw-bold">
+                        <tr>
+                            <td colspan="2">{% trans "TOTAUX" %}</td>
+                            <td class="text-success">{{ total_excedent|floatformat:2 }} {{ devise_symbole }}</td>
+                            <td class="text-danger">{{ total_manquant|floatformat:2 }} {{ devise_symbole }}</td>
+                            <td class="{% if solde_total >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ solde_total|floatformat:2 }} {{ devise_symbole }}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ total_ecarts }}</span>
+                            </td>
+                            <td class="{% if moyenne_generale >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ moyenne_generale|floatformat:2 }} {{ devise_symbole }}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-list me-2"></i>
+                {% trans "Détail des Écarts" %} ({{ ecarts.count }})
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if ecarts %}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Date" %}</th>
+                            <th>{% trans "Caissier" %}</th>
+                            <th>{% trans "Session" %}</th>
+                            <th>{% trans "Type" %}</th>
+                            <th>{% trans "Montant" %}</th>
+                            <th>{% trans "Motif" %}</th>
+                            <th>{% trans "Enregistré par" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ecart in ecarts %}
+                        <tr>
+                            <td>{{ ecart.date_creation|date:"d/m/Y H:i" }}</td>
+                            <td>{{ ecart.caissier.get_full_name }}</td>
+                            <td>
+                                <span class="badge bg-dark">Session {{ ecart.session.id }}</span>
+                                <br>
+                                <small class="text-muted">{{ ecart.session.date_ouverture|date:"d/m/Y" }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if ecart.type_ecart == 'excedent' %}success{% elif ecart.type_ecart == 'manquant' %}danger{% else %}info{% endif %}">
+                                    {{ ecart.get_type_ecart_display }}
+                                </span>
+                            </td>
+                            <td class="fw-bold {% if ecart.type_ecart == 'excedent' %}text-success{% elif ecart.type_ecart == 'manquant' %}text-danger{% endif %}">
+                                {{ ecart.montant|floatformat:2 }} {{ devise_symbole }}
+                            </td>
+                            <td>{{ ecart.motif|default:"-"|truncatewords:8 }}</td>
+                            <td>{{ ecart.created_by.get_full_name|default:"-" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if is_paginated %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center mt-3">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            {% trans "Précédent" %}
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            {% trans "Suivant" %}
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+            {% else %}
+            <div class="text-center text-muted py-4">
+                <i class="fas fa-search fa-2x mb-2"></i>
+                <p>{% trans "Aucun écart trouvé pour les critères sélectionnés" %}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        {% trans "Répartition des Écarts par Caissier" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div style="height: 300px;">
+                        <canvas id="chartEcartsCaissiers"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        {% trans "Répartition par Type d'Écart" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div style="height: 300px;">
+                        <canvas id="chartTypesEcarts"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-download me-2"></i>
+                {% trans "Exporter le Rapport" %}
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="btn-group">
+                <a href="?{% for key, value in request.GET.items %}{% if key != 'export' %}{{ key }}={{ value }}&{% endif %}{% endfor %}export=pdf" 
+                   class="btn btn-danger">
+                    <i class="fas fa-file-pdf me-2"></i> PDF
+                </a>
+                <a href="?{% for key, value in request.GET.items %}{% if key != 'export' %}{{ key }}={{ value }}&{% endif %}{% endfor %}export=excel" 
+                   class="btn btn-success">
+                    <i class="fas fa-file-excel me-2"></i> Excel
+                </a>
+                <a href="?{% for key, value in request.GET.items %}{% if key != 'export' %}{{ key }}={{ value }}&{% endif %}{% endfor %}export=csv" 
+                   class="btn btn-info">
+                    <i class="fas fa-file-csv me-2"></i> CSV
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Récupérer le symbole de la devise du contexte Django
+    const deviseSymbole = "{{ devise_symbole|escapejs }}";
+
+    // Chart 1: Écarts par caissier
+    const ctx1 = document.getElementById('chartEcartsCaissiers').getContext('2d');
+    
+    const caissiers = [{% for stat in stats_caissiers %}'{{ stat.caissier.get_full_name }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+    const soldes = [{% for stat in stats_caissiers %}{{ stat.solde }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+    
+    new Chart(ctx1, {
+        type: 'bar',
+        data: {
+            labels: caissiers,
+            datasets: [{
+                label: 'Solde des écarts (' + deviseSymbole + ')',
+                data: soldes,
+                backgroundColor: soldes.map(solde => solde >= 0 ? 'rgba(40, 167, 69, 0.8)' : 'rgba(220, 53, 69, 0.8)'),
+                borderColor: soldes.map(solde => solde >= 0 ? 'rgba(40, 167, 69, 1)' : 'rgba(220, 53, 69, 1)'),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.parsed.x.toFixed(2) + deviseSymbole;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Solde (' + deviseSymbole + ')'
+                    }
+                }
+            }
+        }
+    });
+
+    // Chart 2: Répartition par type d'écart
+    const ctx2 = document.getElementById('chartTypesEcarts').getContext('2d');
+    
+    new Chart(ctx2, {
+        type: 'pie',
+        data: {
+            labels: ['{% trans "Excédents" %}', '{% trans "Manquants" %}', '{% trans "Régularisations" %}'],
+            datasets: [{
+                data: [{{ total_excedent }}, {{ total_manquant }}, {{ total_regularisation|default:0 }}],
+                backgroundColor: [
+                    'rgba(40, 167, 69, 0.8)',
+                    'rgba(220, 53, 69, 0.8)',
+                    'rgba(23, 162, 184, 0.8)'
+                ],
+                borderColor: [
+                    'rgba(40, 167, 69, 1)',
+                    'rgba(220, 53, 69, 1)',
+                    'rgba(23, 162, 184, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = Math.round((value / total) * 100);
+                            return context.label + ': ' + value.toFixed(2) + deviseSymbole + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

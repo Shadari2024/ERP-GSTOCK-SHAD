@@ -1,0 +1,35 @@
+{% extends 'parametres/base.html' %}
+{% load i18n crispy_forms_tags %}
+
+{% block title %}
+    {% if object %}{% trans "Modifier devise" %}{% else %}{% trans "Ajouter devise" %}{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            {% if object %}
+                <i class="bi bi-pencil-square"></i> {% trans "Modifier la devise" %}
+            {% else %}
+                <i class="bi bi-plus-circle"></i> {% trans "Ajouter une devise" %}
+            {% endif %}
+        </h3>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div class="card-body">
+            {{ form|crispy }}
+        </div>
+        <div class="card-footer d-flex justify-content-between">
+            <a href="{% url 'parametres:devise_list' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> {% trans "Retour" %}
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> {% trans "Enregistrer" %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

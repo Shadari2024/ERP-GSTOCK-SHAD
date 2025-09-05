@@ -1,0 +1,532 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h2 class="h5 mb-0">
+                        <i class="fas fa-chart-line me-2"></i>
+                        Prévisions de ventes pour {{ produit.nom }}
+                    </h2>
+                    <span class="badge bg-light text-dark">
+                        {{ produit.code_barre_numero|default:"N/A" }}
+                    </span>
+                </div>
+
+                <div class="card-body">
+                    {% if error %}
+                        <div class="alert alert-danger alert-dismissible fade show">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            <strong>Erreur :</strong> {{ error }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endif %}
+
+                    {% if is_fallback %}
+                    <div class="alert alert-warning">
+                        <h5><i class="fas fa-info-circle me-2"></i> Mode de repli activé</h5>
+                        <div class="mt-3">
+                            <table class="table table-sm bg-white">
+                                <tr>
+                                    <th>Raison</th>
+                                    <td>{{ fallback_reason }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Méthode</th>
+                                    <td>Moyenne mobile</td>
+                                </tr>
+                                <tr>
+                                    <th>Ventes/jour estimées</th>
+                                    <td>{{ daily_sales|floatformat:2 }} unités</td>
+                                </tr>
+                                <tr>
+                                    <th>Intervalle de confiance</th>
+                                    <td>70-130%</td>
+                                </tr>
+                                <tr>
+                                    <th>Données disponibles</th>
+                                    <td>{{ data_points }} vente(s)</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Indicateurs clés -->
+                    <div class="row mb-4">
+                        <div class="col-md-3 mb-3">
+                            <div class="card border-start-3 border-start-{% if produit.stock < produit.seuil_alerte %}danger{% else %}success{% endif %} h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="text-muted mb-2">Stock Actuel</h6>
+                                            <h3 class="mb-0">{{ produit.stock|intcomma }}</h3>
+                                        </div>
+                                        <div class="bg-{% if produit.stock < produit.seuil_alerte %}danger{% else %}success{% endif %}-light rounded p-3">
+                                            <i class="fas fa-boxes text-{% if produit.stock < produit.seuil_alerte %}danger{% else %}success{% endif %}"></i>
+                                        </div>
+                                    </div>
+                                    <p class="mt-3 mb-0 text-sm">
+                                        Seuil d'alerte: {{ produit.seuil_alerte|intcomma }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <div class="card border-start-3 border-start-info h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="text-muted mb-2">Précision du modèle</h6>
+                                            <h3 class="mb-0">
+                                                {% if performance.mdape %}
+                                                    {{ performance.mdape|floatformat:1 }}%
+                                                {% else %}
+                                                    N/A
+                                                {% endif %}
+                                            </h3>
+                                        </div>
+                                        <div class="bg-info-light rounded p-3">
+                                            <i class="fas fa-percentage text-info"></i>
+                                        </div>
+                                    </div>
+                                    <p class="mt-3 mb-0 text-sm">
+                                        Basé sur {{ data_points|intcomma }} point(s) de données
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <div class="card border-start-3 border-start-primary h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="text-muted mb-2">Période analysée</h6>
+                                            <h3 class="mb-0">{{ forecast_data|length }} jours</h3>
+                                        </div>
+                                        <div class="bg-primary-light rounded p-3">
+                                            <i class="fas fa-calendar-alt text-primary"></i>
+                                        </div>
+                                    </div>
+                                    <p class="mt-3 mb-0 text-sm">
+                                        Jusqu'au {% with last_item=forecast_data|last %}{{ last_item.0|date:"d/m/Y" }}{% endwith %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <div class="card border-start-3 border-start-warning h-100">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="text-muted mb-2">Modèle utilisé</h6>
+                                            <h4 class="mb-0">
+                                                {% if is_fallback %}
+                                                    Moyenne
+                                                {% else %}
+                                                    Prophet
+                                                {% endif %}
+                                            </h4>
+                                        </div>
+                                        <div class="bg-warning-light rounded p-3">
+                                            <i class="fas fa-project-diagram text-warning"></i>
+                                        </div>
+                                    </div>
+                                    <p class="mt-3 mb-0 text-sm">
+                                        Intervalle: {{ performance.interval|default:"80%" }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Diagnostic des données -->
+                    <div class="card mb-4 d-print-none">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Diagnostic des données</h5>
+                        </div>
+                        <div class="card-body">
+                            <p>Nombre de points de données: {{ forecast_data|length }}</p>
+                            <p>Première entrée: {{ forecast_data.0|default:"Aucune donnée" }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Graphique principal -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Visualisation des prévisions</h5>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-secondary" id="zoomIn" title="Zoom avant">
+                                    <i class="fas fa-search-plus"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" id="zoomOut" title="Zoom arrière">
+                                    <i class="fas fa-search-minus"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" id="resetZoom" title="Réinitialiser">
+                                    <i class="fas fa-expand"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container" style="position: relative; height: 400px;">
+                                <canvas id="forecastChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Détails des prévisions -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Détails des prévisions journalières</h5>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary me-2" id="exportData">
+                                    <i class="fas fa-file-export me-1"></i> Exporter
+                                </button>
+                                <button class="btn btn-sm btn-outline-success" id="refreshData">
+                                    <i class="fas fa-sync-alt me-1"></i> Actualiser
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="bg-light">
+                                        <tr>
+                                            <th>Date</th>
+                                            <th class="text-end">Prévision</th>
+                                            <th class="text-end">Minimum</th>
+                                            <th class="text-end">Maximum</th>
+                                            <th class="text-end">Intervalle</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for date, pred, min, max in forecast_data %}
+                                        <tr>
+                                            <td>{{ date|date:"d/m/Y" }}</td>
+                                            <td class="text-end">{{ pred|floatformat:2 }}</td>
+                                            <td class="text-end">{{ min|floatformat:2 }}</td>
+                                            <td class="text-end">{{ max|floatformat:2 }}</td>
+                                            <td class="text-end">
+                                                {% widthratio max pred 100 as upper_ratio %}
+                                                {% widthratio min pred 100 as lower_ratio %}
+                                                <span class="badge bg-light text-dark">
+                                                    {{ lower_ratio|floatformat:"0" }}% à {{ upper_ratio|floatformat:"0" }}%
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Historique des prévisions -->
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Historique des prévisions</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if historique_previsions %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Modèle</th>
+                                            <th class="text-end">Prévu</th>
+                                            <th class="text-end">Réel</th>
+                                            <th class="text-end">Écart</th>
+                                            <th class="text-end">Précision</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for prev in historique_previsions %}
+                                        <tr>
+                                            <td>{{ prev.date_prevision|date:"d/m/Y" }}</td>
+                                            <td>{{ prev.get_modele_utilise_display }}</td>
+                                            <td class="text-end">{{ prev.quantite_predite|floatformat:2 }}</td>
+                                            <td class="text-end">
+                                                {% if prev.quantite_reelle is not None %}
+                                                    {{ prev.quantite_reelle|floatformat:2 }}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end {% if prev.ecart > 0 %}text-success{% elif prev.ecart < 0 %}text-danger{% endif %}">
+                                                {% if prev.ecart is not None %}
+                                                    {{ prev.ecart|floatformat:2 }}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end">
+                                                {% if prev.precision %}
+                                                    {{ prev.precision|floatformat:1 }}%
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-info">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-info-circle me-3 fa-2x"></i>
+                                    <div>
+                                        <h5 class="mb-1">Aucun historique disponible</h5>
+                                        <p class="mb-0">Les nouvelles prévisions seront automatiquement enregistrées dans l'historique.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-light">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>
+                                Généré le {% now "DATETIME_FORMAT" %}
+                                | Modèle: {% if is_fallback %}Moyenne mobile{% else %}Prophet{% endif %}
+                                {% if performance and performance.mdape %}
+                                | Précision: {{ performance.mdape|floatformat:1 }}%
+                                {% endif %}
+                            </small>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <a href="{% url 'produits_par_categorie' %}" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i> Retour aux produits
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Vérification de l'élément canvas
+    const ctx = document.getElementById('forecastChart');
+    if (!ctx) {
+        console.error("Canvas introuvable");
+        return;
+    }
+
+    // Test avec des données factices
+    function createTestChart() {
+        const testData = {
+            labels: ['2023-01-01', '2023-01-02', '2023-01-03'],
+            datasets: [{
+                label: 'Test',
+                data: [10, 20, 15],
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        };
+        
+        return new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: testData,
+            options: { responsive: true }
+        });
+    }
+
+    // Tentative avec les données réelles
+    function createRealChart() {
+        {% if forecast_data %}
+        // Préparation des données
+        const dates = [];
+        const predictions = [];
+        const minValues = [];
+        const maxValues = [];
+
+        {% for item in forecast_data %}
+            dates.push("{{ item.0 }}");
+            predictions.push({{ item.1 }});
+            minValues.push({{ item.2 }});
+            maxValues.push({{ item.3 }});
+        {% endfor %}
+
+        console.log("Données de prévision:", {dates, predictions, minValues, maxValues});
+
+        if (dates.length === 0) {
+            console.error("Aucune donnée disponible");
+            return null;
+        }
+
+        try {
+            return new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [
+                        {
+                            label: 'Prévision moyenne',
+                            data: predictions,
+                            borderColor: '#4e73df',
+                            backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                            borderWidth: 2,
+                            tension: 0.1,
+                            fill: true
+                        },
+                        {
+                            label: 'Fourchette basse',
+                            data: minValues,
+                            borderColor: 'rgba(231, 74, 59, 0.5)',
+                            backgroundColor: 'rgba(231, 74, 59, 0.02)',
+                            borderWidth: 1,
+                            borderDash: [5, 5],
+                            pointRadius: 0
+                        },
+                        {
+                            label: 'Fourchette haute',
+                            data: maxValues,
+                            borderColor: 'rgba(28, 200, 138, 0.5)',
+                            backgroundColor: 'rgba(28, 200, 138, 0.02)',
+                            borderWidth: 1,
+                            borderDash: [5, 5],
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        zoom: {
+                            zoom: {
+                                wheel: { enabled: true },
+                                pinch: { enabled: true },
+                                mode: 'xy',
+                            },
+                            pan: {
+                                enabled: true,
+                                mode: 'xy',
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toFixed(2);
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    }
+                },
+                plugins: [ChartZoom]
+            });
+        } catch (e) {
+            console.error("Erreur création graphique:", e);
+            return null;
+        }
+        {% else %}
+            console.warn("Aucune donnée de prévision disponible");
+            return null;
+        {% endif %}
+    }
+
+    // Création du graphique
+    let chart = createRealChart();
+    if (!chart) {
+        console.warn("Création d'un graphique de test");
+        chart = createTestChart();
+    }
+
+    // Gestion des boutons de zoom
+    if (chart) {
+        document.getElementById('zoomIn')?.addEventListener('click', function() {
+            chart.zoom(1.1);
+        });
+
+        document.getElementById('zoomOut')?.addEventListener('click', function() {
+            chart.zoom(0.9);
+        });
+
+        document.getElementById('resetZoom')?.addEventListener('click', function() {
+            chart.resetZoom();
+        });
+    }
+
+    // Export des données
+    document.getElementById('exportData')?.addEventListener('click', function() {
+        {% if forecast_data %}
+        const data = {
+            produit: {
+                id: {{ produit.id }},
+                nom: "{{ produit.nom }}",
+                reference: "{{ produit.code_barre_numero|default:'N/A' }}"
+            },
+            parametres: {
+                modele: "{% if is_fallback %}moyenne{% else %}prophet{% endif %}",
+                intervalle_confiance: "{{ performance.interval|default:'80%' }}",
+                precision: {{ performance.mdape|default:"null" }},
+                donnees_utilisees: {{ data_points }}
+            },
+            previsions: [
+                {% for item in forecast_data %}
+                {
+                    date: "{{ item.0 }}",
+                    prevision: {{ item.1 }},
+                    minimum: {{ item.2 }},
+                    maximum: {{ item.3 }}
+                }{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            meta: {
+                genere_le: new Date().toISOString(),
+                version: "1.0"
+            }
+        };
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `previsions_{{ produit.nom|slugify }}_{% now "Ymd" %}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        {% endif %}
+    });
+
+    // Actualisation des données
+    document.getElementById('refreshData')?.addEventListener('click', function() {
+        window.location.reload();
+    });
+});
+</script>
+{% endblock %}

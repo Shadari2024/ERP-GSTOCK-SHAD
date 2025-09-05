@@ -1,0 +1,507 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% load math_filters %}
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête amélioré -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'achat_list' %}">Achats</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Retour fournisseur #{{ achat.id }}</li>
+                </ol>
+            </nav>
+            <h1 class="h3 mb-0 text-gray-800">
+                <i class="fas fa-undo-alt me-2"></i>Gestion des retours
+                <small class="text-muted">pour {{ achat.produit.nom }}</small>
+            </h1>
+        </div>
+        <div>
+            <a href="{% url 'detail_achat' achat.id %}" class="btn btn-sm btn-outline-primary">
+                <i class="fas fa-eye me-1"></i> Voir l'achat
+            </a>
+        </div>
+    </div>
+
+    {% include 'partials/messages.html' %}
+
+    <!-- Carte d'information complète -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="m-0 font-weight-bold">Détails de l'achat</h5>
+                <span class="badge bg-white text-primary">Facture: {{ achat.numero_facture|default:"Non renseignée" }}</span>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- Colonne Produit -->
+                <div class="col-md-3 border-end">
+                    <dl>
+                        <dt class="text-muted small">Produit</dt>
+                        <dd class="h5">{{ achat.produit.nom }}</dd>
+                        <dt class="text-muted small mt-3">Code</dt>
+                        <dd>{{ achat.produit.code|default:"-" }}</dd>
+                    </dl>
+                </div>
+                
+                <!-- Colonne Quantités -->
+                <div class="col-md-3 border-end">
+                    <dl>
+                        <dt class="text-muted small">Quantité initiale</dt>
+                        <dd>{{ achat.quantite|intcomma }}</dd>
+                        
+                        <dt class="text-muted small mt-3">Quantité effective</dt>
+                        <dd class="font-weight-bold {% if quantite_effective < achat.quantite %}text-warning{% endif %}">
+                            {{ quantite_effective|intcomma }}
+                            {% if quantite_effective < achat.quantite %}
+                            <small class="text-danger">(-{{ achat.quantite|subtract:quantite_effective|intcomma }})</small>
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+                
+                <!-- Colonne Montants -->
+                <div class="col-md-3 border-end">
+                    <dl>
+                        <dt class="text-muted small">Montant initial</dt>
+                        <dd>{{ achat.total_achat|floatformat:2|intcomma }} {{ symbole_devise }}</dd>
+                        
+                        <dt class="text-muted small mt-3">Montant effectif</dt>
+                        <dd class="font-weight-bold {% if montant_effectif < achat.total_achat %}text-danger{% endif %}">
+                            {{ montant_effectif|floatformat:2|intcomma }} {{ symbole_devise }}
+                            {% if montant_effectif < achat.total_achat %}
+                            <small class="text-danger">(-{{ achat.total_achat|subtract:montant_effectif|floatformat:2|intcomma }})</small>
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+                
+                <!-- Colonne Statistiques -->
+                <div class="col-md-3">
+                    <div class="alert {% if quantite_disponible <= 0 %}alert-danger{% else %}alert-info{% endif %} mb-0">
+                        <h6 class="alert-heading mb-3">
+                            <i class="fas fa-chart-bar me-2"></i>Statistiques retours
+                        </h6>
+                        <div class="d-flex justify-content-between">
+                            <span>Nombre de retours:</span>
+                            <strong>{{ retours_existants.count }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Total retourné:</span>
+                            <strong class="text-danger">{{ quantite_retournee_totale|intcomma }}</strong>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between font-weight-bold">
+                            <span>Disponible:</span>
+                            <strong class="{% if quantite_disponible <= 0 %}text-danger{% endif %}">
+                                {{ quantite_disponible|intcomma }}
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulaire de retour amélioré -->
+    <div class="card shadow mb-4">
+        <div class="card-header {% if quantite_disponible <= 0 %}bg-secondary{% else %}bg-success{% endif %} text-white py-3">
+            <h5 class="m-0 font-weight-bold">
+                <i class="fas fa-exchange-alt me-2"></i>Enregistrer un nouveau retour
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if quantite_disponible <= 0 %}
+                <div class="alert alert-warning mb-0">
+                    <i class="fas fa-ban me-2"></i>
+                    <strong>Aucun retour possible</strong> - Toute la quantité a déjà été retournée.
+                </div>
+            {% else %}
+                <form method="post" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    <div class="row g-3 align-items-end">
+                        <!-- Quantité -->
+                        <div class="col-md-4">
+                            <label for="quantite_retournee" class="form-label">
+                                Quantité à retourner <small class="text-muted">(max: {{ quantite_disponible|intcomma }})</small>
+                            </label>
+                            <div class="input-group">
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="quantite_retournee" 
+                                       name="quantite_retournee" 
+                                       min="1" 
+                                       max="{{ quantite_disponible }}" 
+                                       required
+                                       aria-describedby="quantite-help">
+                                <span class="input-group-text">{{ achat.produit.unite_mesure|default:"unités" }}</span>
+                            </div>
+                            <div id="quantite-help" class="form-text text-end">
+                                Reste: <span id="reste-disponible">{{ quantite_disponible|intcomma }}</span>
+                            </div>
+                            <div class="invalid-feedback">
+                                Veuillez saisir une quantité entre 1 et {{ quantite_disponible }}
+                            </div>
+                        </div>
+                        
+                        <!-- Motif -->
+                        <div class="col-md-6">
+                            <label for="motif" class="form-label">Motif du retour</label>
+                            <textarea class="form-control" 
+                                      id="motif" 
+                                      name="motif" 
+                                      rows="2" 
+                                      required
+                                      placeholder="Décrivez la raison du retour..."></textarea>
+                            <div class="invalid-feedback">
+                                Veuillez préciser le motif du retour
+                            </div>
+                        </div>
+                        
+                        <!-- Bouton -->
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-save me-2"></i>Valider
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Historique des retours détaillé -->
+    <div class="card shadow">
+        <div class="card-header bg-warning text-dark py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="m-0 font-weight-bold">
+                    <i class="fas fa-history me-2"></i>Historique des retours
+                </h5>
+                <span class="badge bg-dark">
+                    Total: {{ quantite_retournee_totale|intcomma }} {{ achat.produit.unite_mesure|default:"unités" }}
+                </span>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if retours_existants %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Date</th>
+                                <th class="text-end">Quantité</th>
+                                <th>Motif</th>
+                                <th>Responsable</th>
+                                <th class="text-end">Montant</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for retour in retours_existants %}
+                            <tr>
+                                <td>
+                                    <span class="d-block">{{ retour.date_retour|date:"d/m/Y" }}</span>
+                                    <small class="text-muted">{{ retour.date_retour|date:"H:i" }}</small>
+                                </td>
+                                <td class="text-end">
+                                    <span class="badge bg-danger rounded-pill">
+                                        -{{ retour.quantite_retournee|intcomma }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="d-inline-block text-truncate" style="max-width: 200px;" 
+                                          title="{{ retour.motif|default:'Aucun motif' }}">
+                                        {{ retour.motif|truncatechars:40|default:"-" }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="d-block">{{ retour.created_by.get_full_name|default:retour.created_by.username }}</span>
+                                    <small class="text-muted">{{ retour.created_by.profile.poste|default:"" }}</small>
+                                </td>
+                                <td class="text-end text-danger">
+                                    -{{ retour.montant_retour|floatformat:2|intcomma }} {{ symbole_devise }}
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'retour_fournisseur_pdf' retour.id %}" 
+                                           class="btn btn-sm btn-outline-primary"
+                                           data-bs-toggle="tooltip"
+                                           title="Générer PDF">
+                                            <i class="fas fa-file-pdf"></i>
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-secondary" 
+                                                data-bs-toggle="tooltip" 
+                                                title="Voir détails"
+                                                onclick="showRetourDetails({{ retour.id }})">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        {% if can_delete %}
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#deleteModal{{ retour.id }}">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-5 bg-light">
+                    <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                    <h5 class="text-muted">Aucun retour enregistré</h5>
+                    <p class="text-muted">Commencez par enregistrer un retour ci-dessus</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modals de suppression améliorés -->
+{% for retour in retours_existants %}
+<div class="modal fade" id="deleteModal{{ retour.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-skull-crossbones me-2"></i>
+                    <strong>Action irréversible</strong> - Cette suppression impactiera le stock.
+                </div>
+                
+                <div class="mb-4">
+                    <h6>Détails du retour à supprimer :</h6>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Produit:</span>
+                            <strong>{{ retour.achat.produit.nom }}</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Quantité:</span>
+                            <strong class="text-danger">-{{ retour.quantite_retournee|intcomma }}</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Montant:</span>
+                            <strong class="text-danger">-{{ retour.montant_retour|floatformat:2|intcomma }} {{ symbole_devise }}</strong>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>Date:</span>
+                            <strong>{{ retour.date_retour|date:"d/m/Y H:i" }}</strong>
+                        </li>
+                        <li class="list-group-item">
+                            <span class="d-block text-muted small">Motif:</span>
+                            <em>{{ retour.motif|default:"Aucun motif renseigné" }}</em>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="fas fa-sync-alt me-2"></i>
+                    <strong>Conséquence :</strong> Le stock sera réaugmenté de {{ retour.quantite_retournee|intcomma }} unités.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Annuler
+                </button>
+                <form method="post" action="{% url 'supprimer_retour' retour.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt me-1"></i> Confirmer suppression
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Modal pour les détails -->
+<div class="modal fade" id="retourDetailsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Détails complet du retour</h5>
+                <div>
+                    <a href="#" id="pdfModalLink" class="btn btn-sm btn-light me-2" target="_blank">
+                        <i class="fas fa-file-pdf me-1"></i> PDF
+                    </a>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+            </div>
+            <div class="modal-body" id="retourDetailsContent">
+                <!-- Contenu chargé dynamiquement -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Fermer
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Initialisation des tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    // Tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+    
+    // Gestion dynamique du formulaire
+    const quantiteInput = document.getElementById('quantite_retournee');
+    const resteDisponible = document.getElementById('reste-disponible');
+    
+    if (quantiteInput && resteDisponible) {
+        quantiteInput.addEventListener('input', function() {
+            const max = parseInt(this.max);
+            const value = parseInt(this.value) || 0;
+            const newRest = max - value;
+            
+            resteDisponible.textContent = newRest.toLocaleString();
+            
+            if (value > max) {
+                this.setCustomValidity(`La quantité ne peut pas dépasser ${max}`);
+                resteDisponible.classList.add('text-danger');
+            } else {
+                this.setCustomValidity('');
+                resteDisponible.classList.remove('text-danger');
+            }
+        });
+    }
+    
+    // Validation des formulaires
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+});
+
+// Affichage des détails d'un retour
+function showRetourDetails(retourId) {
+    fetch(`/api/retours/${retourId}/details/`)
+        .then(response => response.json())
+        .then(data => {
+            const modalContent = document.getElementById('retourDetailsContent');
+            const pdfLink = document.getElementById('pdfModalLink');
+            
+            // Mise à jour du lien PDF
+            pdfLink.href = `/retours/${retourId}/pdf/`;
+            
+            modalContent.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Informations de base</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">Date</dt>
+                            <dd class="col-sm-8">${new Date(data.date_retour).toLocaleString()}</dd>
+                            
+                            <dt class="col-sm-4">Quantité</dt>
+                            <dd class="col-sm-8"><span class="badge bg-danger">-${data.quantite_retournee}</span></dd>
+                            
+                            <dt class="col-sm-4">Montant</dt>
+                            <dd class="col-sm-8 text-danger">-${(data.quantite_retournee * data.achat.prix_unitaire).toFixed(2)} ${data.symbole_devise}</dd>
+                            
+                            <dt class="col-sm-4">Enregistré par</dt>
+                            <dd class="col-sm-8">${data.created_by}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Contexte</h6>
+                        <dl class="row">
+                            <dt class="col-sm-4">Achat</dt>
+                            <dd class="col-sm-8">#${data.achat.id} - ${data.achat.produit}</dd>
+                            
+                            <dt class="col-sm-4">Fournisseur</dt>
+                            <dd class="col-sm-8">${data.achat.fournisseur}</dd>
+                            
+                            <dt class="col-sm-4">Prix unitaire</dt>
+                            <dd class="col-sm-8">${data.achat.prix_unitaire} ${data.symbole_devise}</dd>
+                        </dl>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h6>Motif détaillé</h6>
+                    <div class="card card-body bg-light">
+                        ${data.motif || '<em>Aucun motif renseigné</em>'}
+                    </div>
+                </div>
+                
+                ${data.notes ? `
+                <div class="mt-3">
+                    <h6>Notes complémentaires</h6>
+                    <div class="card card-body bg-light">
+                        ${data.notes}
+                    </div>
+                </div>
+                ` : ''}
+            `;
+            
+            const modal = new bootstrap.Modal(document.getElementById('retourDetailsModal'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Impossible de charger les détails du retour');
+        });
+}
+</script>
+
+<style>
+    .card-header {
+        border-radius: 0.35rem 0.35rem 0 0 !important;
+    }
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.03);
+    }
+    .badge.bg-danger {
+        font-weight: 500;
+    }
+    .list-group-item {
+        padding: 0.75rem 1.25rem;
+    }
+    .form-floating textarea {
+        min-height: 100px;
+    }
+    .text-truncate {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+    .btn-outline-primary {
+        border-color: #4e73df;
+        color: #4e73df;
+    }
+    .btn-outline-primary:hover {
+        background-color: #4e73df;
+        color: white;
+    }
+</style>
+{% endblock %}

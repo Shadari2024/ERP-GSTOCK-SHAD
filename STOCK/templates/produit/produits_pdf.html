@@ -1,0 +1,57 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Liste des Produits</title>
+    <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; }
+        h1, h2 { text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #444; padding: 6px; text-align: center; }
+        th { background-color: #f0f0f0; }
+        .info-societe { text-align: left; margin-bottom: 10px; }
+        .footer { text-align: right; font-size: 10px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <!-- Infos entreprise -->
+    <div class="info-societe">
+        <strong>{{ parametres.nom_societe }}</strong><br>
+        {{ parametres.adresse }}<br>
+        Tel : {{ parametres.telephone }} | Email : {{ parametres.email }}
+    </div>
+
+    <h2>📦 Liste des Produits en Stock</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nom</th>
+                <th>Catégorie</th>
+                <th>Prix Achat</th>
+                <th>Prix Vente</th>
+                <th>Stock</th>
+                <th>TVA (%)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in produits %}
+            <tr>
+                <td>{{ p.id }}</td>
+                <td>{{ p.nom }}</td>
+                <td>{% if p.categorie %}{{ p.categorie.nom }}{% else %}Non classé{% endif %}</td>
+                <td>{{ p.prix_achat|floatformat:2 }} {{ parametres.devise }}</td>
+                <td>{{ p.prix_vente|floatformat:2 }} {{ parametres.devise }}</td>
+                <td>{{ p.stock }}</td>
+                <td>{{ p.tva }}%</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <div class="footer">
+        Exporté le {{ now|date:"d/m/Y à H:i" }} par {{ user.get_full_name|default:user.username }}
+    </div>
+    
+</body>
+</html>

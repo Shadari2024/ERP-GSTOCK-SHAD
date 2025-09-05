@@ -1,0 +1,382 @@
+{% extends "comptabilite/base.html" %}
+{% load static %}
+{% load math_filters %}
+{% block title %}Compte de Résultat{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active" aria-current="page">Compte de Résultat</li>
+{% endblock %}
+
+{% block page_title %}Compte de Résultat{% endblock %}
+
+{% block actions %}
+<div>
+    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#exportModal">
+        <i class="fas fa-download me-1"></i> Exporter
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title">Compte de Résultat</h5>
+        <p class="card-subtitle text-muted">Période du {{ date_debut|date:"d/m/Y" }} au {{ date_fin|date:"d/m/Y" }}</p>
+    </div>
+    <div class="card-body">
+        <!-- Filtres -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <input type="date" class="form-control" id="date-debut" name="date_debut" 
+                       value="{{ date_debut }}" placeholder="Date début">
+            </div>
+            <div class="col-md-3">
+                <input type="date" class="form-control" id="date-fin" name="date_fin" 
+                       value="{{ date_fin }}" placeholder="Date fin">
+            </div>
+            <div class="col-md-3">
+                <select class="form-select" id="detail-level">
+                    <option value="complet">Détail complet</option>
+                    <option value="synthese">Synthèse</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="button" id="filter-btn" class="btn btn-primary w-100">
+                    <i class="fas fa-filter me-1"></i> Appliquer
+                </button>
+            </div>
+        </div>
+
+        <!-- Résumé du compte de résultat -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card bg-primary text-white">
+                    <div class="card-body text-center py-2">
+                        <h6 class="card-title mb-0">{{ total_produits|floatformat:2 }} {{ devise_principale_symbole }}</h6>
+                        <small>Total Produits</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-danger text-white">
+                    <div class="card-body text-center py-2">
+                        <h6 class="card-title mb-0">{{ total_charges|floatformat:2 }} {{ devise_principale_symbole }}</h6>
+                        <small>Total Charges</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card {% if benefice %}bg-success{% else %}bg-warning{% endif %} text-white">
+                    <div class="card-body text-center py-2">
+                        <h6 class="card-title mb-0">{{ resultat|floatformat:2 }} {{ devise_principale_symbole }}</h6>
+                        <small>Résultat</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compte de Résultat détaillé -->
+        <div class="row">
+            <!-- PRODUITS -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-arrow-up me-2"></i>PRODUITS
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-striped mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Comptes de produits (Classe 7)</th>
+                                    <th class="text-end">Montant ({{ devise_principale_symbole }})</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for detail in details_produits %}
+                                <tr>
+                                    <td>{{ detail.compte.numero }} - {{ detail.compte.intitule }}</td>
+                                    <td class="text-end">{{ detail.montant|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted py-3">
+                                        <i class="fas fa-search me-2"></i>Aucun produit pour la période
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                
+                                <!-- Total Produits -->
+                                <tr class="table-success">
+                                    <td><strong>TOTAL PRODUITS</strong></td>
+                                    <td class="text-end"><strong>{{ total_produits|floatformat:2 }}</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CHARGES -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-danger text-white">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-arrow-down me-2"></i>CHARGES
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-striped mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Comptes de charges (Classe 6)</th>
+                                    <th class="text-end">Montant ({{ devise_principale_symbole }})</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for detail in details_charges %}
+                                <tr>
+                                    <td>{{ detail.compte.numero }} - {{ detail.compte.intitule }}</td>
+                                    <td class="text-end">{{ detail.montant|floatformat:2 }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted py-3">
+                                        <i class="fas fa-search me-2"></i>Aucune charge pour la période
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                
+                                <!-- Total Charges -->
+                                <tr class="table-danger">
+                                    <td><strong>TOTAL CHARGES</strong></td>
+                                    <td class="text-end"><strong>{{ total_charges|floatformat:2 }}</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Résultat -->
+        <div class="card mb-4">
+            <div class="card-header {% if benefice %}bg-success{% else %}bg-warning{% endif %} text-white">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-calculator me-2"></i>RÉSULTAT DE L'EXERCICE
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <h5>{{ total_produits|floatformat:2 }} {{ devise_principale_symbole }}</h5>
+                        <p class="text-muted mb-0">Total Produits</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h5>- {{ total_charges|floatformat:2 }} {{ devise_principale_symbole }}</h5>
+                        <p class="text-muted mb-0">Total Charges</p>
+                    </div>
+                    <div class="col-md-4">
+                        <h3 class="{% if benefice %}text-success{% else %}text-warning{% endif %}">
+                            = {{ resultat|floatformat:2 }} {{ devise_principale_symbole }}
+                        </h3>
+                        <p class="text-muted mb-0">
+                            {% if benefice %}
+                                <i class="fas fa-arrow-up text-success me-1"></i>Bénéfice
+                            {% else %}
+                                <i class="fas fa-arrow-down text-warning me-1"></i>Perte
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analyse de la rentabilité -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Indicateurs de rentabilité</h6>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <tr>
+                                <td>Marge brute</td>
+                                <td class="text-end">
+                                    {% if total_produits > 0 %}
+                                        {{ resultat|floatformat:2 }} {{ devise_principale_symbole }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Taux de marge</td>
+                                <td class="text-end">
+                                    {% if total_produits > 0 %}
+                                        {{ resultat|div:total_produits|multiply:100|floatformat:2 }}%
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Charges/Produits</td>
+                                <td class="text-end">
+                                    {% if total_produits > 0 %}
+                                        {{ total_charges|div:total_produits|multiply:100|floatformat:2 }}%
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Répartition</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="progress mb-2" style="height: 20px;">
+                            <div class="progress-bar bg-success" style="width: {% if total_produits > 0 %}{{ total_produits|div:total_produits|multiply:100 }}%{% else %}0%{% endif %}">
+                                Produits: 100%
+                            </div>
+                        </div>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-danger" style="width: {% if total_produits > 0 %}{{ total_charges|div:total_produits|multiply:100 }}%{% else %}0%{% endif %}">
+                                Charges: {% if total_produits > 0 %}{{ total_charges|div:total_produits|multiply:100|floatformat:0 }}%{% else %}0%{% endif %}
+                            </div>
+                            <div class="progress-bar {% if benefice %}bg-success{% else %}bg-warning{% endif %}" style="width: {% if total_produits > 0 %}{{ resultat|abs|div:total_produits|multiply:100 }}%{% else %}0%{% endif %}">
+                                Résultat: {% if total_produits > 0 %}{{ resultat|abs|div:total_produits|multiply:100|floatformat:0 }}%{% else %}0%{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'export -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Exporter le Compte de Résultat</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Format d'export</label>
+                    <select class="form-select" id="export-format">
+                        <option value="pdf">PDF</option>
+                        <option value="excel">Excel</option>
+                        <option value="csv">CSV</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Période</label>
+                    <p class="form-control-static">{{ date_debut|date:"d/m/Y" }} au {{ date_fin|date:"d/m/Y" }}</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="exporterCompteResultat()">
+                    <i class="fas fa-download me-1"></i> Exporter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Appliquer les filtres
+        $('#filter-btn').click(function() {
+            const dateDebut = $('#date-debut').val();
+            const dateFin = $('#date-fin').val();
+            const detailLevel = $('#detail-level').val();
+            
+            let url = '{% url "comptabilite:compte_resultat" %}?';
+            
+            if (dateDebut) url += `date_debut=${dateDebut}&`;
+            if (dateFin) url += `date_fin=${dateFin}&`;
+            if (detailLevel) url += `detail=${detailLevel}&`;
+            
+            window.location.href = url;
+        });
+
+        // Entrée dans les champs déclenche le filtre
+        $('#date-debut, #date-fin').keypress(function(e) {
+            if (e.which === 13) {
+                $('#filter-btn').click();
+            }
+        });
+
+        // Initialiser les dates si vides
+        if (!$('#date-debut').val()) {
+            const firstDay = new Date(new Date().getFullYear(), 0, 1);
+            $('#date-debut').val(firstDay.toISOString().split('T')[0]);
+        }
+
+        if (!$('#date-fin').val()) {
+            $('#date-fin').val(new Date().toISOString().split('T')[0]);
+        }
+    });
+
+    function exporterCompteResultat() {
+        const format = $('#export-format').val();
+        const dateDebut = '{{ date_debut }}';
+        const dateFin = '{{ date_fin }}';
+        
+        // Simulation d'export
+        alert(`Export ${format} du compte de résultat pour la période ${dateDebut} au ${dateFin} sera bientôt disponible.`);
+        $('#exportModal').modal('hide');
+    }
+</script>
+
+<style>
+    .table th {
+        background-color: #2c3e50;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .table-dark th {
+        background-color: #34495e;
+    }
+    
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .progress {
+        background-color: #e9ecef;
+        border-radius: 0.375rem;
+    }
+    
+    .progress-bar {
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .bg-success {
+        background-color: #198754 !important;
+    }
+    
+    .bg-danger {
+        background-color: #dc3545 !important;
+    }
+    
+    .bg-warning {
+        background-color: #ffc107 !important;
+    }
+</style>
+{% endblock %}

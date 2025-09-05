@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="alert alert-danger">
+    <h2>Licence Expirée</h2>
+    <p>Votre licence a expiré ou n'est pas valide.</p>
+    <p>Pour continuer à utiliser l'application, veuillez :</p>
+    <ul>
+        <li>Envoyer un email à {{ licence.email_contact }} avec votre clé actuelle</li>
+        <li>OU effectuer un paiement sur :
+            <ul>
+                <li>Airtel Money: {{ licence.compte_airtel_money }}</li>
+                <li>Equity Bank: {{ licence.compte_equity_bank }}</li>
+            </ul>
+        </li>
+    </ul>
+    <p>Après paiement, vous recevrez une nouvelle clé d'activation.</p>
+    
+    <a href="{% url 'activer_licence' %}" class="btn btn-primary">
+        J'ai reçu une nouvelle clé
+    </a>
+</div>
+{% endblock %}

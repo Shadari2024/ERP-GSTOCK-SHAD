@@ -1,0 +1,153 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col">
+            <h2 class="page-title">{% trans "Gestion des Ressources Humaines" %}</h2>
+            <p class="text-muted">{% trans "Tableau de bord de gestion du personnel" %}</p>
+        </div>
+    </div>
+
+    <!-- Cartes de statistiques -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                {% trans "Total Employés" %}
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_employes }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                {% trans "Employés Actifs" %}
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ employes_actifs }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-check fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                {% trans "Départements" %}
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_departements }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-building fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                {% trans "Congés en attente" %}
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ conges_en_cours }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-alt fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">{% trans "Actions rapides" %}</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <a href="{% url 'grh:employe_create' %}" class="btn btn-primary btn-block">
+                                <i class="fas fa-user-plus me-2"></i>{% trans "Nouvel employé" %}
+                            </a>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <a href="{% url 'grh:departement_create' %}" class="btn btn-success btn-block">
+                                <i class="fas fa-building me-2"></i>{% trans "Nouveau département" %}
+                            </a>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <a href="{% url 'grh:bulletin_create' %}" class="btn btn-info btn-block">
+                                <i class="fas fa-file-invoice-dollar me-2"></i>{% trans "Nouveau bulletin" %}
+                            </a>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <a href="{% url 'grh:conge_create' %}" class="btn btn-warning btn-block">
+                                <i class="fas fa-calendar-plus me-2"></i>{% trans "Nouveau congé" %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">{% trans "Navigation rapide" %}</h6>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <a href="{% url 'grh:employe_list' %}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-list me-2"></i>{% trans "Liste des employés" %}
+                        </a>
+                        <a href="{% url 'grh:departement_list' %}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-sitemap me-2"></i>{% trans "Départements" %}
+                        </a>
+                        <a href="{% url 'grh:poste_list' %}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-briefcase me-2"></i>{% trans "Postes" %}
+                        </a>
+                        <a href="{% url 'grh:contrat_list' %}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-file-contract me-2"></i>{% trans "Contrats" %}
+                        </a>
+                        <a href="{% url 'grh:bulletin_list' %}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-file-invoice me-2"></i>{% trans "Bulletins de paie" %}
+                        </a>
+                        <a href="{% url 'grh:conge_list' %}" class="list-group-item list-group-item-action">
+                            <i class="fas fa-umbrella-beach me-2"></i>{% trans "Gestion des congés" %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

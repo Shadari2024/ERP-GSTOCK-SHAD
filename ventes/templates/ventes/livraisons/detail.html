@@ -1,0 +1,211 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Détail du Bon de Livraison #{{ bon_livraison.numero }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Détail du Bon de Livraison #{{ bon_livraison.numero }}</h4>
+                    <div class="d-flex align-items-center gap-2">
+                        {# BOUTON DÉTAIL DE LA COMMANDE CONVERTIE #}
+                        <a href="{% url 'ventes:commande_detail' bon_livraison.commande.pk %}" 
+                           class="btn btn-info btn-sm" 
+                           title="Voir le détail de la commande d'origine">
+                            <i class="fas fa-shopping-cart"></i> Voir Commande
+                        </a>
+
+                        {% if bon_livraison.statut != 'annule' %}
+                            <a href="{% url 'ventes:livraison_update' bon_livraison.pk %}" class="btn btn-warning btn-sm">
+                                <i class="fas fa-edit"></i> Modifier
+                            </a>
+                        {% endif %}
+                        
+                        {# BOUTON IMPRIMER #}
+                        <a href="{% url 'ventes:livraison_print' bon_livraison.pk %}" 
+                           class="btn btn-secondary btn-sm" 
+                           target="_blank" 
+                           title="Imprimer le bon de livraison">
+                            <i class="fas fa-print"></i> Imprimer
+                        </a>
+
+                        {# BOUTON ENVOYER PAR EMAIL #}
+                        <form action="{% url 'ventes:livraison_send_email' bon_livraison.pk %}" method="post" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success btn-sm" title="Envoyer le bon de livraison par email">
+                                <i class="fas fa-envelope"></i> Email
+                            </button>
+                        </form>
+
+                        {# BOUTON CHANGER STATUT #}
+                        <a href="{% url 'ventes:livraison_change_status' bon_livraison.pk %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-sync-alt"></i> Statut
+                        </a>
+
+                        {% if bon_livraison.statut != 'annule' and bon_livraison.statut != 'livre' %}
+                        <form action="{% url 'ventes:livraison_cancel' bon_livraison.pk %}" method="post" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm" 
+                                    onclick="return confirm('Êtes-vous sûr de vouloir annuler ce bon de livraison ? Le stock sera réapprovisionné.');">
+                                <i class="fas fa-ban"></i> Annuler
+                            </button>
+                        </form>
+                    {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Commande :</strong> 
+                                <a href="{% url 'ventes:commande_detail' bon_livraison.commande.pk %}" class="text-decoration-none">
+                                    #{{ bon_livraison.commande.numero }}
+                                </a>
+                            </p>
+                            <p><strong>Client :</strong> {{ bon_livraison.commande.client.nom }}</p>
+                            <p><strong>Date du BL :</strong> {{ bon_livraison.date|date:"d/m/Y" }}</p>
+                            <p><strong>Statut :</strong> 
+                                {% if bon_livraison.statut == 'prepare' %}
+                                    <span class="badge bg-info">{{ bon_livraison.get_statut_display }}</span>
+                                {% elif bon_livraison.statut == 'expedie' %}
+                                    <span class="badge bg-warning">{{ bon_livraison.get_statut_display }}</span>
+                                {% elif bon_livraison.statut == 'livre' %}
+                                    <span class="badge bg-success">{{ bon_livraison.get_statut_display }}</span>
+                                {% elif bon_livraison.statut == 'annule' %}
+                                    <span class="badge bg-danger">{{ bon_livraison.get_statut_display }}</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <p><strong>Total HT :</strong> {{ bon_livraison.total_ht|intcomma }} {{ devise_principale_symbole }}</p>
+                            <p><strong>Total TVA :</strong> {{ bon_livraison.total_tva|intcomma }} {{ devise_principale_symbole }}</p>
+                            <p><strong>Total TTC :</strong> {{ bon_livraison.total_ttc|intcomma }} {{ devise_principale_symbole }}</p>
+                        </div>
+                    </div>
+                    <hr>
+                    
+                    {# INFORMATION DE CONVERSION #}
+                    {% if bon_livraison.commande.devis %}
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Information :</strong> Ce bon de livraison a été généré à partir de la commande 
+                        <a href="{% url 'ventes:commande_detail' bon_livraison.commande.pk %}" class="alert-link">
+                            #{{ bon_livraison.commande.numero }}
+                        </a>
+                        qui elle-même a été convertie à partir du devis 
+                        <a href="{% url 'ventes:devis_detail' bon_livraison.commande.devis.pk %}" class="alert-link">
+                            #{{ bon_livraison.commande.devis.numero }}
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    <h5>Articles Livrés</h5>
+                    <table class="table table-bordered table-striped mt-3">
+                        <thead>
+                            <tr>
+                                <th>Produit</th>
+                                <th>Quantité</th>
+                                <th>Prix Unitaire HT</th>
+                                <th>Taux TVA</th>
+                                <th>Montant HT</th>
+                                <th>Montant TVA</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in bon_livraison.items.all %}
+                                <tr>
+                                    <td>{{ item.produit.nom }}</td>
+                                    <td>{{ item.quantite|intcomma }}</td>
+                                    <td>{{ item.prix_unitaire|intcomma }} {{ devise_principale_symbole }}</td>
+                                    <td>{{ item.taux_tva|intcomma }}%</td>
+                                    <td>{{ item.montant_ht|intcomma }} {{ devise_principale_symbole }}</td>
+                                    <td>{{ item.montant_tva|intcomma }} {{ devise_principale_symbole }}</td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="6">Aucun article pour ce bon de livraison.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <p><strong>Notes :</strong> {{ bon_livraison.notes|default:"Aucune note." }}</p>
+                </div>
+            </div>
+
+            {# Section Historique des Statuts #}
+            {% if status_history %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Historique des Statuts</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for history in status_history %}
+                            <li class="list-group-item">
+                                De <strong>{{ history.get_ancien_statut_display|default:"N/A" }}</strong> à 
+                                <strong>{{ history.get_nouveau_statut_display }}</strong>
+                                par {{ history.changed_by.username|default:"Système" }} 
+                                le {{ history.changed_at|date:"d/m/Y H:i" }}
+                                {% if history.commentaire %}
+                                    <br><small class="text-muted">Commentaire: {{ history.commentaire }}</small>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            {# Section Journal d'Audit #}
+            {% if audit_logs %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Journal d'Audit</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for log in audit_logs %}
+                            <li class="list-group-item">
+                                <small class="text-muted">[{{ log.performed_at|date:"d/m/Y H:i" }}]</small>
+                                <strong>{{ log.get_action_display }}</strong>: {{ log.description }}
+                                <br><small>par {{ log.performed_by.username|default:"Système" }}</small>
+                                {% if log.details %}
+                                    <br><small class="text-muted">Détails: {{ log.details }}</small>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="d-flex gap-2 mt-3">
+                <a href="{% url 'ventes:livraison_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Retour à la liste
+                </a>
+                
+                {# BOUTON CONVERTIR EN FACTURE (si applicable) #}
+                {% if bon_livraison.statut == 'livre' and not bon_livraison.facture %}
+                <form action="{% url 'ventes:livraison_convert_facture' bon_livraison.pk %}" method="post" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-file-invoice me-2"></i>Convertir en Facture
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

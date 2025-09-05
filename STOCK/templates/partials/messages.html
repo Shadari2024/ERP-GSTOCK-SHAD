@@ -1,0 +1,63 @@
+{% if messages %}
+<div class="container-fluid mb-4">
+    <div class="row">
+        <div class="col-12">
+            {% for message in messages %}
+            <div class="alert alert-dismissible fade show 
+                        {% if message.tags == 'error' %}alert-danger
+                        {% elif message.tags == 'warning' %}alert-warning
+                        {% elif message.tags == 'success' %}alert-success
+                        {% else %}alert-info{% endif %}" 
+                 role="alert">
+                
+                <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0">
+                        {% if message.tags == 'error' %}
+                            <i class="fas fa-times-circle fa-lg me-2"></i>
+                        {% elif message.tags == 'warning' %}
+                            <i class="fas fa-exclamation-triangle fa-lg me-2"></i>
+                        {% elif message.tags == 'success' %}
+                            <i class="fas fa-check-circle fa-lg me-2"></i>
+                        {% else %}
+                            <i class="fas fa-info-circle fa-lg me-2"></i>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <strong class="me-2">
+                            {% if message.tags == 'error' %}Erreur !
+                            {% elif message.tags == 'warning' %}Attention !
+                            {% elif message.tags == 'success' %}Succès !
+                            {% else %}Info{% endif %}
+                        </strong>
+                        {{ message|safe }}
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                
+                {% if 'stock_updated' in message.extra_tags %}
+                <div class="mt-2 small">
+                    <i class="fas fa-database me-1"></i>
+                    Le stock du produit a été mis à jour automatiquement.
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Fermeture automatique après 5 secondes (sauf pour les erreurs importantes)
+document.addEventListener('DOMContentLoaded', function() {
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        if (!alert.classList.contains('alert-danger')) {
+            setTimeout(() => {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }, 5000);
+        }
+    });
+});
+</script>
+{% endif %}

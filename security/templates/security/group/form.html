@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                {% if object %}Modifier le Groupe{% else %}Créer un Nouveau Groupe{% endif %}
+            </h6>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                {{ form|crispy }}
+                <div class="form-group mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Enregistrer
+                    </button>
+                    <a href="{% url 'security:liste_groupes' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Make permissions select more user-friendly
+    const permissionSelects = document.querySelectorAll('select[name="permissions"]');
+    permissionSelects.forEach(select => {
+        select.size = 10;  // Show 10 items at once
+        select.classList.add('form-control');
+    });
+});
+</script>
+{% endblock %}

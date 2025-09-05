@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load filters %}
+{% load math_filters %}
+
+{% block content %}
+<div class="container">
+    <h2>Bilan simplifié</h2>
+    
+    <form method="get" class="mb-4">
+        <div class="row">
+            <div class="col-md-8">
+                <label>Date de clôture</label>
+                <input type="date" name="date_fin" value="{{ date_fin }}" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary mt-4">Générer</button>
+            </div>
+        </div>
+    </form>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5>Actifs</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <tbody>
+                            {% for compte in actifs %}
+                            <tr>
+                                <td>{{ compte.nom }}</td>
+                                <td>{{ compte.solde }} {{ request.user.parametre.devise }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="table-active">
+                                <th>Total actifs</th>
+                                <th>{{ total_actifs }} {{ request.user.parametre.devise }}</th>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h5>Passifs</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <tbody>
+                            {% for compte in passifs %}
+                            <tr>
+                                <td>{{ compte.nom }}</td>
+                                <td>{{ compte.solde|abs }} {{ request.user.parametre.devise }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="table-active">
+                                <th>Total passifs</th>
+                                <th>{{ total_passifs }} {{ request.user.parametre.devise }}</th>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

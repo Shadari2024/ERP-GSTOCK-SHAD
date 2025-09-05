@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Ajouter un Paiement{% endblock %}
+
+{% block content %}
+    <div class="container-fluid mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8 col-lg-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            <i class="fas fa-money-bill-wave me-2"></i>
+                            Enregistrer un Paiement pour la Facture n° {{ facture.numero }}
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        {% if facture.statut == 'paye' %}
+                            <div class="alert alert-info" role="alert">
+                                Cette facture est déjà entièrement payée.
+                            </div>
+                        {% elif facture.montant_restant <= 0 %}
+                            <div class="alert alert-info" role="alert">
+                                Cette facture a un montant restant nul.
+                            </div>
+                        {% endif %}
+
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <p class="mb-0">
+                                    <strong>Client:</strong> {{ facture.client.nom }}
+                                </p>
+                            </div>
+                            <div class="col-6 text-end">
+                                <p class="mb-0">
+                                    <strong>Date d'échéance:</strong> {{ facture.date_echeance|date:"d M Y" }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 text-center">
+                            <h5 class="fw-bold">
+                                Montant total TTC: {{ facture.total_ttc|floatformat:2 }} {{ facture.devise }}
+                            </h5>
+                            <h5 class="text-danger fw-bold">
+                                Reste à payer: {{ facture.montant_restant|floatformat:2 }} {{ facture.devise }}
+                            </h5>
+                        </div>
+
+                        <form method="post" action="{% url 'ventes:paiement_ajouter' facture_pk=facture.pk %}">
+                            {% csrf_token %}
+                            {{ form|crispy }}
+
+                            <div class="d-flex justify-content-between mt-4">
+                                <a href="{% url 'ventes:facture_detail' pk=facture.pk %}" class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-2"></i>Annuler
+                                </a>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-check me-2"></i>Enregistrer le Paiement
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var montantInput = document.getElementById('id_montant');
+            var resteAPayer = parseFloat('{{ facture.montant_restant|floatformat:2 }}');
+
+            // Set the max value based on the amount remaining
+            if (montantInput) {
+                montantInput.setAttribute('max', resteAPayer);
+            }
+        });
+    </script>
+{% endblock %}

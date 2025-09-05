@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Ajouter une Transaction</h2>
+    
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label>Compte *</label>
+            <select name="compte" class="form-control" required>
+                <option value="">Sélectionnez un compte</option>
+                {% for compte in comptes %}
+                <option value="{{ compte.id }}">{{ compte.nom }} ({{ compte.get_type_compte_display }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Type de transaction *</label>
+            <select name="type_transaction" class="form-control" required>
+                <option value="ENTREE">Entrée</option>
+                <option value="SORTIE">Sortie</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Catégorie *</label>
+            <select name="categorie" class="form-control" required>
+                <option value="">Sélectionnez une catégorie</option>
+                {% for categorie in categories %}
+                <option value="{{ categorie.id }}">{{ categorie.nom }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Montant *</label>
+            <input type="number" name="montant" step="0.01" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+            <label>Mode de paiement *</label>
+            <select name="mode_paiement" class="form-control" required>
+                <option value="ESP">Espèces</option>
+                <option value="MM">Mobile Money</option>
+                <option value="CHQ">Chèque</option>
+                <option value="VIR">Virement</option>
+                <option value="CRD">Carte</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Description</label>
+            <textarea name="description" class="form-control" rows="2"></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label>Pièce jointe</label>
+            <input type="file" name="piece_jointe" class="form-control-file">
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+    </form>
+</div>
+{% endblock %}

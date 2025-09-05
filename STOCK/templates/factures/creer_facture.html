@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="facture-form">
+    <h2>Créer une facture pour la commande #{{ commande.id }}</h2>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="numero">Numéro de facture:</label>
+            <input type="text" id="numero" name="numero" 
+                   value="FACT-{{ commande.id }}-{{ commande.date_commande.year }}"
+                   class="form-input">
+        </div>
+        
+        <div class="form-group">
+            <label>Montant total:</label>
+            <input type="text" value="{{ commande.montant_total }} €" disabled>
+        </div>
+        
+        <button type="submit" class="btn-submit">Créer la facture</button>
+    </form>
+</div>
+
+<style>
+    .facture-form {
+        max-width: 600px;
+        margin: 20px auto;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+    }
+    .form-group {
+        margin-bottom: 15px;
+    }
+    .form-input {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
+    .btn-submit {
+        background: #4CAF50;
+        color: white;
+        padding: 10px 15px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}

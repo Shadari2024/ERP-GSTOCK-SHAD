@@ -1,0 +1,384 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">📋 Liste des Commandes</h2>
+        <div class="d-flex align-items-center">
+            <!-- Sélecteur de devise -->
+            <div class="dropdown me-3">
+                <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" id="dropdownDevise" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-money-bill-wave me-1"></i> 
+                    <span id="currentDevise">{{ devise_affichee }}</span> 
+                    (<span id="currentSymbol">{{ devise_affichee|slice:"0:1" }}</span>)
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="dropdownDevise">
+                    {% for devise in devises_acceptees %}
+                    <li>
+                        <a class="dropdown-item {% if devise == devise_affichee %}active{% endif %}" 
+                           href="#" 
+                           onclick="convertirDevise('{{ devise }}')">
+                            {{ devise }} ({{ devise|slice:"0:1" }})
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            
+            <!-- Taux de change -->
+            <div class="input-group input-group-sm me-3" style="width: 180px;">
+                <span class="input-group-text">1$ =</span>
+                <input type="number" step="0.000001" class="form-control" id="tauxChangeInput" value="{{ taux_usd|default:2850 }}">
+                <span class="input-group-text">FC</span>
+                <button class="btn btn-outline-secondary" type="button" onclick="updateTaux()">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+
+            <div class="btn-group">
+                <a href="{% url 'creer_commande' %}" class="btn btn-success me-2">
+                    <i class="fas fa-plus"></i> Nouvelle Commande
+                </a>
+                <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-file-export"></i> <span class="visually-hidden">Exporter</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="{% url 'export_commandes_excel' %}">Excel</a></li>
+                    <li><a class="dropdown-item" href="{% url 'export_commandes_csv' %}">CSV</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres et recherche -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="statutFilter" class="form-label">Statut</label>
+                    <select name="statut" id="statutFilter" class="form-select">
+                        <option value="">Tous</option>
+                        {% for statut in statuts %}
+                        <option value="{{ statut.0 }}" {% if request.GET.statut == statut.0 %}selected{% endif %}>{{ statut.1 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="paiementFilter" class="form-label">Paiement</label>
+                    <select name="paiement" id="paiementFilter" class="form-select">
+                        <option value="">Tous</option>
+                        {% for paiement in paiements %}
+                        <option value="{{ paiement.0 }}" {% if request.GET.paiement == paiement.0 %}selected{% endif %}>{{ paiement.1 }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="dateDebutFilter" class="form-label">Date de</label>
+                    <input type="date" name="date_debut" id="dateDebutFilter" class="form-control" value="{{ request.GET.date_debut }}">
+                </div>
+                <div class="col-md-3">
+                    <label for="dateFinFilter" class="form-label">Date à</label>
+                    <input type="date" name="date_fin" id="dateFinFilter" class="form-control" value="{{ request.GET.date_fin }}">
+                </div>
+                <div class="col-md-8">
+                    <label for="searchFilter" class="form-label">Recherche</label>
+                    <div class="input-group">
+                        <input type="text" name="search" id="searchFilter" class="form-control" placeholder="Client, ID..." value="{{ request.GET.search }}">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i> Filtrer
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4 text-end d-flex align-items-end justify-content-end">
+                    <a href="{% url 'liste_commandes' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-undo"></i> Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Vue Tableau -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center">ID</th>
+                            <th>Client</th>
+                            <th>Vendeur</th>
+                            <th>Date</th>
+                            <th>Expiration</th>
+                            <th>Paiement</th>
+                            <th class="text-end">Total (FC)</th>
+                            <th class="text-end">Converti (<span id="headerDevise">{{ devise_affichee }}</span>)</th>
+                            <th class="text-center">Statut</th>
+                            <th class="text-center">Vente</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for commande in commandes %}
+                        <tr data-montant="{{ commande.montant_total }}">
+                            <td class="text-center fw-bold">#{{ commande.id }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="ms-2">
+                                        <div class="fw-bold">{{ commande.client.nom }}</div>
+                                        <small class="text-muted">{{ commande.client.telephone }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ commande.vendeur }}</td>
+                            <td>{{ commande.date_commande|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <span class="{% if commande.est_expiree %}text-danger{% else %}text-success{% endif %}">
+                                    {{ commande.expiration|date:"d/m/Y" }}
+                                    {% if commande.est_expiree %}<i class="fas fa-exclamation-circle ms-1"></i>{% endif %}
+                                </span>
+                            </td>
+                            <td>{{ commande.get_paiement_display }}</td>
+                            <td class="text-end fw-bold">{{ commande.montant_total|floatformat:0 }} FC</td>
+                            <td class="text-end fw-bold converted-amount">
+                                {% if devise_affichee != 'CDF' %}
+                                    {{ commande.montant_converti|default:"..." }}
+                                {% else %}
+                                    {{ commande.montant_total|floatformat:0 }} FC
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge rounded-pill bg-{{ commande.get_statut_color }}">
+                                    {{ commande.get_statut_display }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                {% if commande.vente_confirmee %}
+                                    <span class="badge bg-success rounded-pill">Confirmée</span>
+                                {% else %}
+                                    <span class="badge bg-secondary rounded-pill">En attente</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'detail_commande' commande.id %}" class="btn btn-outline-primary" title="Détails">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'generer_bon_livraison' commande.id %}" class="btn btn-outline-secondary" title="Bon de livraison">
+                                        BL
+                                    </a>
+                                    <a href="{% url 'creer_retour' commande.id %}" class="btn btn-outline-warning" title="Retour">
+                                        <i class="fas fa-undo"></i>
+                                    </a>
+                                    <a href="{% url 'appliquer_promotion' commande.id %}" class="btn btn-outline-info" title="Remise">
+                                        <i class="fas fa-tag"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-outline-danger" title="Supprimer" data-bs-toggle="modal" data-bs-target="#deleteModal{{ commande.id }}">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Modal de suppression -->
+                                <div class="modal fade" id="deleteModal{{ commande.id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header bg-danger text-white">
+                                                <h5 class="modal-title">Confirmer la suppression</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>Êtes-vous sûr de vouloir supprimer la commande #{{ commande.id }} de {{ commande.client.nom }} ?</p>
+                                                <p class="text-danger"><small>Cette action est irréversible.</small></p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                <form method="post" action="{% url 'supprimer_commande' commande.id %}">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-danger">Supprimer</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="11" class="text-center py-4 text-muted">
+                                <i class="fas fa-inbox fa-2x mb-2"></i>
+                                <p>Aucune commande trouvée</p>
+                                <a href="{% url 'creer_commande' %}" class="btn btn-primary mt-2">
+                                    <i class="fas fa-plus"></i> Créer une commande
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if commandes.paginator.num_pages > 1 %}
+    <div class="mt-4">
+        <nav aria-label="Pagination">
+            <ul class="pagination justify-content-center">
+                {% if commandes.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ commandes.previous_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                {% endif %}
+                
+                {% for num in commandes.paginator.page_range %}
+                    {% if commandes.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > commandes.number|add:'-3' and num < commandes.number|add:'3' %}
+                        <li class="page-item"><a class="page-link" href="?page={{ num }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a></li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if commandes.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ commandes.next_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- JavaScript pour la conversion dynamique -->
+<script>
+// Taux de change actuel
+let currentTaux = parseFloat(document.getElementById('tauxChangeInput').value);
+
+// Fonction pour convertir toutes les valeurs
+function convertirMontants(deviseCible) {
+    const lignes = document.querySelectorAll('tbody tr');
+    const symboles = {'USD': '$', 'EUR': '€', 'CDF': 'FC'};
+    const symbole = symboles[deviseCible] || deviseCible;
+    
+    // Mettre à jour l'en-tête
+    document.getElementById('headerDevise').textContent = deviseCible;
+    document.getElementById('currentDevise').textContent = deviseCible;
+    document.getElementById('currentSymbol').textContent = symbole;
+    
+    if (deviseCible === 'CDF') {
+        // Afficher les valeurs originales en CDF
+        lignes.forEach(ligne => {
+            const montantCdf = parseFloat(ligne.dataset.montant);
+            ligne.querySelector('.converted-amount').textContent = `${montantCdf.toLocaleString('fr-FR')} FC`;
+        });
+        return;
+    }
+
+    // Convertir chaque montant
+    lignes.forEach(ligne => {
+        const montantCdf = parseFloat(ligne.dataset.montant);
+        const montantConverti = montantCdf / currentTaux;
+        ligne.querySelector('.converted-amount').textContent = `${symbole} ${montantConverti.toLocaleString('fr-FR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    });
+}
+
+// Fonction pour changer de devise
+function convertirDevise(devise) {
+    convertirMontants(devise);
+    
+    // Enregistrer la préférence
+    fetch("{% url 'set_devise' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: `devise=${encodeURIComponent(devise)}`
+    }).catch(error => console.error('Erreur:', error));
+}
+
+// Fonction pour mettre à jour le taux
+function updateTaux() {
+    const nouveauTaux = parseFloat(document.getElementById('tauxChangeInput').value);
+    if (!isNaN(nouveauTaux) && nouveauTaux > 0) {
+        currentTaux = nouveauTaux;
+        const deviseActuelle = document.getElementById('currentDevise').textContent;
+        convertirMontants(deviseActuelle);
+        
+        // Envoyer le nouveau taux au serveur
+        fetch("{% url 'update_taux' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: `taux=${currentTaux}&devise_source=USD&devise_cible=CDF`
+        }).catch(error => console.error('Erreur:', error));
+    } else {
+        alert('Veuillez entrer un taux valide');
+    }
+}
+
+// Conversion initiale
+document.addEventListener('DOMContentLoaded', function() {
+    convertirMontants('{{ devise_affichee }}');
+    
+    // Initialiser les tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Validation du taux de change
+    document.getElementById('tauxChangeInput').addEventListener('change', function() {
+        if (this.value <= 0) {
+            this.classList.add('is-invalid');
+        } else {
+            this.classList.remove('is-invalid');
+        }
+    });
+});
+</script>
+
+<style>
+.converted-amount {
+    color: var(--bs-primary);
+    font-weight: bold;
+}
+.table th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    white-space: nowrap;
+}
+.badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+    font-size: 0.75rem;
+}
+.card {
+    border-radius: 0.5rem;
+    overflow: hidden;
+    border: 1px solid rgba(0,0,0,.125);
+}
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+}
+@media (max-width: 992px) {
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .d-flex.justify-content-between > div {
+        margin-top: 1rem;
+        width: 100%;
+    }
+}
+</style>
+
+{% endblock %}

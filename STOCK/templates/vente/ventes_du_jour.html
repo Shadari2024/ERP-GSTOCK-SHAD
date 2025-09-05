@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+{% load static humanize %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="card border-0 shadow-lg overflow-hidden">
+        <div class="card-header bg-dark text-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-cart-check fs-3 me-3"></i>
+                    <div>
+                        <h3 class="mb-0">Ventes du jour</h3>
+                        <small class="opacity-75">{{ request.entreprise.nom }} - {{ date_jour|date:"d/m/Y" }}</small>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    {% if perms.STOCK.add_commande %}
+                    <a href="{% url 'vente_au_comptoir' %}" class="btn btn-success btn-sm">
+                        <i class="bi bi-plus-circle me-1"></i>Nouvelle vente
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'historique_ventes' %}" class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-clock-history me-1"></i>Historique
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="bg-light p-3 border-bottom">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" id="recherche" class="form-control border-start-0" placeholder="Rechercher client..." onkeyup="filtrerVentes()">
+                            <button class="btn btn-outline-secondary" type="button" onclick="reinitialiserRecherche()">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <form id="deviseForm" method="GET" action="{% url 'ventes_du_jour' %}">
+                            <select name="devise" class="form-select" onchange="this.form.submit()">
+                                {% for devise in devises_disponibles %}
+                                    <option value="{{ devise.code }}" {% if devise.code == devise_affichee %}selected{% endif %}>
+                                        {{ devise.code }} ({{ devise.symbole }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </div>
+                    <div class="col-md-5 text-md-end">
+                        <div class="d-flex justify-content-end gap-2">
+                            <div class="stat-badge bg-primary bg-opacity-10 text-primary">
+                                <i class="bi bi-cash-coin me-1"></i>
+                                <span>Total: 
+                                {% if devise_entreprise.symbole_avant %}{{ devise_entreprise.symbole }}{% endif %}
+                                {{ total_converti|default:0|floatformat:2|intcomma }}
+                                {% if not devise_entreprise.symbole_avant %}{{ devise_affichee }}{% endif %}
+                                </span>
+                            </div>
+                            <div class="stat-badge bg-success bg-opacity-10 text-success">
+                                <i class="bi bi-cart-check me-1"></i>
+                                <span>{{ nombre_ventes }} vente{{ nombre_ventes|pluralize }}</span>
+                            </div>
+                        </div>
+                        {% if taux_conversion != 1.0 %}
+                        <small class="text-muted mt-1 d-block">
+                            Taux: {{ sens_conversion }}
+                        </small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="ventesTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="120" class="ps-4"><i class="bi bi-clock me-1"></i> Heure</th>
+                            <th><i class="bi bi-person me-1"></i> Client</th>
+                            <th width="150"><i class="bi bi-cash-stack me-1"></i> Montant</th>
+                            <th width="150"><i class="bi bi-credit-card me-1"></i> Paiement</th>
+                            <th width="120" class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in ventes_converties %}
+                        <tr class="animate__animated animate__fadeIn">
+                            <td class="ps-4">
+                                <div class="fw-semibold">{{ item.vente.date_commande|date:"H:i" }}</div>
+                                <small class="text-muted">{{ item.vente.date_commande|date:"d/m/Y" }}</small>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar bg-primary bg-opacity-10 text-primary me-3">
+                                        {{ item.vente.client.nom|slice:":1"|upper }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-semibold">{{ item.vente.client.nom }}</div>
+                                        {% if item.vente.client.telephone %}
+                                        <small class="text-muted">{{ item.vente.client.telephone }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="fw-bold text-success">
+                                {% if devise_entreprise.symbole_avant %}{{ devise_entreprise.symbole }}{% endif %}
+                                {{ item.montant_converti|floatformat:2|intcomma }}
+                                {% if not devise_entreprise.symbole_avant %} {{ devise_affichee }}{% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border">
+                                    <i class="bi bi-cash-coin me-1"></i> {{ item.vente.get_mode_paiement_display }}
+                                </span>
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    {% if perms.STOCK.view_commande %}
+                                    <a href="{% url 'detail_commande' item.vente.id %}" class="btn btn-light" target="_blank" data-bs-toggle="tooltip" title="Ticket PDF">
+                                        <i class="bi bi-file-earmark-pdf text-primary"></i>
+                                    </a>
+                                    <a href="{% url 'detail_commande' item.vente.id %}" class="btn btn-light" data-bs-toggle="tooltip" title="Détails">
+                                        <i class="bi bi-eye text-info"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if perms.STOCK.delete_commande %}
+                                    <button class="btn btn-light annuler-vente" data-vente-id="{{ item.vente.id }}" data-bs-toggle="tooltip" title="Annuler">
+                                        <i class="bi bi-x-circle text-danger"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <div class="empty-state">
+                                    <i class="bi bi-cart-x fs-1 text-muted"></i>
+                                    <h5 class="mt-3">Aucune vente aujourd'hui</h5>
+                                    <p class="text-muted">Commencez par enregistrer une nouvelle vente</p>
+                                    {% if perms.STOCK.add_commande %}
+                                    <a href="{% url 'vente_au_comptoir' %}" class="btn btn-primary mt-2">
+                                        <i class="bi bi-plus-circle me-2"></i>Nouvelle vente
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card-footer bg-light py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">Mis à jour à {{ now|date:"H:i" }}</small>
+                <small class="text-muted">
+                    {% if nombre_ventes > 0 %}
+                    Affichage de 1 à {{ nombre_ventes }} sur {{ nombre_ventes }} ventes
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'annulation -->
+<div class="modal fade" id="annulerVenteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Confirmer l'annulation</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir annuler cette vente ? Cette action est irréversible.</p>
+                <form id="annulerVenteForm" method="post" action="">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="raisonAnnulation" class="form-label">Raison de l'annulation</label>
+                        <textarea class="form-control" id="raisonAnnulation" name="raison" rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="submit" form="annulerVenteForm" class="btn btn-danger">Confirmer l'annulation</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+    
+    .avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+    
+    .stat-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+        font-size: 0.875rem;
+        display: inline-flex;
+        align-items: center;
+    }
+    
+    .table {
+        --bs-table-bg: transparent;
+    }
+    
+    .table thead th {
+        border-bottom: none;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        color: var(--bs-secondary);
+    }
+    
+    .table tbody tr {
+        border-bottom: 1px solid #f0f0f0;
+        transition: all 0.2s ease;
+    }
+    
+    .table tbody tr:last-child {
+        border-bottom: none;
+    }
+    
+    .table tbody tr:hover {
+        background-color: rgba(13, 110, 253, 0.03);
+    }
+    
+    .empty-state {
+        padding: 2rem;
+        text-align: center;
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+        font-size: 0.75em;
+    }
+    
+    .input-group-text {
+        transition: all 0.3s ease;
+    }
+    
+    .input-group:focus-within .input-group-text {
+        color: var(--bs-primary);
+    }
+</style>
+
+<script>
+function filtrerVentes() {
+    const input = document.getElementById("recherche");
+    const filter = input.value.toLowerCase();
+    const table = document.getElementById("ventesTable");
+    const rows = table.querySelectorAll("tbody tr");
+    let visibleCount = 0;
+
+    rows.forEach(row => {
+        const clientCell = row.querySelector("td:nth-child(2)");
+        if (clientCell) {
+            const text = clientCell.textContent.toLowerCase();
+            if (text.includes(filter)) {
+                row.style.display = "";
+                visibleCount++;
+            } else {
+                row.style.display = "none";
+            }
+        }
+    });
+
+    // Gérer l'affichage quand aucun résultat
+    const emptyState = document.querySelector(".empty-state");
+    if (visibleCount === 0 && filter !== "") {
+        if (!emptyState || emptyState.closest("tr").querySelector("i.bi-cart-x")) {
+            const tbody = table.querySelector("tbody");
+            const newEmptyRow = document.createElement("tr");
+            newEmptyRow.innerHTML = `
+                <td colspan="5" class="text-center py-5">
+                    <div class="empty-state">
+                        <i class="bi bi-search fs-1 text-muted"></i>
+                        <h5 class="mt-3">Aucun résultat trouvé</h5>
+                        <p class="text-muted">Essayez avec d'autres termes de recherche</p>
+                    </div>
+                </td>
+            `;
+            const initialEmptyRow = tbody.querySelector("td[colspan='5'] .empty-state i.bi-cart-x");
+            if (initialEmptyRow) {
+                initialEmptyRow.closest("tr").remove();
+            }
+            tbody.appendChild(newEmptyRow);
+        }
+    } else if (filter === "" && document.querySelector(".empty-state i.bi-search")) {
+        const emptyStateSearch = document.querySelector(".empty-state i.bi-search");
+        if (emptyStateSearch) {
+            emptyStateSearch.closest("tr").remove();
+        }
+        if (visibleCount === 0) {
+            const tbody = table.querySelector("tbody");
+            const initialEmptyRow = document.createElement("tr");
+            initialEmptyRow.innerHTML = `
+                <td colspan="5" class="text-center py-5">
+                    <div class="empty-state">
+                        <i class="bi bi-cart-x fs-1 text-muted"></i>
+                        <h5 class="mt-3">Aucune vente aujourd'hui</h5>
+                        <p class="text-muted">Commencez par enregistrer une nouvelle vente</p>
+                        <a href="{% url 'vente_au_comptoir' %}" class="btn btn-primary mt-2">
+                            <i class="bi bi-plus-circle me-2"></i>Nouvelle vente
+                        </a>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(initialEmptyRow);
+        }
+    }
+}
+
+function reinitialiserRecherche() {
+    document.getElementById("recherche").value = "";
+    filtrerVentes();
+}
+
+// Gestion de l'annulation de vente
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser les tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Gestion du modal d'annulation
+    const annulerBtns = document.querySelectorAll('.annuler-vente');
+    const annulerForm = document.getElementById('annulerVenteForm');
+    const annulerModal = new bootstrap.Modal(document.getElementById('annulerVenteModal'));
+
+    annulerBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const venteId = this.getAttribute('data-vente-id');
+            annulerForm.action = `/commandes/${venteId}/annuler/`;
+            annulerModal.show();
+        });
+    });
+});
+</script>
+{% endblock %}

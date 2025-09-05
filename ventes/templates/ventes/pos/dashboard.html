@@ -1,0 +1,328 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %} {# Assurez-vous d'avoir ceci pour les traductions #}
+{% load humanize %} {# Pour un meilleur formatage des nombres #}
+
+{% block title %}Dashboard POS - {{ point_de_vente.nom }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête du Dashboard -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="fas fa-cash-register me-2"></i>
+                {{ point_de_vente.nom }}
+            </h1>
+            <p class="text-muted mb-0">Code: {{ point_de_vente.code }}</p>
+            {% if point_de_vente.adresse %}
+            <small class="text-muted">{{ point_de_vente.adresse }}</small>
+            {% endif %}
+        </div>
+        
+        <div class="d-flex gap-2">
+            {% if session_ouverte %}
+            <span class="badge bg-success fs-6">
+                <i class="fas fa-circle-check me-1"></i>
+                {% trans "Session Ouverte" %}
+            </span>
+            {% else %}
+            <span class="badge bg-secondary fs-6">
+                <i class="fas fa-circle-pause me-1"></i>
+                {% trans "Session Fermée" %}
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Alertes et Messages -->
+    {% if messages %}
+    <div class="row">
+        <div class="col-12">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Colonne principale -->
+        <div class="col-lg-8">
+            <!-- Cartes de statistiques (assurez-vous que _stats_cards.html utilise aussi devise_principale.symbole) -->
+            {# Inclure la devise_principale dans le contexte de l'inclusion si _stats_cards.html en a besoin #}
+            {% include 'ventes/pos/includes/_stats_cards.html' with devise_principale=devise_principale pos=point_de_vente %}
+
+            <!-- Session en cours -->
+            {% if session_ouverte %}
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-play-circle me-2"></i>
+                        {% trans "Session en Cours" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% include 'ventes/pos/includes/_session_info.html' with session=session_ouverte devise_principale=devise_principale %} {# <-- Passe la devise #}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Actions rapides -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">{% trans "Actions Rapides" %}</h5>
+                </div>
+                <div class="card-body">
+                    {% include 'ventes/pos/includes/_quick_actions.html' with pos=point_de_vente session_ouverte=session_ouverte %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Informations du POS -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        {% trans "Informations du Point de Vente" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>{% trans "Code" %}:</strong>
+                        <span class="float-end">{{ point_de_vente.code }}</span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>{% trans "Nom" %}:</strong>
+                        <span class="float-end">{{ point_de_vente.nom }}</span>
+                    </div>
+                    {% if point_de_vente.responsable %}
+                    <div class="mb-3">
+                        <strong>{% trans "Responsable" %}:</strong>
+                        <span class="float-end">{{ point_de_vente.responsable.get_full_name }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="mb-3">
+                        <strong>{% trans "Statut" %}:</strong>
+                        <span class="float-end">
+                            {% if point_de_vente.actif %}
+                            <span class="badge bg-success">{% trans "Actif" %}</span>
+                            {% else %}
+                            <span class="badge bg-danger">{% trans "Inactif" %}</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% if point_de_vente.adresse %}
+                    <div>
+                        <strong>{% trans "Adresse" %}:</strong>
+                        <p class="text-muted mb-0">{{ point_de_vente.adresse }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Dernières ventes -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        {% trans "Dernières Ventes" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_ventes %}
+                    <div class="list-group list-group-flush">
+                        {% for vente in recent_ventes %}
+                        <div class="list-group-item border-0 px-0 py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-0">#{{ vente.numero }}</h6>
+                                    <small class="text-muted">{{ vente.date|date:"d/m/Y H:i" }}</small>
+                                </div>
+                                <span class="badge bg-primary rounded-pill">
+                                    {{ vente.total_ttc|floatformat:2 }} {{ devise_principale.symbole }} {# <-- Devise ajoutée ici #}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center mb-0">{% trans "Aucune vente récente" %}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+{% if not session_ouverte %}
+<!-- Modal pour ouvrir une session -->
+<div class="modal fade" id="ouvrirSessionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'ventes:ouvrir_session_pos' point_de_vente.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">{% trans "Ouvrir une Session" %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="fonds_ouverture" class="form-label">
+                            {% trans "Fonds d'ouverture" %} 
+                            {% if devise_principale.symbole %}({{ devise_principale.symbole }}){% endif %} {# <-- Devise ajoutée #}
+                        </label>
+                        <input type="number" class="form-control" id="fonds_ouverture" 
+                               name="fonds_ouverture" step="0.01" min="0" required
+                               placeholder="{% trans "Montant initial en caisse" %}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Annuler" %}</button>
+                    <button type="submit" class="btn btn-success">{% trans "Ouvrir la Session" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% else %}
+<!-- Modal pour fermer une session -->
+<div class="modal fade" id="fermerSessionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+           <form method="post" action="{% url 'ventes:fermer_session_pos' pk=point_de_vente.id session_pk=session_ouverte.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">{% trans "Fermer la Session" %}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        {% trans "Session ouverte le" %} {{ session_ouverte.date_ouverture|date:"d/m/Y à H:i" }}
+                        {% trans "avec" %} {{ session_ouverte.fonds_ouverture|floatformat:2 }} 
+                        {% if devise_principale.symbole %}{{ devise_principale.symbole }}{% endif %} {# <-- Devise ajoutée #}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="fonds_fermeture" class="form-label">
+                            {% trans "Fonds de fermeture" %} 
+                            {% if devise_principale.symbole %}({{ devise_principale.symbole }}){% endif %} {# <-- Devise ajoutée #}
+                        </label>
+                        <input type="number" class="form-control" id="fonds_fermeture" 
+                               name="fonds_fermeture" step="0.01" min="0" required
+                               placeholder="{% trans "Montant final en caisse" %}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Annuler" %}</button>
+                    <button type="submit" class="btn btn-danger">{% trans "Fermer la Session" %}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    transition: box-shadow 0.15s ease-in-out;
+}
+
+.card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.stats-card {
+    border-left: 4px solid #0d6efd;
+}
+
+.stats-card.success {
+    border-left-color: #198754;
+}
+
+.stats-card.warning {
+    border-left-color: #ffc107;
+}
+
+.stats-card.danger {
+    border-left-color: #dc3545;
+}
+
+.quick-action-btn {
+    transition: all 0.2s ease-in-out;
+}
+
+.quick-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid #eee;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Script pour les tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialisation des tooltips Bootstrap
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Auto-focus sur les champs des modals quand ils s'ouvrent
+    const ouvrirSessionModal = document.getElementById('ouvrirSessionModal');
+    const fermerSessionModal = document.getElementById('fermerSessionModal');
+    
+    if (ouvrirSessionModal) {
+        ouvrirSessionModal.addEventListener('shown.bs.modal', function () {
+            document.getElementById('fonds_ouverture').focus();
+        });
+    }
+    
+    if (fermerSessionModal) {
+        fermerSessionModal.addEventListener('shown.bs.modal', function () {
+            document.getElementById('fonds_fermeture').focus();
+        });
+    }
+    
+    // Validation des formulaires (utilisant Bootstrap's built-in validation ou une messagerie plus conviviale)
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const fondsInput = this.querySelector('input[type="number"]');
+            if (fondsInput && parseFloat(fondsInput.value) < 0) {
+                e.preventDefault();
+                // Remplace alert() par une méthode plus élégante, comme un message Bootstrap
+                // ou un message d'erreur à côté du champ.
+                // Pour l'instant, un simple message dans la console ou un toast.
+                console.error('Le montant ne peut pas être négatif.');
+                // Ou ajoutez un élément d'alerte visible dans le DOM
+                // alert('Le montant ne peut pas être négatif.'); // Évitez alert() en production
+                fondsInput.focus();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

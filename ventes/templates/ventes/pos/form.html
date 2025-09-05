@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if object %}Modifier{% else %}Créer{% endif %} Point de Vente{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            {% if object %}Modifier{% else %}Créer{% endif %} Point de Vente
+        </h1>
+        <a href="{% url 'ventes:pos_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left mr-2"></i>Retour
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-primary text-white">
+                    <h6 class="m-0 font-weight-bold">Informations du Point de Vente</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Champs de base -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="id_code" class="font-weight-bold">Code *</label>
+                                    <input type="text" name="code" id="id_code" class="form-control" required 
+                                           value="{{ form.code.value|default:'' }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="id_nom" class="font-weight-bold">Nom *</label>
+                                    <input type="text" name="nom" id="id_nom" class="form-control" required 
+                                           value="{{ form.nom.value|default:'' }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="id_adresse" class="font-weight-bold">Adresse</label>
+                            <textarea name="adresse" id="id_adresse" class="form-control" rows="3">{{ form.adresse.value|default:'' }}</textarea>
+                        </div>
+
+                        <!-- Responsable -->
+                        <div class="form-group">
+                            <label for="id_responsable" class="font-weight-bold">Responsable principal</label>
+                            <select name="responsable" id="id_responsable" class="form-control">
+                                <option value="">Sélectionnez un responsable</option>
+                                {% for caissier in form.responsable.field.queryset %}
+                                    <option value="{{ caissier.id }}" {% if form.responsable.value == caissier.id %}selected{% endif %}>
+                                        {{ caissier.get_full_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Caissiers -->
+                        <div class="form-group">
+                            <label for="id_caissiers" class="font-weight-bold">Caissiers assignés</label>
+                            <select name="caissiers" id="id_caissiers" class="form-control" multiple size="5">
+                                {% for caissier in form.caissiers.field.queryset %}
+                                    <option value="{{ caissier.id }}" {% if caissier.id in form.caissiers.value %}selected{% endif %}>
+                                        {{ caissier.get_full_name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">Maintenez Ctrl pour sélectionner plusieurs caissiers</small>
+                        </div>
+
+                        <!-- Statut -->
+                        <div class="form-group">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" name="actif" id="id_actif" class="custom-control-input" 
+                                       {% if form.actif.value %}checked{% endif %}>
+                                <label class="custom-control-label" for="id_actif">Point de vente actif</label>
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save mr-2"></i>
+                                {% if object %}Mettre à jour{% else %}Créer{% endif %}
+                            </button>
+                            <a href="{% url 'ventes:pos_list' %}" class="btn btn-secondary ml-2">
+                                <i class="fas fa-times mr-2"></i>Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 bg-info text-white">
+                    <h6 class="m-0 font-weight-bold">Instructions</h6>
+                </div>
+                <div class="card-body">
+                    <h6>À propos de l'assignation</h6>
+                    <ul class="list-unstyled">
+                        <li><i class="fas fa-check text-success mr-2"></i> Le responsable doit être un caissier</li>
+                        <li><i class="fas fa-check text-success mr-2"></i> Plusieurs caissiers peuvent travailler sur le même POS</li>
+                    </ul>
+
+                    {% if not form.responsable.field.queryset.exists %}
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        Aucun caissier disponible. 
+                        <a href="{% url 'security:user_create' %}" class="alert-link">
+                            Créer des caissiers
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Validation simple
+    $('form').on('submit', function(e) {
+        let isValid = true;
+        const code = $('#id_code').val();
+        const nom = $('#id_nom').val();
+        
+        if (!code.trim()) {
+            alert('Le code est obligatoire');
+            isValid = false;
+        }
+        
+        if (!nom.trim()) {
+            alert('Le nom est obligatoire');
+            isValid = false;
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>{% trans "Gestion des présences" %}</h2>
+        </div>
+        <div class="col text-end">
+            <a href="{% url 'grh:presence_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-1"></i> {% trans "Nouvelle présence" %}
+            </a>
+            <a href="{% url 'grh:presence_import' %}" class="btn btn-success">
+                <i class="fas fa-upload me-1"></i> {% trans "Importer" %}
+            </a>
+            <a href="{% url 'grh:presence_calendrier' %}" class="btn btn-info">
+                <i class="fas fa-calendar me-1"></i> {% trans "Calendrier" %}
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="card-title">{% trans "Liste des présences" %}</h5>
+                </div>
+                <div class="col-md-6">
+                    <form method="get" class="d-flex">
+                        <select name="employe" class="form-select me-2">
+                            <option value="">{% trans "Tous les employés" %}</option>
+                            {% for emp in employes %}
+                                <option value="{{ emp.id }}" {% if request.GET.employe == emp.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ emp.nom_complet }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <input type="date" name="date_debut" class="form-control me-2" 
+                               value="{{ request.GET.date_debut }}" placeholder="{% trans 'Début' %}">
+                        <input type="date" name="date_fin" class="form-control me-2" 
+                               value="{{ request.GET.date_fin }}" placeholder="{% trans 'Fin' %}">
+                        <button type="submit" class="btn btn-outline-primary">{% trans "Filtrer" %}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Date" %}</th>
+                            <th>{% trans "Employé" %}</th>
+                            <th>{% trans "Heure arrivée" %}</th>
+                            <th>{% trans "Heure départ" %}</th>
+                            <th>{% trans "Heures travaillées" %}</th>
+                            <th>{% trans "Statut" %}</th>
+                            <th>{% trans "Actions" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for presence in presences %}
+                        <tr>
+                            <td>{{ presence.date|date:"d/m/Y" }}</td>
+                            <td>{{ presence.employe.nom_complet }}</td>
+                            <td>{{ presence.heure_arrivee|default:"-" }}</td>
+                            <td>{{ presence.heure_depart|default:"-" }}</td>
+                            <td>{{ presence.heures_travaillees }}h</td>
+                            <td>
+                                <span class="badge bg-{% if presence.statut == 'PRESENT' %}success{% elif presence.statut == 'ABSENT' %}danger{% else %}warning{% endif %}">
+                                    {{ presence.get_statut_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="{% url 'grh:presence_update' presence.pk %}" class="btn btn-sm btn-warning" title="{% trans 'Modifier' %}">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'grh:presence_delete' presence.pk %}" class="btn btn-sm btn-danger" title="{% trans 'Supprimer' %}">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">{% trans "Aucune présence trouvée" %}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

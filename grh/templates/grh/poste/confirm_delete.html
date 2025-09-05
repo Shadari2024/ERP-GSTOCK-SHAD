@@ -1,0 +1,50 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        {% trans "Confirmer la suppression" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>{% trans "Êtes-vous sûr de vouloir supprimer le poste suivant ?" %}</p>
+                    <div class="alert alert-info">
+                        <strong>{{ object.code }} - {{ object.intitule }}</strong>
+                        <br>
+                        <small>
+                            {% trans "Département" %}: {{ object.departement.nom }}<br>
+                            {% trans "Type de contrat" %}: {{ object.get_type_contrat_display }}<br>
+                            {% trans "Salaire" %}: {{ object.salaire_min }} - {{ object.salaire_max }} {{ devise_principale_symbole }}
+                        </small>
+                    </div>
+                    
+                    {% if object.employe_set.exists %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        {% trans "Attention ! Ce poste est attribué à" %} {{ object.employe_set.count }} {% trans "employé(s)" %}.
+                    </div>
+                    {% endif %}
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash me-2"></i>{% trans "Confirmer la suppression" %}
+                            </button>
+                            <a href="{% url 'grh:poste_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>{% trans "Annuler" %}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

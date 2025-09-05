@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-lg">
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="h4 mb-0"><i class="fas fa-balance-scale me-2"></i>Balance des comptes</h2>
+                <div>
+                    <span class="badge bg-light text-dark fs-6">
+                        Période : {{ date_debut|date:"d/m/Y" }} - {{ date_fin|date:"d/m/Y" }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <form method="get" class="mb-4">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Date début</label>
+                        <input type="date" name="date_debut" value="{{ date_debut }}" class="form-control border-primary">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Date fin</label>
+                        <input type="date" name="date_fin" value="{{ date_fin }}" class="form-control border-primary">
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary w-100 py-2">
+                            <i class="fas fa-filter me-2"></i>Filtrer
+                        </button>
+                    </div>
+                </div>
+            </form>
+            
+            <div class="table-responsive">
+                <table class="table table-hover table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th><i class="fas fa-wallet me-2"></i>Compte</th>
+                            <th><i class="fas fa-tag me-2"></i>Type</th>
+                            <th class="text-end"><i class="fas fa-arrow-down me-2"></i>Entrées</th>
+                            <th class="text-end"><i class="fas fa-arrow-up me-2"></i>Sorties</th>
+                            <th class="text-end"><i class="fas fa-calculator me-2"></i>Solde</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in balance %}
+                        <tr>
+                            <td class="fw-bold">{{ item.compte.nom }}</td>
+                            <td>
+                                <span class="badge bg-{% if item.compte.type_compte == 'actif' %}success{% elif item.compte.type_compte == 'passif' %}danger{% else %}info{% endif %}">
+                                    {{ item.compte.get_type_compte_display }}
+                                </span>
+                            </td>
+                            <td class="text-end text-success fw-bold">{{ item.entree|floatformat:2 }} {{ request.user.parametre.devise }}</td>
+                            <td class="text-end text-danger fw-bold">{{ item.sortie|floatformat:2 }} {{ request.user.parametre.devise }}</td>
+                            <td class="text-end fw-bold {% if item.solde >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ item.solde|floatformat:2 }} {{ request.user.parametre.devise }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-secondary fw-bold">
+                        <tr>
+                            <td colspan="2">Totaux</td>
+                            <td class="text-end">{{ total_entrees|floatformat:2 }} {{ request.user.parametre.devise }}</td>
+                            <td class="text-end">{{ total_sorties|floatformat:2 }} {{ request.user.parametre.devise }}</td>
+                            <td class="text-end">{{ solde_total|floatformat:2 }} {{ request.user.parametre.devise }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        
+        <div class="card-footer bg-light">
+            <div class="row">
+                <div class="col-md-6">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i> Données au {{ now|date:"d/m/Y H:i" }}
+                    </small>
+                </div>
+                <div class="col-md-6 text-end">
+                    <button class="btn btn-sm btn-outline-primary me-2">
+                        <i class="fas fa-print me-1"></i> Imprimer
+                    </button>
+                    <button class="btn btn-sm btn-outline-success">
+                        <i class="fas fa-file-excel me-1"></i> Exporter
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .table th {
+        white-space: nowrap;
+    }
+    .table-hover tbody tr:hover {
+        transform: scale(1.01);
+        transition: transform 0.2s;
+    }
+    .form-control:focus {
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+    }
+</style>
+{% endblock %}

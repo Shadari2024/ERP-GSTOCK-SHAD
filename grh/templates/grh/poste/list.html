@@ -1,0 +1,92 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+
+{% block page_title %}{% trans "Gestion des postes" %}{% endblock %}
+{% block page_description %}{% trans "Ajoutez, modifiez ou supprimez les postes et leurs détails." %}{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item active" aria-current="page">{% trans "Postes" %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="card-title mb-0">{% trans "Liste des postes" %}</h5>
+        <a href="{% url 'grh:poste_create' %}" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Créer un nouveau poste">
+            <i class="bi bi-plus-circle-fill me-1"></i> {% trans "Nouveau poste" %}
+        </a>
+    </div>
+
+    <div class="mb-4">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <input type="text" name="q" class="form-control form-control-sm" placeholder="{% trans 'Rechercher un poste par intitulé ou code...' %}" value="{{ request.GET.q }}">
+            </div>
+            <div class="col-md-4">
+                <select name="departement" class="form-select form-select-sm">
+                    <option value="">{% trans "Tous les départements" %}</option>
+                    {% for dept in departements %}
+                        <option value="{{ dept.id }}" {% if request.GET.departement == dept.id|stringformat:"s" %}selected{% endif %}>
+                            {{ dept.nom }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="tooltip" data-bs-placement="top" title="Appliquer les filtres de recherche">
+                    <i class="bi bi-funnel-fill me-1"></i> {% trans "Filtrer les résultats" %}
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle">
+            <thead>
+                <tr>
+                    <th scope="col" class="text-secondary">{% trans "Code" %}</th>
+                    <th scope="col" class="text-secondary">{% trans "Intitulé" %}</th>
+                    <th scope="col" class="text-secondary">{% trans "Département" %}</th>
+                    <th scope="col" class="text-secondary">{% trans "Type de contrat" %}</th>
+                    <th scope="col" class="text-secondary">{% trans "Salaire min" %}</th>
+                    <th scope="col" class="text-secondary">{% trans "Salaire max" %}</th>
+                    <th scope="col" class="text-secondary">{% trans "Statut" %}</th>
+                    <th scope="col" class="text-secondary text-end">{% trans "Actions" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for poste in postes %}
+                <tr>
+                    <td><span class="text-muted">{{ poste.code }}</span></td>
+                    <td><a href="{% url 'grh:poste_update' poste.pk %}" class="text-decoration-none text-white">{{ poste.intitule }}</a></td>
+                    <td><span class="text-primary">{{ poste.departement.nom }}</span></td>
+                    <td>{{ poste.get_type_contrat_display }}</td>
+                    <td>{{ poste.salaire_min }} {{ devise_principale_symbole }}</td>
+                    <td>{{ poste.salaire_max }} {{ devise_principale_symbole }}</td>
+                    <td>
+                        <span class="badge rounded-pill bg-{% if poste.actif %}success{% else %}danger{% endif %} py-2 px-3">
+                            {% if poste.actif %}<i class="bi bi-check-circle me-1"></i> {% trans "Actif" %}{% else %}<i class="bi bi-x-circle me-1"></i> {% trans "Inactif" %}{% endif %}
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'grh:poste_update' poste.pk %}" class="btn btn-sm btn-outline-warning" data-bs-toggle="tooltip" data-bs-placement="top" title="Modifier le poste">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a href="{% url 'grh:poste_delete' poste.pk %}" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" data-bs-placement="top" title="Supprimer le poste">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-secondary py-4">
+                        <i class="bi bi-emoji-frown d-block mb-2 fs-4"></i>
+                        {% trans "Aucun poste trouvé." %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

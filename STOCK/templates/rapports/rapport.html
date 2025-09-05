@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="text-center mb-5"><i class="fas fa-chart-pie mr-2"></i>Rapports et Statistiques</h1>
+    
+    <div class="row">
+        <!-- Rapport Mouvements -->
+        <div class="col-md-4 mb-4">
+            <div class="card report-card h-100 border-0 shadow-lg hover-effect">
+                <div class="card-body text-center">
+                    <div class="icon-circle bg-primary mb-4 mx-auto">
+                        <i class="fas fa-exchange-alt fa-2x text-white"></i>
+                    </div>
+                    <h3 class="h4">Mouvements</h3>
+                    <p class="text-muted">Historique des entrées/sorties de stock</p>
+                    <a href="{% url 'rapport_mouvements' %}" class="btn btn-outline-primary stretched-link">
+                        <i class="fas fa-download mr-2"></i>Générer
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Rapport Alertes -->
+        <div class="col-md-4 mb-4">
+            <div class="card report-card h-100 border-0 shadow-lg hover-effect">
+                <div class="card-body text-center">
+                    <div class="icon-circle bg-danger mb-4 mx-auto">
+                        <i class="fas fa-exclamation-triangle fa-2x text-white"></i>
+                    </div>
+                    <h3 class="h4">Alertes Stock</h3>
+                    <p class="text-muted">Produits sous le seuil minimum</p>
+                    <a href="{% url 'rapport_alert' %}" class="btn btn-outline-danger stretched-link">
+                        <i class="fas fa-download mr-2"></i>Générer
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Rapport Écarts -->
+        <div class="col-md-4 mb-4">
+            <div class="card report-card h-100 border-0 shadow-lg hover-effect">
+                <div class="card-body text-center">
+                    <div class="icon-circle bg-warning mb-4 mx-auto">
+                        <i class="fas fa-search-minus fa-2x text-white"></i>
+                    </div>
+                    <h3 class="h4">Écarts Inventaire</h3>
+                    <p class="text-muted">Différences entre stock réel et théorique</p>
+                    <a href="{% url 'rapport_ecarts_pd' %}" class="btn btn-outline-warning stretched-link">
+                        <i class="fas fa-download mr-2"></i>Générer
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .report-card {
+        border-radius: 15px;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        overflow: hidden;
+    }
+    
+    .hover-effect:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    
+    .icon-circle {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .stretched-link::after {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 1;
+        content: "";
+    }
+</style>
+{% endblock %}

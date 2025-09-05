@@ -1,0 +1,412 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- En-tête avec sélecteur de devise -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center mb-3 mb-md-0">
+            <div class="icon-wrapper bg-primary bg-opacity-10 p-3 rounded-3 me-3">
+                <i class="bi bi-graph-up fs-3 text-primary"></i>
+            </div>
+            <div>
+                <h2 class="mb-0 fw-bold">Tableau de Bord</h2>
+                <p class="text-muted mb-0">Statistiques du jour - {{ now|date:"d/m/Y" }}</p>
+            </div>
+        </div>
+        
+        <div class="d-flex align-items-center">
+            <form method="get" class="me-3">
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-currency-exchange"></i></span>
+                    <select name="devise" class="form-select" onchange="this.form.submit()">
+                        {% for d in param.devises_acceptees %}
+                        <option value="{{ d }}" {% if d == devise %}selected{% endif %}>{{ d }}</option>
+                        {% endfor %}
+                    </select>
+                    
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cartes indicateurs principaux -->
+    <div class="row g-3 mb-4">
+        <!-- CA Total -->
+        <div class="col-md-6 col-lg-3">
+            <div class="card stat-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-success me-3">
+                            <i class="bi bi-cash-stack"></i>
+                        </div>
+                        <div>
+                            <h6 class="stat-label">CA Total</h6>
+                            <h3 class="stat-value mb-0">{{ total_journalier_converted|floatformat:2|intcomma }} {{ devise }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Transactions -->
+        <div class="col-md-6 col-lg-3">
+            <div class="card stat-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-info me-3">
+                            <i class="bi bi-cart-check"></i>
+                        </div>
+                        <div>
+                            <h6 class="stat-label">Transactions</h6>
+                            <h3 class="stat-value mb-0">{{ total_transactions }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Produits vendus -->
+        <div class="col-md-6 col-lg-3">
+            <div class="card stat-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-warning me-3">
+                            <i class="bi bi-box-seam"></i>
+                        </div>
+                        <div>
+                            <h6 class="stat-label">Produits vendus</h6>
+                            <h3 class="stat-value mb-0">{{ total_produits }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Utilisateurs -->
+        <div class="col-md-6 col-lg-3">
+            <div class="card stat-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon bg-primary me-3">
+                            <i class="bi bi-people"></i>
+                        </div>
+                        <div>
+                            <h6 class="stat-label">Utilisateurs</h6>
+                            <h3 class="stat-value mb-0">{{ nb_utilisateurs }}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deuxième ligne de cartes -->
+    <div class="row g-3 mb-4">
+        <!-- Ventes du jour -->
+        <div class="col-md-6 col-lg-3">
+            <div class="card stat-card h-100">
+                <div class="card-body text-center">
+                    <div class="icon-lg bg-green bg-opacity-10 text-green mb-3 mx-auto">
+                        <i class="bi bi-currency-euro"></i>
+                    </div>
+                    <h5 class="text-muted mb-1">Ventes du jour</h5>
+                    <h3 class="fw-bold text-green">{{ ventes_jour_converted|floatformat:2|intcomma }} {{ devise }}</h3>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Commandes -->
+        <div class="col-md-6 col-lg-3">
+            <a href="{% url 'commande_stats' %}" class="text-decoration-none">
+                <div class="card stat-card h-100 hover-shadow">
+                    <div class="card-body text-center">
+                        <div class="icon-lg bg-blue bg-opacity-10 text-blue mb-3 mx-auto">
+                            <i class="bi bi-cart"></i>
+                        </div>
+                        <h5 class="text-muted mb-1">Commandes</h5>
+                        <h3 class="fw-bold">{{ nb_commandes }}</h3>
+                    </div>
+                </div>
+            </a>
+        </div>
+        
+        <!-- Produits en stock -->
+        <div class="col-md-6 col-lg-3">
+            <a href="{% url 'statistiques_produits' %}" class="text-decoration-none">
+                <div class="card stat-card h-100 hover-shadow">
+                    <div class="card-body text-center">
+                        <div class="icon-lg bg-purple bg-opacity-10 text-purple mb-3 mx-auto">
+                            <i class="bi bi-box"></i>
+                        </div>
+                        <h5 class="text-muted mb-1">Produits en stock</h5>
+                        <h3 class="fw-bold">{{ produits_en_stock }}</h3>
+                    </div>
+                </div>
+            </a>
+        </div>
+        
+        <!-- Utilisateurs actifs -->
+        <div class="col-md-6 col-lg-3">
+            <div class="card stat-card h-100">
+                <div class="card-body text-center">
+                    <div class="icon-lg bg-orange bg-opacity-10 text-orange mb-3 mx-auto">
+                        <i class="bi bi-person-check"></i>
+                    </div>
+                    <h5 class="text-muted mb-1">Utilisateurs actifs</h5>
+                    <h3 class="fw-bold">{{ utilisateurs_actifs }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableaux de données -->
+    <div class="row g-4">
+        <!-- Produits les plus vendus -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-trophy-fill text-warning me-2"></i>
+                        Produits les plus vendus
+                    </h5>
+                    <a href="#" class="btn btn-sm btn-outline-primary">Voir tout</a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Produit</th>
+                                    <th class="text-end">Quantité</th>
+                                    <th class="text-end">{{ devise }}</th>
+                                    <th class="text-end">Part</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for produit in produits_populaires %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar bg-primary bg-opacity-10 text-primary me-3">
+                                                {{ produit.nom|slice:":1"|upper }}
+                                            </div>
+                                            <div>
+                                                <div class="fw-semibold">{{ produit.nom }}</div>
+                                                <small class="text-muted">Ref: {{ produit.reference }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-end fw-semibold">{{ produit.qte_totale }}</td>
+                                    <td class="text-end">{{ produit.ca_produit_converted|floatformat:2|intcomma }}</td>
+                                    <td class="text-end">
+                                        <div class="d-flex align-items-center justify-content-end">
+                                            <div class="progress flex-grow-1 me-2" style="height: 6px; max-width: 80px;">
+                                                <div class="progress-bar bg-warning" 
+                                                     style="width: {{ produit.part_market|floatformat:0 }}%"></div>
+                                            </div>
+                                            <small>{{ produit.part_market|floatformat:1 }}%</small>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-5">
+                                        <div class="empty-state">
+                                            <i class="bi bi-box-seam fs-1 text-muted"></i>
+                                            <h5 class="mt-3">Aucune vente aujourd'hui</h5>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance vendeurs -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-0 py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people-fill text-primary me-2"></i>
+                        Performance des vendeurs
+                    </h5>
+                    <a href="#" class="btn btn-sm btn-outline-primary">Voir tout</a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Vendeur</th>
+                                    <th class="text-end">Transactions</th>
+                                    <th class="text-end">{{ devise }}</th>
+                                    <th class="text-end">Performance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for vendeur in performance_vendeurs %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="avatar bg-info bg-opacity-10 text-info me-3">
+                                                {{ vendeur.nom|slice:":1"|upper }}
+                                            </div>
+                                            <div class="fw-semibold">{{ vendeur.nom }}</div>
+                                        </div>
+                                    </td>
+                                    <td class="text-end">{{ vendeur.nb_ventes }}</td>
+                                    <td class="text-end fw-semibold">{{ vendeur.total_vendeur_converted|floatformat:2|intcomma }}</td>
+                                    <td class="text-end">
+                                        <span class="badge bg-{{ vendeur.perf_color }} bg-opacity-10 text-{{ vendeur.perf_color }}">
+                                            <i class="bi bi-{{ vendeur.perf_icon }} me-1"></i>
+                                            {{ vendeur.performance|floatformat:1 }}%
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-5">
+                                        <div class="empty-state">
+                                            <i class="bi bi-person-x fs-1 text-muted"></i>
+                                            <h5 class="mt-3">Aucune vente enregistrée</h5>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Couleurs thématiques */
+    :root {
+        --green: #28a745;
+        --blue: #007bff;
+        --purple: #6f42c1;
+        --orange: #fd7e14;
+        --primary: #0d6efd;
+    }
+    
+    /* Cartes statistiques */
+    .stat-card {
+        border-radius: 0.5rem;
+        border: none;
+        transition: all 0.3s ease;
+        background-color: #fff;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    
+    .hover-shadow:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.25rem;
+    }
+    
+    .icon-lg {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+    
+    .stat-label {
+        font-size: 0.875rem;
+        color: var(--bs-secondary);
+        margin-bottom: 0.25rem;
+        font-weight: 500;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+    }
+    
+    /* Tableaux */
+    .table thead th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        color: var(--bs-secondary);
+        border-bottom: none;
+    }
+    
+    .table tbody tr {
+        border-bottom: 1px solid #f0f0f0;
+        transition: all 0.2s ease;
+    }
+    
+    .table tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    /* Avatar */
+    .avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+    
+    /* États vides */
+    .empty-state {
+        padding: 2rem;
+        text-align: center;
+    }
+    
+    .empty-state i {
+        opacity: 0.5;
+    }
+    
+    /* Couleurs */
+    .bg-green { background-color: var(--green); }
+    .bg-blue { background-color: var(--blue); }
+    .bg-purple { background-color: var(--purple); }
+    .bg-orange { background-color: var(--orange); }
+    .bg-primary { background-color: var(--primary); }
+    
+    .text-green { color: var(--green); }
+    .text-blue { color: var(--blue); }
+    .text-purple { color: var(--purple); }
+    .text-orange { color: var(--orange); }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .stat-card {
+            margin-bottom: 1rem;
+        }
+        
+        .icon-wrapper {
+            margin-right: 0.75rem;
+        }
+    }
+</style>
+{% endblock %}

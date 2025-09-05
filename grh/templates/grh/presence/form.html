@@ -1,0 +1,68 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">
+                        {% if object %}
+                            <i class="fas fa-edit me-2"></i>{% trans "Modifier la présence" %}
+                        {% else %}
+                            <i class="fas fa-plus-circle me-2"></i>{% trans "Nouvelle présence" %}
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        
+                        <div class="form-actions mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>
+                                {% if object %}{% trans "Modifier" %}{% else %}{% trans "Créer" %}{% endif %}
+                            </button>
+                            <a href="{% url 'grh:presence_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>{% trans "Annuler" %}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Calcul automatique des heures travaillées
+    const heureArrivee = document.getElementById('id_heure_arrivee');
+    const heureDepart = document.getElementById('id_heure_depart');
+    
+    function calculerHeures() {
+        if (heureArrivee.value && heureDepart.value) {
+            const [h1, m1] = heureArrivee.value.split(':').map(Number);
+            const [h2, m2] = heureDepart.value.split(':').map(Number);
+            
+            const totalMinutes = (h2 * 60 + m2) - (h1 * 60 + m1);
+            const heures = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            
+            // Afficher le calcul (vous pourriez stocker cela dans un champ caché)
+            console.log(`Heures travaillées: ${heures}h${minutes}`);
+        }
+    }
+    
+    if (heureArrivee && heureDepart) {
+        heureArrivee.addEventListener('change', calculerHeures);
+        heureDepart.addEventListener('change', calculerHeures);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends 'parametres/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Historique des abonnements" %}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h3 class="card-title">
+            <i class="bi bi-clock-history"></i> {% trans "Historique des abonnements" %}
+        </h3>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>{% trans "Entreprise" %}</th>
+                        <th>{% trans "Plan" %}</th>
+                        <th>{% trans "Période" %}</th>
+                        <th>{% trans "Statut" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for abonnement in abonnements %}
+                    <tr>
+                        <td>{{ abonnement.entreprise.nom }}</td>
+                        <td>{{ abonnement.plan_actuel.nom }}</td>
+                        <td>
+                            {{ abonnement.date_debut|date:"d/m/Y" }} - 
+                            {% if abonnement.date_fin %}
+                                {{ abonnement.date_fin|date:"d/m/Y" }}
+                            {% else %}
+                                {% trans "En cours" %}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if abonnement.est_actif %}success{% else %}secondary{% endif %}">
+                                {% if abonnement.est_actif %}{% trans "Actif" %}{% else %}{% trans "Inactif" %}{% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

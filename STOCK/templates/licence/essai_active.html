@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg">
+                <div class="card-header bg-success text-white">
+                    <h3 class="mb-0">
+                        <i class="fas fa-rocket me-2"></i>
+                        Votre essai gratuit est activé !
+                    </h3>
+                </div>
+                
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h4 class="alert-heading">
+                            <i class="fas fa-clock me-2"></i>
+                            Temps restant : {{ jours_restants }} jour{{ jours_restants|pluralize }}
+                        </h4>
+                        <p class="mb-0">
+                            Expire le : <strong>{{ date_expiration }}</strong>
+                        </p>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-body">
+                                    <h5 class="card-title text-primary">
+                                        <i class="fas fa-check-circle me-2"></i>
+                                        Fonctionnalités activées
+                                    </h5>
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item">
+                                            <i class="fas fa-check text-success me-2"></i>
+                                            Accès complet à l'application
+                                        </li>
+                                        <li class="list-group-item">
+                                            <i class="fas fa-check text-success me-2"></i>
+                                            Support technique de base
+                                        </li>
+                                        <li class="list-group-item">
+                                            <i class="fas fa-check text-success me-2"></i>
+                                            Toutes les fonctionnalités premium
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        Passez à l'abonnement
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <p>
+                                        Profitez de <strong>20% de réduction</strong> si vous souscrivez avant la fin de votre essai !
+                                    </p>
+                                    <a href="{% url 'panel_abonnement' %}" class="btn btn-primary btn-lg w-100">
+                                        <i class="fas fa-crown me-2"></i>
+                                        Voir les offres
+                                    </a>
+                                    
+                                    {% if not user_authenticated %}
+                                        <div class="mt-3">
+                                            <a href="{% url 'account_signup' %}" class="btn btn-outline-dark w-100">
+                                                <i class="fas fa-user-plus me-2"></i>
+                                                Créer un compte permanent
+                                            </a>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-footer bg-light">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Vous pourrez souscrire à tout moment avant l'expiration.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

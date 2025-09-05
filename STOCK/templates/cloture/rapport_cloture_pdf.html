@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Rapport de clôture - {{ cloture.vendeur.get_full_name }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+        body {
+            font-family: "Segoe UI", "DejaVu Sans", sans-serif;
+            font-size: 12px;
+            color: #333;
+            line-height: 1.5;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #0d6efd;
+        }
+        .header h1 {
+            color: #0d6efd;
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        .header h2 {
+            color: #666;
+            font-size: 18px;
+            margin-top: 0;
+        }
+        .info-block {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .info-row {
+            display: flex;
+            margin-bottom: 5px;
+        }
+        .info-label {
+            font-weight: bold;
+            min-width: 150px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th {
+            background-color: #0d6efd;
+            color: white;
+            padding: 10px;
+            text-align: left;
+        }
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .total-row td {
+            font-weight: bold;
+            border-top: 2px solid #0d6efd;
+        }
+        .footer {
+            margin-top: 40px;
+            text-align: right;
+            font-size: 11px;
+            color: #666;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        .ecarts {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #fff8e1;
+            border-left: 4px solid #ffc107;
+        }
+        .ecarts h2 {
+            color: #ff9800;
+            margin-top: 0;
+            font-size: 16px;
+        }
+        .status-valid {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .status-invalid {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1><i class="fas fa-cash-register"></i> Rapport de clôture de caisse</h1>
+        <h2>{{ cloture.date_jour|date:"d/m/Y" }}</h2>
+    </div>
+
+    <div class="info-block">
+        <div class="info-row">
+            <span class="info-label">Caissier/Vendeur :</span>
+            <span>{{ cloture.vendeur.get_full_name }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Statut :</span>
+            <span class="{% if cloture.validee %}status-valid{% else %}status-invalid{% endif %}">
+                {% if cloture.validee %}
+                <i class="fas fa-check-circle"></i> Clôture validée
+                {% else %}
+                <i class="fas fa-times-circle"></i> Clôture non validée
+                {% endif %}
+            </span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Heure de clôture :</span>
+            <span>{{ cloture.date_cloture|date:"H:i" }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Commentaires :</span>
+            <span>{{ cloture.commentaire|default:"Aucun commentaire" }}</span>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre de ventes</th>
+                <th>Montant espèces</th>
+                <th>Montant carte</th>
+                <th>Total encaissé</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="total-row">
+                <td>{{ cloture.nombre_ventes }}</td>
+                <td>{{ cloture.montant_espece|floatformat:2 }} FCFA</td>
+                <td>{{ cloture.montant_carte|floatformat:2 }} FCFA</td>
+                <td>{{ cloture.montant_total|floatformat:2 }} FCFA</td>
+            </tr>
+        </tbody>
+    </table>
+
+    {% if cloture.ecarts %}
+    <div class="ecarts">
+        <h2><i class="fas fa-exclamation-triangle"></i> Écarts relevés</h2>
+        <p>{{ cloture.ecarts }}</p>
+    </div>
+    {% endif %}
+
+    <div class="footer">
+        <p>Rapport généré automatiquement le {% now "d/m/Y à H:i" %} • {{ cloture.vendeur.get_full_name }}</p>
+    </div>
+</body>
+</html>

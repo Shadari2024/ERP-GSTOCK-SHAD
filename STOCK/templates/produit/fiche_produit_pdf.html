@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Fiche Produit - {{ produit.nom }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .logo { max-height: 80px; }
+        .info-societe { text-align: right; }
+        .photo-produit { text-align: center; margin: 20px 0; }
+        .photo-produit img { max-height: 150px; }
+        .code-barres { text-align: center; margin: 20px 0; }
+        .code-barres img { max-width: 300px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .footer { margin-top: 30px; font-size: 0.8em; text-align: center; }
+        .stock-alerte { color: red; }
+    </style>
+</head>
+<body>
+    <!-- En-tête -->
+    <div class="header">
+        {% if parametres.logo %}
+        <div>
+            <img src="{{ parametres.logo.path }}" class="logo">
+        </div>
+        {% endif %}
+        
+        <div class="info-societe">
+            <h2>{{ parametres.nom_societe }}</h2>
+            <p>{{ parametres.adresse }}</p>
+            <p>Tél: {{ parametres.telephone }}</p>
+        </div>
+    </div>
+    
+    <!-- Titre -->
+    <h1 style="text-align: center;">Fiche Produit: {{ produit.nom }}</h1>
+    
+    <!-- Photo produit -->
+    {% if produit.photo %}
+    <div class="photo-produit">
+        <img src="{{ produit.photo.path }}">
+    </div>
+    {% endif %}
+    
+    <!-- Code-barres -->
+    {% if code_barre_img %}
+    <div class="code-barres">
+        <img src="data:image/png;base64,{{ code_barre_img }}">
+        <p>{{ produit.code_barre_numero }}</p>
+    </div>
+    {% endif %}
+    
+    <!-- Détails produit -->
+    <table>
+        <tr>
+            <th>ID</th>
+            <td>{{ produit.id }}</td>
+            <th>Catégorie</th>
+            <td>{{ produit.categorie.nom|default:"Non classé" }}</td>
+        </tr>
+        <tr>
+            <th>Description</th>
+            <td colspan="3">{{ produit.description|default:"-" }}</td>
+        </tr>
+        <tr>
+            <th>Prix d'achat</th>
+            <td>{{ produit.prix_achat }} {{ parametres.devise }}</td>
+            <th>Prix de vente</th>
+            <td>{{ produit.prix_vente }} {{ parametres.devise }}</td>
+        </tr>
+        <tr>
+            <th>Stock</th>
+            <td colspan="3" class="{% if produit.stock < produit.seuil_alerte %}stock-alerte{% endif %}">
+                {{ produit.stock }} (Seuil d'alerte: {{ produit.seuil_alerte }})
+            </td>
+        </tr>
+    </table>
+    
+    <!-- Pied de page -->
+    <div class="footer">
+        Document généré le {{ date_impression }} - {{ parametres.nom_societe }}
+    </div>
+</body>
+</html>

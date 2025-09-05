@@ -1,0 +1,138 @@
+<div class="row g-3">
+    <div class="col-sm-6 col-md-4">
+        {% if session_ouverte and session_ouverte.id %}
+        <a href="{% url 'ventes:nouvelle_vente_pos' pk=point_de_vente.id session_pk=session_ouverte.id %}" 
+           class="btn btn-primary w-100 quick-action-btn" 
+           data-bs-toggle="tooltip" 
+           title="Démarrer une nouvelle vente">
+            <i class="fas fa-cash-register fa-2x mb-2"></i>
+            <br>
+            Nouvelle Vente
+        </a>
+        {% else %}
+        <button class="btn btn-primary w-100 quick-action-btn" disabled
+                title="Ouvrez d'abord une session pour effectuer une vente">
+            <i class="fas fa-cash-register fa-2x mb-2"></i>
+            <br>
+            Nouvelle Vente
+        </button>
+        {% endif %}
+    </div>
+    
+    <div class="col-sm-6 col-md-4">
+        {% if session_ouverte and session_ouverte.id %}
+        <button type="button" class="btn btn-warning w-100 quick-action-btn" 
+                data-bs-toggle="modal" data-bs-target="#fermerSessionModal" 
+                title="Fermer la session en cours">
+            <i class="fas fa-door-closed fa-2x mb-2"></i>
+            <br>
+            Fermer Session
+        </button>
+        {% else %}
+        <button type="button" class="btn btn-success w-100 quick-action-btn" 
+                data-bs-toggle="modal" data-bs-target="#ouvrirSessionModal" 
+                title="Ouvrir une nouvelle session">
+            <i class="fas fa-door-open fa-2x mb-2"></i>
+            <br>
+            Ouvrir Session
+        </button>
+        {% endif %}
+    </div>
+    
+<!-- Dans votre template de dashboard POS -->
+<div class="col-sm-6 col-md-4">
+    <a href="{% url 'ventes:historique_pos' pk=point_de_vente.id %}" class="btn btn-info w-100 quick-action-btn" 
+       data-bs-toggle="tooltip" title="Voir l'historique des ventes">
+        <i class="fas fa-history fa-2x mb-2"></i>
+        <br>
+        Historiques
+    </a>
+</div>
+    
+
+
+
+
+<!-- Dans votre template de dashboard POS -->
+<div class="col-sm-6 col-md-4">
+    <a href="{% url 'ventes:ecarts_caisse' pk=point_de_vente.id %}" class="btn btn-warning w-100 quick-action-btn" 
+       data-bs-toggle="tooltip" title="Gérer les écarts de caisse">
+        <i class="fas fa-money-bill-wave fa-2x mb-2"></i>
+        <br>
+        Écarts Caisse
+    </a>
+</div>
+
+
+
+
+
+
+<!-- Dans votre template de dashboard POS -->
+<div class="col-sm-6 col-md-4">
+    <a href="{% url 'ventes:rapports_pos' pk=point_de_vente.id %}" class="btn btn-info w-100 quick-action-btn" 
+       data-bs-toggle="tooltip" title="Voir les rapports du POS">
+        <i class="fas fa-chart-line fa-2x mb-2"></i>
+        <br>
+        Rapports2
+    </a>
+</div>
+    
+    <div class="col-sm-6 col-md-4">
+        <a href="{% url "ventes:statistiques_ventes" %}" class="btn btn-dark w-100 quick-action-btn" 
+           data-bs-toggle="tooltip" title="Consulter les rapports">
+            <i class="fas fa-chart-bar fa-2x mb-2"></i>
+            <br>
+            Rapports
+        </a>
+    </div>
+    
+    <div class="col-sm-6 col-md-4">
+        <a href="{% url 'ventes:pos_update' point_de_vente.id %}" 
+           class="btn btn-outline-primary w-100 quick-action-btn" 
+           data-bs-toggle="tooltip" title="Modifier les paramètres du POS">
+            <i class="fas fa-cog fa-2x mb-2"></i>
+            <br>
+            Paramètres
+        </a>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

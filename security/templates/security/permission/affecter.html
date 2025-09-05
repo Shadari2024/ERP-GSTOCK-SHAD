@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Affectation des Permissions{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-key me-2"></i>
+                        Affectation des Permissions aux Groupes
+                    </h5>
+                </div>
+                
+                <!-- Barre de recherche avancée -->
+                <div class="card-body border-bottom">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="searchInput" class="form-label">Recherche</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="searchInput" 
+                                       name="q" value="{{ current_search.q }}" 
+                                       placeholder="Rechercher permissions..."
+                                       list="keywordSuggestions">
+                                <datalist id="keywordSuggestions">
+                                    {% for keyword in popular_keywords %}
+                                    <option value="{{ keyword }}">
+                                    {% endfor %}
+                                </datalist>
+                                <button class="btn btn-outline-secondary" type="submit">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="appFilter" class="form-label">Application</label>
+                            <select class="form-select" id="appFilter" name="app">
+                                <option value="">Toutes les applications</option>
+                                {% for app in app_suggestions %}
+                                <option value="{{ app }}" {% if current_search.app == app %}selected{% endif %}>
+                                    {{ app }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="groupeFilter" class="form-label">Groupe</label>
+                            <select class="form-select" id="groupeFilter" name="groupe_filter">
+                                <option value="">Tous les groupes</option>
+                                {% for groupe in groupes %}
+                                <option value="{{ groupe.id }}" {% if current_search.groupe_filter == groupe.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ groupe.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-filter me-1"></i> Filtrer
+                            </button>
+                            <a href="?" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>
+                            </a>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Formulaire d'affectation -->
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-4">
+                                <div class="sticky-top" style="top: 20px;">
+                                    <h5 class="mb-3">
+                                        <i class="fas fa-users me-2"></i>
+                                        Sélection du groupe
+                                    </h5>
+                                    <select class="form-select" name="groupe" required>
+                                        <option value="">Choisir un groupe...</option>
+                                        {% for groupe in groupes %}
+                                        <option value="{{ groupe.id }}" {% if selected_groupe_id == groupe.id|stringformat:"s" %}selected{% endif %}>
+                                            {{ groupe.name }} ({{ groupe.user_set.count }} users)
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    
+                                    {% if current_search.groupe_filter and selected_groupe %}
+                                    <div class="alert alert-info mt-3">
+                                        <small>
+                                            <i class="fas fa-info-circle me-1"></i>
+                                            Filtre actif: affichage des permissions du groupe "{{ selected_groupe.name }}"
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-8">
+                                <h5 class="mb-3">
+                                    <i class="fas fa-key me-2"></i>
+                                    Permissions disponibles
+                                </h5>
+                                
+                                {% if permissions_par_app %}
+                                <div class="accordion" id="permissionsAccordion">
+                                    {% for app_data in permissions_par_app.values %}
+                                    <div class="accordion-item">
+                                        <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+                                            <button class="accordion-button" type="button" 
+                                                    data-bs-toggle="collapse" 
+                                                    data-bs-target="#collapse{{ forloop.counter }}" 
+                                                    aria-expanded="true" 
+                                                    aria-controls="collapse{{ forloop.counter }}">
+                                                {{ app_data.app_label|title }}
+                                                <span class="badge bg-secondary ms-2">{{ app_data.permissions|length }}</span>
+                                            </button>
+                                        </h2>
+                                        <div id="collapse{{ forloop.counter }}" 
+                                             class="accordion-collapse collapse show" 
+                                             aria-labelledby="heading{{ forloop.counter }}" 
+                                             data-bs-parent="#permissionsAccordion">
+                                            <div class="accordion-body">
+                                                <div class="row">
+                                                    {% for model in app_data.model_names %}
+                                                    <div class="col-md-6 mb-3">
+                                                        <h6 class="text-muted">{{ model|title }}</h6>
+                                                        <div class="list-group">
+                                                            {% for perm in app_data.permissions %}
+                                                            {% if perm.content_type.model == model %}
+                                                            <label class="list-group-item">
+                                                                <input class="form-check-input me-2" 
+                                                                       type="checkbox" 
+                                                                       name="permissions" 
+                                                                       value="{{ perm.id }}"
+                                                                       {% if current_search.groupe_filter and perm.id in permissions_groupe %}checked{% endif %}>
+                                                                {{ perm.name }}
+                                                                <small class="text-muted d-block">
+                                                                    <code>{{ perm.codename }}</code>
+                                                                </small>
+                                                            </label>
+                                                            {% endif %}
+                                                            {% endfor %}
+                                                        </div>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Aucune permission trouvée avec ces critères de recherche.
+                                    <a href="?" class="alert-link">Réinitialiser les filtres</a>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="mt-4 text-end">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>
+                                        Enregistrer les permissions
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gestion des Permissions{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="card border-0 shadow-lg rounded-lg mt-4">
+        <div class="card-header bg-gradient-primary-to-secondary text-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="m-0">
+                    <i class="fas fa-user-shield me-2"></i>
+                    Affectation des Permissions
+                </h3>
+                <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#helpModal">
+                    <i class="fas fa-question-circle me-1"></i> Aide
+                </button>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <form method="post" id="permissionForm">
+                {% csrf_token %}
+                
+                <!-- Sélection du groupe -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <select name="groupe" class="form-select" id="groupeSelect" required>
+                                <option value="">Sélectionnez un groupe</option>
+                                {% for groupe in groupes %}
+                                <option value="{{ groupe.id }}" data-perms="{{ groupe.permissions.all|join:',' }}">
+                                    {{ groupe.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <label for="groupeSelect">
+                                <i class="fas fa-users me-1"></i> Groupe
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex align-items-center h-100">
+                            <div class="alert alert-info mb-0 py-2 w-100">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <span id="groupInfo">Sélectionnez un groupe pour voir ses permissions</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Permissions par application -->
+                <div class="accordion" id="permissionsAccordion">
+                    {% for app, perms in permissions_par_app.items %}
+                    <div class="accordion-item border-0 mb-3">
+                        <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+                            <button class="accordion-button bg-light shadow-sm rounded" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}" 
+                                    aria-expanded="true" aria-controls="collapse{{ forloop.counter }}">
+                                <i class="fas fa-cube me-2"></i>
+                                <strong>{{ app|title }}</strong>
+                                <span class="badge bg-primary rounded-pill ms-2">{{ perms|length }}</span>
+                            </button>
+                        </h2>
+                        <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse show" 
+                             aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#permissionsAccordion">
+                            <div class="accordion-body pt-3">
+                                <div class="row">
+                                    {% for perm in perms %}
+                                    <div class="col-md-6 col-lg-4 mb-3">
+                                        <div class="form-check card card-hover border-start-3 border-primary">
+                                            <input class="form-check-input position-absolute" 
+                                                   type="checkbox" 
+                                                   name="permissions" 
+                                                   id="perm_{{ perm.id }}" 
+                                                   value="{{ perm.id }}">
+                                            <label class="form-check-label card-body d-block" for="perm_{{ perm.id }}">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="mb-1">{{ perm.name }}</h6>
+                                                        <small class="text-muted">{{ perm.codename }}</small>
+                                                    </div>
+                                                    <i class="fas fa-check-circle text-success ms-2 d-none"></i>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-secondary" id="resetBtn">
+                        <i class="fas fa-undo me-1"></i> Réinitialiser
+                    </button>
+                    <button type="submit" class="btn btn-primary px-4" id="submitBtn">
+                        <i class="fas fa-save me-1"></i> Enregistrer les permissions
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'aide -->
+<div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="helpModalLabel">
+                    <i class="fas fa-question-circle me-2"></i>
+                    Aide sur l'affectation des permissions
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <h5><i class="fas fa-info-circle me-2"></i>Comment utiliser</h5>
+                    <ol>
+                        <li>Sélectionnez un groupe dans la liste déroulante</li>
+                        <li>Les permissions actuelles du groupe seront automatiquement cochées</li>
+                        <li>Modifiez les permissions en cochant/décochant les cases</li>
+                        <li>Cliquez sur "Enregistrer" pour sauvegarder les modifications</li>
+                    </ol>
+                </div>
+                <div class="alert alert-warning">
+                    <h5><i class="fas fa-exclamation-triangle me-2"></i>Bonnes pratiques</h5>
+                    <ul>
+                        <li>Attribuez uniquement les permissions nécessaires</li>
+                        <li>Vérifiez régulièrement les permissions des groupes</li>
+                        <li>Documentez les règles d'affectation des permissions</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                    <i class="fas fa-check me-1"></i> Compris
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card-hover {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    .card-hover:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .form-check-input:checked + .card-hover {
+        background-color: rgba(13, 110, 253, 0.05);
+    }
+    .form-check-input:checked + .card-hover .fa-check-circle {
+        display: block !important;
+    }
+    .border-start-3 {
+        border-left-width: 3px !important;
+    }
+    .bg-gradient-primary-to-secondary {
+        background: linear-gradient(135deg, #4e73df 0%, #1cc88a 100%);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const groupeSelect = document.getElementById('groupeSelect');
+    const groupInfo = document.getElementById('groupInfo');
+    const resetBtn = document.getElementById('resetBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    // Gestion de la sélection du groupe
+    groupeSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const permIds = selectedOption.dataset.perms ? selectedOption.dataset.perms.split(',') : [];
+        
+        // Mise à jour de l'info-bulle
+        if (this.value) {
+            groupInfo.innerHTML = `Permissions actuelles du groupe: <strong>${selectedOption.text}</strong>`;
+        } else {
+            groupInfo.innerHTML = 'Sélectionnez un groupe pour voir ses permissions';
+        }
+        
+        // Réinitialiser toutes les cases
+        document.querySelectorAll('input[name="permissions"]').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        
+        // Cocher les permissions du groupe
+        permIds.forEach(id => {
+            const checkbox = document.getElementById(`perm_${id}`);
+            if (checkbox) checkbox.checked = true;
+        });
+    });
+    
+    // Bouton de réinitialisation
+    resetBtn.addEventListener('click', function() {
+        groupeSelect.value = '';
+        groupInfo.innerHTML = 'Sélectionnez un groupe pour voir ses permissions';
+        document.querySelectorAll('input[name="permissions"]').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+    });
+    
+    // Confirmation avant soumission
+    document.getElementById('permissionForm').addEventListener('submit', function(e) {
+        if (!groupeSelect.value) {
+            e.preventDefault();
+            alert('Veuillez sélectionner un groupe');
+            return;
+        }
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Enregistrement...';
+    });
+});
+</script>
+{% endblock %}

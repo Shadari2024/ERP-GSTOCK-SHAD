@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% block content %}
+<div class="container py-4">
+    <div class="card shadow-lg">
+        <!-- En-tête avec identification SAAS -->
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="h4 mb-0">
+                        <i class="fas fa-cash-register me-2"></i>Clôture de caisse - {{ today|date:"d/m/Y" }}
+                    </h2>
+                    <div class="mt-1">
+                        <span class="badge bg-light text-dark">
+                            {{ request.entreprise.nom }}
+                        </span>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <small class="text-white-50 d-block">Session: {{ request.user.get_full_name }}</small>
+                    <small class="text-white-50">{% now "H:i" %}</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages d'alerte -->
+        {% if messages %}
+        <div class="mt-3 mx-3">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                <i class="fas fa-{% if message.tags == 'error' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="card-body">
+            <!-- Résumé des ventes -->
+            <div class="alert alert-info mb-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="h5 mb-0">
+                        <i class="fas fa-receipt me-2"></i>Résumé des ventes
+                    </h4>
+                    <span class="badge bg-primary rounded-pill">
+                        {{ nombre_ventes }} transaction{{ nombre_ventes|pluralize }}
+                    </span>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="d-flex justify-content-between">
+                            <span class="fw-bold">Total des ventes :</span>
+                            <span>{{ total_ventes|floatformat:2 }} {{ request.entreprise.devise_principale.symbole }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex justify-content-between">
+                            <span class="fw-bold">Moyenne par transaction :</span>
+                            <span>
+                                {% if nombre_ventes > 0 %}
+                                    {{ total_ventes|div:nombre_ventes|floatformat:2 }}
+                                {% else %}
+                                    0.00
+                                {% endif %}
+                                {{ request.entreprise.devise_principale.symbole }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulaire de clôture -->
+            <form method="post" action="{% url 'cloturer_caisse' %}">
+                {% csrf_token %}
+                <input type="hidden" name="entreprise" value="{{ request.entreprise.id }}">
+
+                <div class="row g-3 mb-4">
+                    <!-- Montant espèces -->
+                    <div class="col-md-6">
+                        <label for="montant_espece" class="form-label fw-bold">
+                            <i class="fas fa-money-bill-wave me-2"></i>Montant en espèces
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">{{ request.entreprise.devise_principale.symbole }}</span>
+                            <input type="number" step="0.01" class="form-control" 
+                                   id="montant_espece" name="montant_espece" 
+                                   required min="0" value="0.00">
+                        </div>
+                        <small class="text-muted">Total des encaissements en espèces</small>
+                    </div>
+
+                    <!-- Montant carte -->
+                    <div class="col-md-6">
+                        <label for="montant_carte" class="form-label fw-bold">
+                            <i class="fas fa-credit-card me-2"></i>Montant par carte
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">{{ request.entreprise.devise_principale.symbole }}</span>
+                            <input type="number" step="0.01" class="form-control" 
+                                   id="montant_carte" name="montant_carte" 
+                                   required min="0" value="0.00">
+                        </div>
+                        <small class="text-muted">Total des paiements par carte bancaire</small>
+                    </div>
+                </div>
+
+                <!-- Commentaire -->
+                <div class="mb-4">
+                    <label for="commentaire" class="form-label fw-bold">
+                        <i class="fas fa-comment-dots me-2"></i>Commentaire (optionnel)
+                    </label>
+                    <textarea class="form-control" id="commentaire" name="commentaire" 
+                              rows="3" placeholder="Incidents, remarques..."></textarea>
+                </div>
+
+                <!-- Boutons d'action -->
+                <div class="d-grid gap-3">
+                    <button type="submit" class="btn btn-success btn-lg py-3">
+                        <i class="fas fa-check-circle me-2"></i> Valider la clôture
+                    </button>
+                    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times-circle me-2"></i> Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Pied de page -->
+        <div class="card-footer bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i> 
+                    Clôture du jour - {{ today|date:"l d F Y" }}
+                </small>
+                <small class="text-muted">
+                    <i class="fas fa-user-shield me-1"></i> 
+                    {{ request.user.get_full_name }}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border-radius: 0.5rem;
+        border: none;
+    }
+    .card-header {
+        border-radius: 0.5rem 0.5rem 0 0 !important;
+    }
+    .input-group-text {
+        min-width: 3rem;
+        justify-content: center;
+    }
+    textarea.form-control {
+        min-height: 100px;
+    }
+    @media (max-width: 768px) {
+        .card-body {
+            padding: 1rem;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus sur le champ espèces
+    document.getElementById('montant_espece').focus();
+    
+    // Validation des montants
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const espece = parseFloat(document.getElementById('montant_espece').value);
+        const carte = parseFloat(document.getElementById('montant_carte').value);
+        
+        if (isNaN(espece) || isNaN(carte) || espece < 0 || carte < 0) {
+            e.preventDefault();
+            alert('Veuillez saisir des montants valides (nombres positifs)');
+            return false;
+        }
+        
+        return true;
+    });
+});
+</script>
+{% endblock %}                                               

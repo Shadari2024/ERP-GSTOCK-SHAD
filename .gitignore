@@ -1,0 +1,39 @@
+﻿# Environnements virtuels
+venv/
+.env/
+
+# Base de données
+*.sqlite3
+db.sqlite3
+
+# Fichiers Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Fichiers de sauvegarde
+*.bak
+backups/
+sauvegardes/
+
+# Fichiers média
+media/
+
+# Fichiers de log
+*.log
+debug.log
+
+# IDE
+.vscode/
+.idea/
+
+# Fichiers temporaires
+tmp/
+
+# Autres
+produits/
+packages.txt
+test.json
+python
+how 4cd8d1db68c3d50a1a7ebaf30f550bf17ee989c4
+1

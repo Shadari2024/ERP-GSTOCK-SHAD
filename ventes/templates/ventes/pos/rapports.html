@@ -1,0 +1,437 @@
+<!-- ventes/templates/ventes/pos/rapports.html -->
+{% extends 'base.html' %}
+{% load math_filters %}
+{% load static %}
+
+{% block title %}Rapports POS - {{ point_de_vente.nom }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-chart-bar me-2"></i>Rapports - {{ point_de_vente.nom }}
+        </h1>
+        <div>
+            {% comment %} <a href="{% url 'ventes:export_rapport_pos' point_de_vente.pk %}?date_debut={{ date_debut }}&date_fin={{ date_fin }}&type=ventes&format=excel"  {% endcomment %}
+               class="btn btn-success btn-sm">
+                <i class="fas fa-file-excel me-1"></i>Excel
+            </a>
+            {% comment %} <a href="{% url 'ventes:export_rapport_pos' point_de_vente.pk %}?date_debut={{ date_debut }}&date_fin={{ date_fin }}&type=ventes&format=csv"  {% endcomment %}
+               class="btn btn-info btn-sm ms-1">
+                <i class="fas fa-file-csv me-1"></i>CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 bg-primary text-white">
+            <h6 class="m-0 font-weight-bold">
+                <i class="fas fa-filter me-2"></i>Filtres
+            </h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="date_debut" class="form-label">Date début</label>
+                    <input type="date" name="date_debut" id="date_debut" 
+                           value="{{ date_debut }}" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="date_fin" class="form-label">Date fin</label>
+                    <input type="date" name="date_fin" id="date_fin" 
+                           value="{{ date_fin }}" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="periode" class="form-label">Période</label>
+                    <select name="periode" id="periode" class="form-select">
+                        <option value="jour" {% if periode == 'jour' %}selected{% endif %}>Journalier</option>
+                        <option value="mois" {% if periode == 'mois' %}selected{% endif %}>Mensuel</option>
+                        <option value="heure" {% if periode == 'heure' %}selected{% endif %}>Horaire</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="caissier" class="form-label">Caissier</label>
+                    <select name="caissier" id="caissier" class="form-select">
+                        <option value="">Tous les caissiers</option>
+                        {% for caissier in caissiers %}
+                        <option value="{{ caissier.id }}" {% if caissier_id == caissier.id|stringformat:"s" %}selected{% endif %}>
+                            {{ caissier.get_full_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-2"></i>Appliquer les filtres
+                    </button>
+                    <a href="{% url 'ventes:rapports_pos' point_de_vente.pk %}" class="btn btn-secondary ms-2">
+                        <i class="fas fa-sync me-2"></i>Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Statistiques principales -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Chiffre d'Affaires
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats.total_ventes|floatformat:2 }} €
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-euro-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Nombre de Ventes
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats.nombre_ventes }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-shopping-cart fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Panier Moyen
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats.moyenne_vente|floatformat:2 }} €
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chart-pie fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Articles Vendus
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats.total_articles }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-boxes fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphique des ventes -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3 bg-info text-white">
+                    <h6 class="m-0 font-weight-bold">
+                        <i class="fas fa-chart-line me-2"></i>Évolution des Ventes
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartVentes" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphiques secondaires -->
+    <div class="row mb-4">
+        <!-- Catégories -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow">
+                <div class="card-header py-3 bg-success text-white">
+                    <h6 class="m-0 font-weight-bold">
+                        <i class="fas fa-tags me-2"></i>Ventes par Catégorie
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartCategories" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modes de paiement -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow">
+                <div class="card-header py-3 bg-warning text-white">
+                    <h6 class="m-0 font-weight-bold">
+                        <i class="fas fa-credit-card me-2"></i>Modes de Paiement
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="chartPaiements" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau détaillé -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3 bg-secondary text-white">
+                    <h6 class="m-0 font-weight-bold">
+                        <i class="fas fa-table me-2"></i>Détail des Ventes
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover" id="dataTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Période</th>
+                                    <th class="text-end">Chiffre d'Affaires</th>
+                                    <th class="text-end">Nombre de Ventes</th>
+                                    <th class="text-end">Moyenne par Vente</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for donnee in donnees_ventes %}
+                                <tr>
+                                    <td>
+                                        {% if periode == 'jour' %}
+                                        {{ donnee.periode|date:"d/m/Y" }}
+                                        {% elif periode == 'mois' %}
+                                        {{ donnee.periode|date:"m/Y" }}
+                                        {% else %}
+                                        {{ donnee.periode|date:"d/m/Y H:00" }}
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">{{ donnee.total_ttc|floatformat:2 }} €</td>
+                                    <td class="text-end">{{ donnee.nombre_ventes }}</td>
+                                    <td class="text-end">
+                                        {% if donnee.nombre_ventes > 0 %}
+                                        {{ donnee.total_ttc|floatformat:2|div:donnee.nombre_ventes }} €
+                                        {% else %}
+                                        0.00 €
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Aucune donnée disponible</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th>Total</th>
+                                    <th class="text-end">{{ stats.total_ventes|floatformat:2 }} €</th>
+                                    <th class="text-end">{{ stats.nombre_ventes }}</th>
+                                    <th class="text-end">{{ stats.moyenne_vente|floatformat:2 }} €</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- DataTables -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+
+<!-- Select2 -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+$(document).ready(function() {
+    // Initialiser les sélecteurs
+    $('#caissier').select2({
+        placeholder: "Sélectionnez un caissier...",
+        allowClear: true
+    });
+
+    // Graphique des ventes
+    var ctxVentes = document.getElementById('chartVentes').getContext('2d');
+    var chartVentes = new Chart(ctxVentes, {
+        type: 'line',
+        data: {
+            labels: [
+                {% for donnee in donnees_ventes %}
+                '{% if periode == "jour" %}{{ donnee.periode|date:"d/m" }}{% elif periode == "mois" %}{{ donnee.periode|date:"m/Y" }}{% else %}{{ donnee.periode|date:"H:00" }}{% endif %}',
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Chiffre d\'Affaires (€)',
+                data: [
+                    {% for donnee in donnees_ventes %}
+                    {{ donnee.total_ttc }},
+                    {% endfor %}
+                ],
+                borderColor: 'rgb(54, 162, 235)',
+                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Évolution du chiffre d\'affaires'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Graphique des catégories
+    var ctxCategories = document.getElementById('chartCategories').getContext('2d');
+    var chartCategories = new Chart(ctxCategories, {
+        type: 'doughnut',
+        data: {
+            labels: [
+                {% for categorie in donnees_categories %}
+                '{{ categorie.produit__categorie__nom|default:"Sans catégorie" }}',
+                {% endfor %}
+            ],
+            datasets: [{
+                data: [
+                    {% for categorie in donnees_categories %}
+                    {{ categorie.total }},
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
+                    '#858796', '#f8f9fc', '#5a5c69', '#2e59d9', '#17a673'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                },
+                title: {
+                    display: true,
+                    text: 'Répartition par catégorie'
+                }
+            }
+        }
+    });
+
+    // Graphique des modes de paiement
+    var ctxPaiements = document.getElementById('chartPaiements').getContext('2d');
+    var chartPaiements = new Chart(ctxPaiements, {
+        type: 'pie',
+        data: {
+            labels: [
+                {% for paiement in donnees_paiements %}
+                '{{ paiement.mode_paiement }}',
+                {% endfor %}
+            ],
+            datasets: [{
+                data: [
+                    {% for paiement in donnees_paiements %}
+                    {{ paiement.total }},
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                },
+                title: {
+                    display: true,
+                    text: 'Répartition des modes de paiement'
+                }
+            }
+        }
+    });
+
+    // Initialiser DataTables
+    $('#dataTable').DataTable({
+        ordering: true,
+        searching: true,
+        language: {
+            url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json'
+        },
+        dom: 'Bfrtip',
+        buttons: [
+            'copy', 'csv', 'excel', 'pdf', 'print'
+        ]
+    });
+});
+</script>
+
+<style>
+.card {
+    border: none;
+    border-radius: 10px;
+}
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+}
+.table th {
+    border-top: none;
+    font-weight: 600;
+}
+.chart-container {
+    position: relative;
+    height: 300px;
+}
+</style>
+{% endblock %}

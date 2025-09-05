@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4 border-0 shadow-sm">
+                <!-- Card Header with Gradient Background -->
+                <div class="card-header pb-3 bg-gradient-primary text-white border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-1"><i class="fas fa-database me-2"></i>Gestion des sauvegardes</h5>
+                            <p class="text-sm text-white-50 mb-0">
+                                <i class="fas fa-folder-open me-1"></i> Dossier : {{ backup_dir }}
+                            </p>
+                        </div>
+                        <div class="d-flex">
+                            <div class="input-group input-group-sm" style="width: 250px;">
+                                <span class="input-group-text bg-white"><i class="fas fa-search"></i></span>
+                                <input type="text" id="backupSearch" class="form-control" placeholder="Rechercher...">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Card Body -->
+                <div class="card-body px-0 pt-0 pb-2">
+                    <!-- Backup Action Section -->
+                    <div class="px-4 pt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div>
+                                <h6 class="mb-0 text-dark">Actions de sauvegarde</h6>
+                                <p class="text-sm text-muted mb-0">Création et gestion des sauvegardes système</p>
+                            </div>
+                            <button id="manualBackupBtn" class="btn btn-success btn-sm rounded-pill shadow-sm">
+                                <i class="fas fa-save me-2"></i>Créer une sauvegarde
+                            </button>
+                        </div>
+                        
+                        <!-- Backup Progress -->
+                        <div id="backupProgressContainer" class="mb-4" style="display: none;">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-xs font-weight-bold">Progression</span>
+                                <span id="progressPercent" class="text-xs font-weight-bold">0%</span>
+                            </div>
+                            <div id="backupProgress" class="progress">
+                                <div id="backupProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                                     role="progressbar" style="width: 0%"></div>
+                            </div>
+                            <div id="backupStatusMessage" class="text-xs mt-1"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Backup List Section -->
+                    <div class="px-4">
+                        <h6 class="mb-3 text-dark">Historique des sauvegardes</h6>
+                    </div>
+                    
+                    <div class="table-responsive p-0">
+                        <table class="table align-items-center mb-0" id="backupTable">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th class="ps-4 text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Nom du fichier</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Date</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Taille</th>
+                                    <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 text-end pe-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for backup in backups %}
+                                <tr class="backup-row">
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fas fa-file-archive text-primary me-3"></i>
+                                            <div>
+                                                <h6 class="mb-0 text-sm">{{ backup.filename }}</h6>
+                                                <p class="text-xs text-secondary mb-0">Type: {{ backup.file_type|default:"Archive" }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="text-xs font-weight-bold">{{ backup.formatted_date|default:"-" }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge badge-sm bg-gradient-secondary">{{ backup.human_size|default:"-" }}</span>
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'download_backup' filename=backup.filename %}" 
+                                               class="btn btn-link text-success px-2 mb-0" title="Télécharger">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                            <button class="btn btn-link text-danger px-2 mb-0 delete-backup" 
+                                                    data-filename="{{ backup.filename }}" title="Supprimer">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                            <button class="btn btn-link text-info px-2 mb-0 restore-backup" 
+                                                    data-filename="{{ backup.filename }}" title="Restaurer">
+                                                <i class="fas fa-undo"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center py-4">
+                                        <div class="d-flex flex-column align-items-center">
+                                            <i class="fas fa-database text-secondary mb-2" style="font-size: 2rem;"></i>
+                                            <p class="text-muted">Aucune sauvegarde disponible</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Backup Stats Footer -->
+                    <div class="card-footer bg-transparent border-0 d-flex justify-content-between align-items-center">
+                        <div class="text-sm text-muted">
+                            <span class="font-weight-bold">{{ backups|length }}</span> sauvegarde(s) au total
+                        </div>
+                        <div class="text-sm text-muted">
+                            Espace utilisé: <span class="font-weight-bold">{{ total_size|default:"0 MB" }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Backup Modal -->
+<div class="modal fade" id="deleteBackupModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-danger text-white">
+                <h6 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer <strong id="backupToDelete"></strong> ?</p>
+                <p class="text-sm text-muted">Cette action est irréversible.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-sm btn-danger" id="confirmDelete">Supprimer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Elements
+    const backupBtn = document.getElementById('manualBackupBtn');
+    const backupProgressContainer = document.getElementById('backupProgressContainer');
+    const progressBar = document.getElementById('backupProgressBar');
+    const progressPercent = document.getElementById('progressPercent');
+    const backupStatusMessage = document.getElementById('backupStatusMessage');
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteBackupModal'));
+    let currentBackupToDelete = null;
+    
+    // Search functionality
+    const backupSearch = document.getElementById('backupSearch');
+    backupSearch.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        document.querySelectorAll('.backup-row').forEach(row => {
+            const filename = row.querySelector('h6').textContent.toLowerCase();
+            row.style.display = filename.includes(searchTerm) ? '' : 'none';
+        });
+    });
+    
+    // Manual Backup
+    backupBtn.addEventListener('click', function() {
+        const btnOriginal = backupBtn.innerHTML;
+        backupBtn.disabled = true;
+        backupBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Création en cours...';
+        
+        backupProgressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressPercent.textContent = '0%';
+        backupStatusMessage.textContent = 'Initialisation de la sauvegarde...';
+        
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += Math.random() * 5;
+            const displayProgress = Math.min(progress, 90);
+            progressBar.style.width = `${displayProgress}%`;
+            progressPercent.textContent = `${Math.floor(displayProgress)}%`;
+        }, 300);
+        
+        fetch('{% url "manual_backup" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            clearInterval(progressInterval);
+            progressBar.style.width = '100%';
+            progressPercent.textContent = '100%';
+            
+            if (data.status === 'success') {
+                backupStatusMessage.innerHTML = `
+                    <span class="text-success"><i class="fas fa-check-circle me-1"></i> ${data.message}</span>
+                `;
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                throw new Error(data.message || 'Erreur inconnue');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            backupStatusMessage.innerHTML = `
+                <span class="text-danger"><i class="fas fa-exclamation-circle me-1"></i> ${error.message || 'Erreur réseau'}</span>
+            `;
+        })
+        .finally(() => {
+            clearInterval(progressInterval);
+            backupBtn.disabled = false;
+            backupBtn.innerHTML = btnOriginal;
+            setTimeout(() => {
+                progressBar.style.width = '0%';
+                backupProgressContainer.style.display = 'none';
+            }, 3000);
+        });
+    });
+    
+    // Delete Backup with Modal
+    document.querySelectorAll('.delete-backup').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentBackupToDelete = this.dataset.filename;
+            document.getElementById('backupToDelete').textContent = currentBackupToDelete;
+            deleteModal.show();
+        });
+    });
+    
+    document.getElementById('confirmDelete').addEventListener('click', function() {
+        if (!currentBackupToDelete) return;
+        
+        const btn = this;
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Suppression...';
+        
+        fetch(`{% url 'delete_backup' %}?filename=${encodeURIComponent(currentBackupToDelete)}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            if (data.status === 'success') {
+                deleteModal.hide();
+                const row = document.querySelector(`.delete-backup[data-filename="${currentBackupToDelete}"]`).closest('tr');
+                row.classList.add('table-danger');
+                row.style.transition = 'opacity 0.5s';
+                row.style.opacity = 0;
+                setTimeout(() => row.remove(), 500);
+                
+                // Show success message
+                alert(`Le fichier ${currentBackupToDelete} a été supprimé avec succès.`);
+            } else {
+                throw new Error(data.message || 'Échec de la suppression');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert(`Erreur: ${error.message}`);
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            currentBackupToDelete = null;
+        });
+    });
+    
+    // Restore Backup
+    document.querySelectorAll('.restore-backup').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const filename = this.dataset.filename;
+            if (!confirm(`Restaurer le système à partir de "${filename}" ?\nCette opération peut prendre plusieurs minutes.`)) return;
+            
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            this.disabled = true;
+            
+            fetch(`/backup/restore/?filename=${encodeURIComponent(filename)}`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('Restauration réussie: ' + data.message);
+                    location.reload();
+                } else {
+                    throw new Error(data.message || 'Échec de la restauration');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur: ' + error.message);
+                this.innerHTML = '<i class="fas fa-undo"></i>';
+                this.disabled = false;
+            });
+        });
+    });
+});
+</script>
+
+<style>
+    .card {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    
+    .card-header {
+        border-radius: 12px 12px 0 0 !important;
+    }
+    
+    .bg-gradient-primary {
+        background: linear-gradient(87deg, #5e72e4 0, #825ee4 100%) !important;
+    }
+    
+    .bg-gradient-danger {
+        background: linear-gradient(87deg, #f5365c 0, #f56036 100%) !important;
+    }
+    
+    .bg-gradient-secondary {
+        background: linear-gradient(87deg, #6c757d 0, #4a5258 100%) !important;
+    }
+    
+    .table thead th {
+        border-bottom: 1px solid #e9ecef !important;
+    }
+    
+    .backup-row:hover {
+        background-color: #f8f9fa;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        transition: all 0.2s ease;
+    }
+    
+    .btn-link {
+        text-decoration: none;
+    }
+    
+    .progress {
+        height: 6px;
+        border-radius: 3px;
+    }
+</style>
+{% endblock %}

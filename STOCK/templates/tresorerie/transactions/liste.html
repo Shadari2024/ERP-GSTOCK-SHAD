@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center {% if request.user.parametre.theme_sombre %}bg-dark text-light border-secondary{% else %}bg-primary text-white{% endif %}">
+            <h6 class="m-0 font-weight-bold">Liste des Transactions</h6>
+            <div>
+                <div class="dropdown d-inline-block mr-2">
+                    <button class="btn btn-sm dropdown-toggle {% if request.user.parametre.theme_sombre %}btn-secondary text-light{% else %}btn-light text-dark border{% endif %}" 
+                            type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Devise: {{ devise_affichee }}
+                    </button>
+                    <div class="dropdown-menu {% if request.user.parametre.theme_sombre %}dropdown-menu-dark bg-dark{% endif %}" aria-labelledby="dropdownMenuButton">
+                        {% for devise in devises_disponibles %}
+                        <a class="dropdown-item {% if devise == devise_affichee %}active{% endif %} {% if request.user.parametre.theme_sombre %}text-light{% else %}text-dark{% endif %}"
+                           href="#"
+                           onclick="setDevise('{{ devise }}')">
+                           {{ devise }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <a href="{% url 'ajouter_transaction' %}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-plus mr-1"></i> Nouvelle Transaction
+                </a>
+            </div>
+        </div>
+        <div class="card-body {% if request.user.parametre.theme_sombre %}bg-dark{% endif %}">
+            <!-- Filtres -->
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <form method="get" class="form-inline">
+                        <div class="input-group">
+                            <input type="text" class="form-control {% if request.user.parametre.theme_sombre %}bg-secondary text-light border-dark{% else %}bg-white text-dark{% endif %}" 
+                                   name="q" placeholder="Rechercher..." value="{{ request.GET.q }}">
+                            <div class="input-group-append">
+                                <button class="btn {% if request.user.parametre.theme_sombre %}btn-secondary text-light{% else %}btn-outline-secondary text-dark{% endif %}" type="submit">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="ml-3">
+                            <select name="type" class="form-control {% if request.user.parametre.theme_sombre %}bg-secondary text-light border-dark{% else %}bg-white text-dark{% endif %}">
+                                <option value="">Tous types</option>
+                                <option value="ENTREE" {% if request.GET.type == 'ENTREE' %}selected{% endif %}>Entrées</option>
+                                <option value="SORTIE" {% if request.GET.type == 'SORTIE' %}selected{% endif %}>Sorties</option>
+                            </select>
+                        </div>
+                        <div class="ml-2">
+                            <input type="date" class="form-control {% if request.user.parametre.theme_sombre %}bg-secondary text-light border-dark{% else %}bg-white text-dark{% endif %}" 
+                                   name="date" value="{{ request.GET.date }}">
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-4 text-right">
+                    <span class="badge {% if request.user.parametre.theme_sombre %}bg-secondary text-light{% else %}badge-info text-dark{% endif %}">
+                        Solde total: <span class="font-weight-bold">{{ solde_total_formatted }}</span>
+                        {% if solde_total_principal_formatted %}
+                            <br><small class="{% if request.user.parametre.theme_sombre %}text-light{% else %}text-muted{% endif %}">({{ solde_total_principal_formatted }})</small>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Tableau -->
+            <div class="table-responsive">
+                <table class="table table-bordered {% if request.user.parametre.theme_sombre %}table-dark{% endif %}" width="100%" cellspacing="0">
+                    <thead>
+                        <tr class="{% if request.user.parametre.theme_sombre %}bg-gray-800 text-light{% else %}thead-light text-dark{% endif %}">
+                            <th>Date</th>
+                            <th>Compte</th>
+                            <th>Type</th>
+                            <th>Catégorie</th>
+                            <th>Montant</th>
+                            <th>Mode Paiement</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr class="{% if transaction.obj.type_transaction == 'ENTREE' %}{% if request.user.parametre.theme_sombre %}bg-success-dark text-light{% else %}bg-success text-dark{% endif %}{% else %}{% if request.user.parametre.theme_sombre %}bg-danger-dark text-light{% else %}bg-danger text-dark{% endif %}{% endif %}">
+                            <td class="{% if request.user.parametre.theme_sombre %}text-light{% else %}text-dark{% endif %}">{{ transaction.obj.date_transaction|date:"d/m/Y H:i" }}</td>
+                            <td class="{% if request.user.parametre.theme_sombre %}text-light{% else %}text-dark{% endif %}">{{ transaction.obj.compte.nom }}</td>
+                            <td class="{% if request.user.parametre.theme_sombre %}text-light{% else %}text-dark{% endif %}">{{ transaction.obj.get_type_transaction_display }}</td>
+                            <td class="{% if request.user.parametre.theme_sombre %}text-light{% else %}text-dark{% endif %}">{{ transaction.obj.categorie.nom|default:"-" }}</td>
+                            <td>
+                                <strong class="{% if request.user.parametre.theme_sombre %}text-light{% else %}text-dark{% endif %}">{{ transaction.montant_affiche }}</strong>
+                                {% if transaction.montant_original %}
+                                    <br><small class="{% if request.user.parametre.theme_sombre %}text-light{% else %}text-muted{% endif %}">({{ transaction.montant_original }})</small>
+                                {% endif %}
+                            </td>
+                            <td class="{% if request.user.parametre.theme_sombre %}text-light{% else %}text-dark{% endif %}">{{ transaction.obj.get_mode_paiement_display }}</td>
+                            <td>
+                                <a href="{% url 'detail_transaction' transaction.obj.id %}" class="btn btn-sm btn-info" title="Détails">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="#" class="btn btn-sm btn-warning" title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center {% if request.user.parametre.theme_sombre %}text-light{% else %}text-dark{% endif %}">Aucune transaction trouvée</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link {% if request.user.parametre.theme_sombre %}bg-dark text-light border-secondary{% else %}text-dark{% endif %}" 
+                           href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.date %}&date={{ request.GET.date }}{% endif %}" 
+                           aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link {% if request.user.parametre.theme_sombre %}bg-dark text-light border-secondary{% else %}text-dark{% endif %}" 
+                           href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.date %}&date={{ request.GET.date }}{% endif %}" 
+                           aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link {% if request.user.parametre.theme_sombre %}bg-dark text-light border-secondary{% else %}text-dark{% endif %}" 
+                               href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.date %}&date={{ request.GET.date }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link {% if request.user.parametre.theme_sombre %}bg-dark text-light border-secondary{% else %}text-dark{% endif %}" 
+                           href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.date %}&date={{ request.GET.date }}{% endif %}" 
+                           aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link {% if request.user.parametre.theme_sombre %}bg-dark text-light border-secondary{% else %}text-dark{% endif %}" 
+                           href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.date %}&date={{ request.GET.date }}{% endif %}" 
+                           aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+function setDevise(devise) {
+    const dropdown = document.getElementById('dropdownMenuButton');
+    dropdown.disabled = true;
+    dropdown.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Chargement...`;
+
+    fetch("{% url 'set_devise' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: 'devise=' + encodeURIComponent(devise)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Erreur réseau');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            window.location.reload();
+        } else {
+            alert('Erreur: ' + (data.message || 'Impossible de changer la devise'));
+            dropdown.disabled = false;
+            dropdown.innerHTML = `Devise: {{ devise_affichee }}`;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Une erreur est survenue lors du changement de devise');
+        dropdown.disabled = false;
+        dropdown.innerHTML = `Devise: {{ devise_affichee }}`;
+    });
+}
+</script>
+
+<style>
+    .table-responsive {
+        overflow-x: auto;
+    }
+    .table th {
+        white-space: nowrap;
+    }
+    .bg-success-dark {
+        background-color: #1e3e1e !important;
+    }
+    .bg-danger-dark {
+        background-color: #5c1a1a !important;
+    }
+    .badge-info {
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+    }
+    .page-link {
+        color: #4e73df;
+    }
+    .page-item.active .page-link {
+        background-color: #4e73df;
+        border-color: #4e73df;
+        color: white !important;
+    }
+    .dropdown-menu-dark {
+        background-color: #343a40;
+    }
+    .dropdown-menu-dark .dropdown-item {
+        color: rgba(255, 255, 255, 0.8);
+    }
+    .dropdown-menu-dark .dropdown-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: white;
+    }
+    .dropdown-menu-dark .dropdown-item.active {
+        background-color: #007bff;
+        color: white;
+    }
+    .bg-gray-800 {
+        background-color: #2d3748;
+    }
+    .border-secondary {
+        border-color: #6c757d !important;
+    }
+</style>s
+{% endblock %}

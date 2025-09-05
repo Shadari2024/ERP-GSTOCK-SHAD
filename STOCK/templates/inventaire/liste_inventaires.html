@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-lg border-0">
+        <!-- En-tête -->
+        <div class="card-header bg-gradient-primary text-white border-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-0"><i class="fas fa-clipboard-check me-2"></i> INVENTAIRE À VALIDER</h2>
+                    <p class="mb-0 opacity-75">Ajustement des stocks après inventaire physique</p>
+                </div>
+                <a href="{% url 'saisie_inventaire' %}" class="btn btn-light">
+                    <i class="fas fa-plus me-1"></i> Nouvel inventaire
+                </a>
+            </div>
+        </div>
+
+        <!-- Tableau d'inventaire -->
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">PRODUIT</th>
+                                <th class="text-end">STOCK THÉORIQUE</th>
+                                <th class="text-end">STOCK PHYSIQUE</th>
+                                <th class="text-end pe-4">ÉCART</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inv in inventaires %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="d-flex align-items-center">
+                                        {% if inv.produit.image %}
+                                        <img src="{{ inv.produit.image.url }}" class="rounded me-3" width="40" height="40" style="object-fit: cover;">
+                                        {% else %}
+                                        <div class="rounded me-3 bg-light d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-box text-muted"></i>
+                                        </div>
+                                        {% endif %}
+                                        <div>
+                                            <strong>{{ inv.produit.nom }}</strong>
+                                            <div class="text-muted small">{{ inv.produit.categorie.nom|default:"-" }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="text-end fw-bold">{{ inv.stock_theorique }}</td>
+                                <td class="text-end">
+                                    <input type="number" 
+                                           name="physique_{{ inv.produit.id }}" 
+                                           value="{{ inv.stock_physique }}"
+                                           class="form-control form-control-sm text-end"
+                                           min="0"
+                                           style="width: 100px; display: inline-block;">
+                                </td>
+                                <td class="text-end pe-4">
+                                    <span class="badge rounded-pill py-1 px-3 {% if inv.ecart > 0 %}bg-success{% elif inv.ecart < 0 %}bg-danger{% else %}bg-secondary{% endif %}">
+                                        {% if inv.ecart > 0 %}+{% endif %}{{ inv.ecart }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-5">
+                                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                    <h5 class="text-muted">Aucun inventaire à valider</h5>
+                                    <p class="text-muted">Tous les inventaires ont été validés ou aucun n'a été saisi</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Bouton de validation -->
+                {% if inventaires %}
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="fas fa-check-circle me-1"></i> Valider et ajuster les stocks
+                    </button>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Styles personnalisés */
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+    }
+    
+    .card {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    
+    .table {
+        font-size: 0.9rem;
+    }
+    
+    .table thead th {
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        border-bottom-width: 1px;
+    }
+    
+    .table tbody tr {
+        transition: all 0.15s;
+    }
+    
+    .table tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    
+    input[type="number"] {
+        -moz-appearance: textfield;
+    }
+</style>
+{% endblock %}

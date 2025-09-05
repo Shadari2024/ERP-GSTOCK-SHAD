@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    .header { background-color: #0d6efd; color: white; padding: 10px; }
+    .body { padding: 10px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>Bonjour {{ commande.client.nom }},</h2>
+  </div>
+  <div class="body">
+    <p>Merci de votre confiance. Vous trouverez ci-joint le devis #{{ commande.id }} daté du
+      {% if commande.date_creation %}
+        {{ commande.date_creation|date:"d/m/Y" }}
+      {% else %}
+        [Date non disponible]
+      {% endif %}.
+    </p>
+    <p>Ce devis est valable jusqu’au
+      {% if commande.date_expiration %}
+        {{ commande.date_expiration|date:"d/m/Y" }}
+      {% else %}
+        [Date d'expiration non disponible]
+      {% endif %}.
+    </p>
+    <p>Nous restons à votre disposition.</p>
+    <p>Bien cordialement,<br><strong>L’équipe commerciale</strong></p>
+  </div>
+</body>
+</html>

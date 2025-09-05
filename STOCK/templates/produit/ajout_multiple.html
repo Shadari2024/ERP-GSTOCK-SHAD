@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h3>Ajout multiple de produits</h3>
+        </div>
+        <div class="card-body">
+            <form id="form-ajout-multiple" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label for="categorie" class="form-label">Catégorie commune (optionnelle)</label>
+                    <select name="categorie" id="categorie" class="form-select">
+                        <option value="">-- Aucune --</option>
+                        {% for cat in categories %}
+                            <option value="{{ cat.id }}">{{ cat.nom }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div id="produits-container">
+                    <!-- lignes de produits -->
+                </div>
+
+                <button type="button" class="btn btn-success my-3" id="ajouter-ligne">+ Ajouter une ligne</button>
+
+                <div class="text-end">
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+
+                <input type="hidden" name="produits_data" id="produits-data">
+            </form>
+
+            <div id="message" class="mt-3"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Template ligne -->
+<template id="ligne-produit-template">
+    <div class="card mb-3 produit-ligne">
+        <div class="card-body row g-3">
+            <div class="col-md-3">
+                <input type="text" class="form-control nom" placeholder="Nom du produit *" required>
+            </div>
+            <div class="col-md-3">
+                <input type="text" class="form-control description" placeholder="Description">
+            </div>
+            <div class="col-md-2">
+                <input type="number" class="form-control prix-achat" placeholder="Prix achat *" required>
+            </div>
+            <div class="col-md-2">
+                <input type="number" class="form-control prix-vente" placeholder="Prix vente *" required>
+            </div>
+            <div class="col-md-2">
+                <input type="number" class="form-control stock" placeholder="Stock" value="0">
+            </div>
+            <div class="col-md-2">
+                <input type="number" class="form-control seuil-alerte" placeholder="Seuil" value="10">
+            </div>
+            <div class="col-md-4">
+                <input type="file" class="form-control photo">
+            </div>
+            <div class="col-md-2 d-flex align-items-center">
+                <button type="button" class="btn btn-danger btn-sm supprimer-ligne">Supprimer</button>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const container = document.getElementById("produits-container");
+    const btnAjouter = document.getElementById("ajouter-ligne");
+    const template = document.getElementById("ligne-produit-template");
+    const form = document.getElementById("form-ajout-multiple");
+
+    function ajouterLigne() {
+        const clone = template.content.cloneNode(true);
+        clone.querySelector(".supprimer-ligne").addEventListener("click", function () {
+            this.closest(".produit-ligne").remove();
+        });
+        container.appendChild(clone);
+    }
+
+    btnAjouter.addEventListener("click", ajouterLigne);
+    ajouterLigne(); // une ligne au début
+
+    form.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        const lignes = container.querySelectorAll(".produit-ligne");
+        const produits = [];
+
+        for (let ligne of lignes) {
+            const nom = ligne.querySelector(".nom").value;
+            const description = ligne.querySelector(".description").value;
+            const prix_achat = ligne.querySelector(".prix-achat").value;
+            const prix_vente = ligne.querySelector(".prix-vente").value;
+            const stock = ligne.querySelector(".stock").value || 0;
+            const seuil_alerte = ligne.querySelector(".seuil-alerte").value || 10;
+            const photo = ligne.querySelector(".photo").files[0];
+
+            if (!nom || !prix_achat || !prix_vente) {
+                alert("Veuillez remplir tous les champs obligatoires (*) pour chaque produit.");
+                return;
+            }
+
+            let photo_data = null;
+            if (photo) {
+                const reader = new FileReader();
+                photo_data = await new Promise((resolve) => {
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.readAsDataURL(photo);
+                });
+            }
+
+            produits.push({
+                nom,
+                description,
+                prix_achat,
+                prix_vente,
+                stock,
+                seuil_alerte,
+                photo_data
+            });
+        }
+
+        const data = new FormData(form);
+        data.append("produits_data", JSON.stringify(produits));
+
+        const response = await fetch("{% url 'ajout_multiple_produits' %}", {
+            method: "POST",
+            headers: { "X-CSRFToken": "{{ csrf_token }}" },
+            body: data,
+        });
+
+        const result = await response.json();
+        const message = document.getElementById("message");
+
+        if (result.success) {
+            message.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+            container.innerHTML = "";
+            ajouterLigne();
+        } else {
+            message.innerHTML = `<div class="alert alert-danger">Erreur : ${result.error}</div>`;
+        }
+    });
+});
+</script>
+{% endblock %}

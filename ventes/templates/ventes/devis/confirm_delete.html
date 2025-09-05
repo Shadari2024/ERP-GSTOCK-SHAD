@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #6c5ce7;
+        --secondary-color: #a29bfe;
+        --dark-bg: #1a1a2e;
+        --darker-bg: #16213e;
+        --card-bg: #0f3460;
+        --text-light: #e6e6e6;
+        --text-lighter: #ffffff;
+        --danger-color: #ff7675;
+    }
+
+    body {
+        background-color: var(--dark-bg);
+        color: var(--text-light);
+    }
+
+    .confirmation-card {
+        background-color: var(--card-bg);
+        border-radius: 10px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        border-left: 4px solid var(--danger-color);
+        animation: fadeIn 0.3s ease forwards;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .confirmation-icon {
+        font-size: 4rem;
+        color: var(--danger-color);
+        margin-bottom: 1rem;
+    }
+
+    .btn-danger {
+        background-color: var(--danger-color);
+        border-color: var(--danger-color);
+    }
+
+    .btn-danger:hover {
+        background-color: #e84343;
+        border-color: #e84343;
+    }
+
+    .btn-outline-secondary {
+        color: var(--text-light);
+        border-color: var(--text-light);
+    }
+
+    .btn-outline-secondary:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .warning-text {
+        color: var(--danger-color);
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="confirmation-card p-4 p-md-5 text-center">
+                <div class="confirmation-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h2 class="mb-4">Confirmer la suppression</h2>
+                
+                <div class="alert alert-dark text-start mb-4">
+                    <p class="mb-1">Vous êtes sur le point de supprimer définitivement :</p>
+                    <h5 class="mb-0 text-center mt-3">Devis #{{ object.numero }}</h5>
+                    <p class="text-center mb-0 small text-muted">{{ object.client.nom }} - {{ object.date|date:"d/m/Y" }}</p>
+                </div>
+
+                <p class="warning-text mb-4">
+                    <i class="fas fa-radiation me-2"></i>Cette action est irréversible et supprimera toutes les données associées.
+                </p>
+                
+                <form method="post" class="d-flex justify-content-center gap-3">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger px-4 py-2 rounded-pill">
+                        <i class="fas fa-trash-alt me-2"></i>Confirmer la suppression
+                    </button>
+                    <a href="{% url 'ventes:devis_detail' object.pk %}" class="btn btn-outline-secondary px-4 py-2 rounded-pill">
+                        <i class="fas fa-times me-2"></i>Annuler
+                    </a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

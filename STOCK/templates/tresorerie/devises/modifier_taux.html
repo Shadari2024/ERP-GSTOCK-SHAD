@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-edit"></i> {{ page_title }}
+                </h3>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="card-body">
+                    {% if messages %}
+                    <div class="alert-messages">
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert">&times;</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Champ Devise Source -->
+                    <div class="form-group">
+                        <label for="devise_source">Devise Source</label>
+                        <select class="form-control" id="devise_source" name="devise_source" required>
+                            <option value="">Sélectionnez une devise</option>
+                            {% for devise in devises_disponibles %}
+                            <option value="{{ devise }}"
+                                {% if taux.devise_source == devise %}selected{% endif %}>
+                                {{ devise }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Champ Devise Cible -->
+                    <div class="form-group">
+                        <label for="devise_cible">Devise Cible</label>
+                        <select class="form-control" id="devise_cible" name="devise_cible" required>
+                            <option value="">Sélectionnez une devise</option>
+                            {% for devise in devises_disponibles %}
+                            <option value="{{ devise }}"
+                                {% if taux.devise_cible == devise %}selected{% endif %}>
+                                {{ devise }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Champ Taux -->
+                    <div class="form-group">
+                        <label for="taux">Taux de change</label>
+                        <input type="number" class="form-control" id="taux" name="taux" 
+                               step="0.000001" min="0.000001" required
+                               value="{{ taux.taux|floatformat:6 }}"
+                               placeholder="Exemple: 2000 pour 1 USD = 2000 FC">
+                        <small class="form-text text-muted">
+                            Entrez le taux de conversion (1 [source] = X [cible])
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="card-footer text-right">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Enregistrer
+                    </button>
+                    <a href="{% url 'liste_devises' %}" class="btn btn-default">
+                        <i class="fas fa-times"></i> Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+$(document).ready(function() {
+    // Validation côté client
+    $('form').submit(function(e) {
+        const source = $('#devise_source').val();
+        const cible = $('#devise_cible').val();
+        
+        if (source === cible) {
+            alert("Les devises source et cible doivent être différentes");
+            e.preventDefault();
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

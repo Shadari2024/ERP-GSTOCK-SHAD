@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+{% load math_filters %} {# Ajouté pour permettre l'utilisation du filtre 'abs' #}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-lg">
+        <div class="card-header bg-gradient-primary text-white d-flex justify-content-between align-items-center">
+            <h3 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Détails de la Dette #{{ dette.id }}</h3>
+            <a href="{% url 'liste_dettes' %}" class="btn btn-sm btn-outline-light">
+                <i class="bi bi-arrow-left me-1"></i> Retour à la liste
+            </a>
+        </div>
+
+        <div class="card-body p-4">
+            {% if perms.STOCK.view_dette %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5 class="text-primary mb-3"><i class="bi bi-info-circle me-2"></i>Informations Générales</h5>
+                        <p><strong>Client:</strong> <a href="{% url 'details_client' my_id=dette.client.id %}">{{ dette.client.nom }}</a></p>
+                        <p><strong>Commande Associée:</strong>
+                            {% if dette.commande %}
+                                <a href="{% url 'detail_commande' commande_id=dette.commande.id %}">#{{ dette.commande.id }}</a> (Total: {{ dette.commande.montant_total|floatformat:2|intcomma }} {{ dette.client.devise_preferee.symbole|default:'€' }}) {# Utilise montant_total #}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </p>
+                        <p><strong>Date de Création:</strong> {{ dette.date_creation|date:"d M Y" }}</p>
+                        <p><strong>Date d'Échéance:</strong>
+                            <span class="fw-bold">{{ dette.date_echeance|date:"d M Y" }}</span>
+                            {% comment %} 
+                                Assurez-vous que 'est_en_retard' et 'jours_restants' sont passés 
+                                depuis votre vue (DetteDetailView ou fonction).
+                                La propriété 'jours_avant_echeance' du modèle Dette est idéale pour 'jours_restants'.
+                            {% endcomment %}
+                            {% if est_en_retard %}
+                                {# Utilisation correcte du filtre 'abs' #}
+                                <span class="badge bg-danger ms-2">Expirée ({{ jours_restants|abs }} jours de retard)</span>
+                            {% elif jours_restants <= 30 and jours_restants >= 0 %}
+                                <span class="badge bg-warning text-dark ms-2">Échéance proche (Dans {{ jours_restants }} jours)</span>
+                            {% else %}
+                                <span class="badge bg-info ms-2">Dans {{ jours_restants }} jours</span>
+                            {% endif %}
+                        </p>
+                        <p><strong>Statut:</strong>
+                            {% if dette.est_soldee %}
+                                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i> Soldée</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split me-1"></i> Non soldée</span>
+                            {% endif %}
+                        </p>
+                        {% if dette.notes %}
+                            <p><strong>Notes:</strong> {{ dette.notes|linebreaksbr }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <h5 class="text-primary mb-3"><i class="bi bi-cash-stack me-2"></i>Montants</h5>
+                        <p><strong>Montant Initial:</strong> <span class="fs-5 fw-bold">{{ dette.montant_initial|floatformat:2|intcomma }} {{ dette.client.devise_preferee.symbole|default:'€' }}</span></p>
+                        <p><strong>Montant Payé:</strong> <span class="fs-5 text-success fw-bold">{{ dette.montant_paye|floatformat:2|intcomma }} {{ dette.client.devise_preferee.symbole|default:'€' }}</span></p>
+                        <hr>
+                        <p><strong>Montant Restant Dû:</strong>
+                            <span class="fs-4 fw-bold {% if dette.montant_du > 0 %}text-danger{% else %}text-success{% endif %}">
+                                {{ dette.montant_du|floatformat:2|intcomma }} {{ dette.client.devise_preferee.symbole|default:'€' }}
+                            </span>
+                        </p>
+
+                        {# SECTION D'ENREGISTREMENT DE PAIEMENT DÉJÀ INTÉGRÉE #}
+                        {% if not dette.est_soldee %}
+                            <div class="mt-4 p-3 bg-light rounded border">
+                                <h6 class="mb-3">Enregistrer un Paiement</h6>
+                                <form method="POST" action="{% url 'payer_dette' dette_id=dette.id %}">
+                                    {% csrf_token %}
+                                    <div class="mb-3">
+                                        <label for="montant_paiement" class="form-label">Montant du Paiement</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">{{ dette.client.devise_preferee.symbole|default:'€' }}</span>
+                                            <input type="number" step="0.01" min="0.01" max="{{ dette.montant_du|floatformat:2 }}" class="form-control" id="montant_paiement" name="montant_paiement" required value="{{ dette.montant_du|floatformat:2 }}">
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-success me-2">
+                                        <i class="bi bi-wallet me-1"></i> Enregistrer Paiement
+                                    </button>
+                                    <a href="{% url 'marquer_dette_soldee' dette_id=dette.id %}" class="btn btn-outline-success" onclick="return confirm('Êtes-vous sûr de vouloir marquer cette dette comme entièrement soldée ? Cela mettra le montant dû à zéro.');">
+                                        <i class="bi bi-check-all me-1"></i> Marquer comme Soldée
+                                    </a>
+                                </form>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-danger">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-shield-lock fs-3 me-3"></i>
+                        <div>
+                            <h4 class="alert-heading">Accès refusé</h4>
+                            <p class="mb-0">Vous n'avez pas les permissions nécessaires pour voir les détails de cette dette.</p>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

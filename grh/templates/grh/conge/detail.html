@@ -1,0 +1,380 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+{% load humanize %}
+
+{% block title %}{% trans "Détail du congé" %} - {{ conge.employe.nom_complet }} - {{ block.super }}{% endblock %}
+
+{% block page_title %}
+    <i class="fas fa-calendar-alt me-2"></i>{% trans "Détail du congé" %} - {{ conge.employe.nom_complet }}
+{% endblock %}
+
+{% block page_description %}
+    {% trans "Informations complètes de la demande de congé" %}
+{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'grh:conge_list' %}">{% trans "Congés" %}</a></li>
+    <li class="breadcrumb-item active">{% trans "Détail" %} - {{ conge.employe.nom_complet }}</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-calendar-alt me-2"></i>{% trans "Détail de la demande de congé" %}
+                    </h5>
+                    <div class="card-tools">
+                        <a href="{% url 'grh:conge_update' conge.pk %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-edit me-1"></i> {% trans "Modifier" %}
+                        </a>
+                        <a href="{% url 'grh:conge_list' %}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left me-1"></i> {% trans "Retour" %}
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Bannière de statut -->
+                    <div class="alert 
+                        {% if conge.statut == 'VALIDE' %}alert-success
+                        {% elif conge.statut == 'REJETE' %}alert-danger
+                        {% else %}alert-warning{% endif %} mb-4">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h6 class="mb-0">
+                                    <i class="fas 
+                                        {% if conge.statut == 'VALIDE' %}fa-check-circle
+                                        {% elif conge.statut == 'REJETE' %}fa-times-circle
+                                        {% else %}fa-clock{% endif %} me-2"></i>
+                                    <strong>Statut :</strong> 
+                                    <span class="badge bg-
+                                        {% if conge.statut == 'VALIDE' %}success
+                                        {% elif conge.statut == 'REJETE' %}danger
+                                        {% else %}warning{% endif %}">
+                                        {{ conge.get_statut_display }}
+                                    </span>
+                                </h6>
+                                {% if conge.statut == 'DEMANDE' %}
+                                <small class="mb-0">{% trans "En attente de validation" %}</small>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <small>
+                                    <i class="fas fa-calendar me-1"></i>
+                                    {{ conge.date_debut|date:"d/m/Y" }} - {{ conge.date_fin|date:"d/m/Y" }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Colonne de gauche - Informations employé -->
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-header bg-light">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-user me-2"></i>{% trans "Informations employé" %}
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-3">
+                                        {% if conge.employe.photo %}
+                                        <img src="{{ conge.employe.photo.url }}" alt="{{ conge.employe.nom_complet }}" 
+                                             class="rounded-circle me-3" width="60" height="60">
+                                        {% else %}
+                                        <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                             style="width: 60px; height: 60px;">
+                                            <i class="fas fa-user text-white fa-2x"></i>
+                                        </div>
+                                        {% endif %}
+                                        <div>
+                                            <h5 class="mb-1">{{ conge.employe.nom_complet }}</h5>
+                                            <p class="text-muted mb-0">{{ conge.employe.matricule }}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="mb-2">
+                                                <strong>{% trans "Poste" %}:</strong><br>
+                                                {{ conge.employe.poste.intitule|default:"Non spécifié" }}
+                                            </p>
+                                            <p class="mb-2">
+                                                <strong>{% trans "Département" %}:</strong><br>
+                                                {{ conge.employe.poste.departement.nom|default:"Non spécifié" }}
+                                            </p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="mb-2">
+                                                <strong>{% trans "Date d'embauche" %}:</strong><br>
+                                                {{ conge.employe.date_embauche|date:"d/m/Y"|default:"Non spécifié" }}
+                                            </p>
+                                            <p class="mb-2">
+                                                <strong>{% trans "Ancienneté" %}:</strong><br>
+                                                {{ conge.employe.anciennete }} {% trans "ans" %}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Détails du congé -->
+                            <div class="card mb-4">
+                                <div class="card-header bg-light">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>{% trans "Détails du congé" %}
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-4 fw-bold">{% trans "Type" %}:</div>
+                                        <div class="col-md-8">
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-{% if conge.type_conge == 'MALADIE' %}heartbeat{% elif conge.type_conge == 'MATERNITE' %}baby{% elif conge.type_conge == 'PATERNITE' %}child{% else %}umbrella-beach{% endif %} me-1"></i>
+                                                {{ conge.get_type_conge_display }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-4 fw-bold">{% trans "Date début" %}:</div>
+                                        <div class="col-md-8">{{ conge.date_debut|date:"d/m/Y" }}</div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-4 fw-bold">{% trans "Date fin" %}:</div>
+                                        <div class="col-md-8">{{ conge.date_fin|date:"d/m/Y" }}</div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-4 fw-bold">{% trans "Durée" %}:</div>
+                                        <div class="col-md-8">
+                                            <span class="badge bg-primary">
+                                                {{ conge.nombre_jours }} {% trans "jour(s)" %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-4 fw-bold">{% trans "Demandé le" %}:</div>
+                                        <div class="col-md-8">{{ conge.date_demande|date:"d/m/Y H:i" }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Colonne de droite - Validation et motif -->
+                        <div class="col-md-6">
+                            <!-- Validation -->
+                            <div class="card mb-4">
+                                <div class="card-header bg-light">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-check-circle me-2"></i>{% trans "Validation" %}
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    {% if conge.statut != 'DEMANDE' %}
+                                    <div class="row mb-3">
+                                        <div class="col-md-4 fw-bold">{% trans "Statut" %}:</div>
+                                        <div class="col-md-8">
+                                            <span class="badge bg-{% if conge.statut == 'VALIDE' %}success{% else %}danger{% endif %}">
+                                                {{ conge.get_statut_display }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-4 fw-bold">{% trans "Validé le" %}:</div>
+                                        <div class="col-md-8">{{ conge.date_validation|date:"d/m/Y H:i" }}</div>
+                                    </div>
+                                    {% if conge.valide_par %}
+                                    <div class="row mb-3">
+                                        <div class="col-md-4 fw-bold">{% trans "Validé par" %}:</div>
+                                        <div class="col-md-8">
+                                            <div class="d-flex align-items-center">
+                                                {% if conge.valide_par.photo %}
+                                                <img src="{{ conge.valide_par.photo.url }}" alt="{{ conge.valide_par.nom_complet }}" 
+                                                     class="rounded-circle me-2" width="32" height="32">
+                                                {% endif %}
+                                                {{ conge.valide_par.nom_complet }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    {% else %}
+                                    <p class="text-center text-muted">
+                                        <i class="fas fa-clock fa-2x mb-2"></i><br>
+                                        {% trans "En attente de validation" %}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Motif -->
+                            <div class="card mb-4">
+                                <div class="card-header bg-light">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-comment me-2"></i>{% trans "Motif" %}
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    {% if conge.motif %}
+                                    <div class="bg-light p-3 rounded">
+                                        {{ conge.motif|linebreaks }}
+                                    </div>
+                                    {% else %}
+                                    <p class="text-muted text-center">
+                                        <i class="fas fa-minus-circle me-2"></i>
+                                        {% trans "Aucun motif spécifié" %}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-cog me-2"></i>{% trans "Actions" %}
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-grid gap-2">
+                                        <a href="{% url 'grh:conge_update' conge.pk %}" class="btn btn-primary">
+                                            <i class="fas fa-edit me-2"></i>{% trans "Modifier" %}
+                                        </a>
+                                        <a href="{% url 'grh:employe_detail' conge.employe.pk %}" class="btn btn-info">
+                                            <i class="fas fa-user me-2"></i>{% trans "Profil employé" %}
+                                        </a>
+                                        <a href="{% url 'grh:conge_list' %}" class="btn btn-secondary">
+                                            <i class="fas fa-list me-2"></i>{% trans "Liste des congés" %}
+                                        </a>
+                                    </div>
+
+                                    {% if conge.statut == 'DEMANDE' %}
+                                    <hr>
+                                    <div class="text-center">
+                                        <small class="text-muted mb-2 d-block">{% trans "Actions de validation" %}</small>
+                                        <div class="btn-group w-100">
+                                            <form method="post" action="{% url 'grh:conge_valider' conge.pk 'VALIDE' %}" class="flex-fill">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-success w-100">
+                                                    <i class="fas fa-check me-2"></i>{% trans "Valider" %}
+                                                </button>
+                                            </form>
+                                            <form method="post" action="{% url 'grh:conge_valider' conge.pk 'REJETE' %}" class="flex-fill">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-danger w-100">
+                                                    <i class="fas fa-times me-2"></i>{% trans "Rejeter" %}
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Informations supplémentaires -->
+                    <div class="row mt-4">
+                        <div class="col-md-12">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-history me-2"></i>{% trans "Historique" %}
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <small class="text-muted">
+                                                <i class="fas fa-calendar-plus me-2"></i>
+                                                {% trans "Créé le" %}: {{ conge.created_at|date:"d/m/Y H:i"|default:"N/A" }}
+                                            </small>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <small class="text-muted">
+                                                <i class="fas fa-calendar-check me-2"></i>
+                                                {% trans "Modifié le" %}: {{ conge.updated_at|date:"d/m/Y H:i"|default:"N/A" }}
+                                            </small>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <small class="text-muted">
+                                                <i class="fas fa-building me-2"></i>
+                                                {% trans "Entreprise" %}: {{ conge.entreprise.nom }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Confirmation pour les actions de validation
+    const validationForms = document.querySelectorAll('form[action*="conge_valider"]');
+    validationForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const action = this.action.includes('VALIDE') ? 'valider' : 'rejeter';
+            if (!confirm(`Êtes-vous sûr de vouloir ${action} cette demande de congé ?`)) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>
+
+<style>
+.card {
+    border: 1px solid #e3e6f0;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+}
+
+.card-header {
+    border-bottom: 1px solid #e3e6f0;
+    background-color: #f8f9fc;
+}
+
+.badge {
+    font-size: 0.75rem;
+    padding: 0.35em 0.65em;
+}
+
+.fw-bold {
+    color: #4e73df;
+}
+
+.alert {
+    border-left: 4px solid;
+}
+
+.alert-success {
+    border-left-color: #28a745;
+}
+
+.alert-warning {
+    border-left-color: #ffc107;
+}
+
+.alert-danger {
+    border-left-color: #dc3545;
+}
+
+.btn-group .btn {
+    border-radius: 0.35rem;
+}
+</style>
+{% endblock %}

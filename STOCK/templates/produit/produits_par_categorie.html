@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container my-5">
+  <!-- Titre -->
+  <h2 class="text-center text-primary animate__animated animate__fadeIn">Nos Produits par Catégorie</h2>
+
+  <!-- Barre de recherche et filtre par catégorie -->
+  <div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between">
+      <!-- Barre de Recherche -->
+      <div class="form-group w-50">
+        <input type="text" class="form-control" id="searchInput" placeholder="Rechercher un produit...">
+      </div>
+
+      <!-- Filtre par Catégorie -->
+      <div class="form-group w-30">
+        <select class="form-select" id="categoryFilter">
+          <option value="">Choisir une catégorie</option>
+          {% for categorie in categories %}
+            <option value="{{ categorie.id }}">{{ categorie.nom }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tableau des produits -->
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th scope="col">Image</th>
+        <th scope="col">Nom du Produit</th>
+        <th scope="col">Description</th>
+        <th scope="col">Prix</th>
+        <th scope="col">Stock</th>
+        <th scope="col">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="productTableBody">
+      {% for categorie in categories %}
+        {% for produit in categorie.produits.all %}
+          <tr class="product-row" data-product-name="{{ produit.nom|lower }}" data-product-category="{{ categorie.id }}">
+            <td><img src="{{ produit.photo.url }}" alt="{{ produit.nom }}" class="img-fluid" style="max-width: 80px;"></td>
+            <td>{{ produit.nom }}</td>
+            <td>{{ produit.description }}</td>
+            <td>{{ produit.prix_vente }} €</td>
+            <td>{{ produit.stock }}</td>
+            <td>
+              <button class="btn btn-info btn-sm" onclick="viewProduct({{ produit.id }})">Voir</button>
+              <button class="btn btn-warning btn-sm" onclick="editProduct({{ produit.id }})">Éditer</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteProduct({{ produit.id }})">Supprimer</button>
+            </td>
+          </tr>
+        {% endfor %}
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- Pagination -->
+  <nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+      <li class="page-item"><a class="page-link" href="#">Précédent</a></li>
+      <li class="page-item"><a class="page-link" href="#">1</a></li>
+      <li class="page-item"><a class="page-link" href="#">2</a></li>
+      <li class="page-item"><a class="page-link" href="#">3</a></li>
+      <li class="page-item"><a class="page-link" href="#">Suivant</a></li>
+    </ul>
+  </nav>
+</div>
+
+<!-- jQuery et script pour la recherche et le filtre -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+  $(document).ready(function() {
+    // Filtrer par catégorie
+    $('#categoryFilter').on('change', function() {
+      var categoryId = $(this).val();
+      $('.product-row').each(function() {
+        var productCategory = $(this).data('product-category');
+        if (categoryId === "" || categoryId == productCategory) {
+          $(this).show();
+        } else {
+          $(this).hide();
+        }
+      });
+    });
+
+    // Rechercher un produit par nom
+    $('#searchInput').on('keyup', function() {
+      var searchValue = $(this).val().toLowerCase();
+      $('.product-row').each(function() {
+        var productName = $(this).data('product-name');
+        if (productName.indexOf(searchValue) !== -1) {
+          $(this).show();
+        } else {
+          $(this).hide();
+        }
+      });
+    });
+  });
+
+  // Fonctions d'actions
+  function viewProduct(productId) {
+    alert('Voir le produit avec ID: ' + productId);
+  }
+
+  function editProduct(productId) {
+    alert('Éditer le produit avec ID: ' + productId);
+  }
+
+  function deleteProduct(productId) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce produit?')) {
+      alert('Produit avec ID ' + productId + ' supprimé.');
+    }
+  }
+</script>
+{% endblock %}

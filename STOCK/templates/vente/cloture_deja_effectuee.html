@@ -1,0 +1,7 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>Clôture déjà effectuée</h2>
+<p>La caisse de {{ cloture.vendeur.username }} a déjà été clôturée pour le {{ cloture.date }}.</p>
+<p>Total : {{ cloture.total_ventes }} €</p>
+<p>Nombre de commandes : {{ cloture.nb_commandes }}</p>
+{% endblock %}

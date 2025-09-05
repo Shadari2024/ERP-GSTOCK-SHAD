@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="text-center mb-4">
+        <h2>{{ parametres.nom_societe }}</h2>
+        <h4>BON DE RÉCEPTION</h4>
+        <p>N° {{ reception.numero }}</p>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <p><strong>Date :</strong> {{ reception.date_reception|date:"d/m/Y" }}</p>
+            <p><strong>Fournisseur :</strong> {{ reception.fournisseur.nom }}</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <p><strong>Statut :</strong> {{ reception.get_status_display }}</p>
+            <p><strong>Devise :</strong> {{ reception.devise }} (Taux: {{ reception.taux_change }} {{ parametres.devise_principale }})</p>
+        </div>
+    </div>
+    
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Produit</th>
+                <th>Quantité</th>
+                <th>Prix unitaire</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in reception.lignes.all %}
+            <tr>
+                <td>{{ ligne.produit.designation }}</td>
+                <td>{{ ligne.quantite }}</td>
+                <td>{{ ligne.prix_unitaire|floatformat:2 }} {{ reception.devise }}</td>
+                <td>{{ ligne.montant|floatformat:2 }} {{ reception.devise }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <th colspan="3">Total</th>
+                <th>{{ reception.total_devise_origine|floatformat:2 }} {{ reception.devise }}</th>
+            </tr>
+            <tr>
+                <th colspan="3">Total en {{ parametres.devise_principale }}</th>
+                <th>{{ reception.total|floatformat:2 }}</th>
+            </tr>
+        </tfoot>
+    </table>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <p><strong>Responsable :</strong> {{ reception.created_by.get_full_name }}</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <p>Fait à Kinshasa, le {% now "d/m/Y" %}</p>
+            <p class="mt-4"><strong>Signature</strong></p>
+        </div>
+    </div>
+    
+    <div class="text-center mt-4">
+        <button onclick="window.print()" class="btn btn-primary">
+            <i class="fas fa-print me-1"></i> Imprimer
+        </button>
+    </div>
+</div>
+
+<style>
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        .container, .container * {
+            visibility: visible;
+        }
+        .container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+        }
+        .no-print {
+            display: none !important;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% load custom_filters %}
+{% load security_filters %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">Journal d'activité</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <div class="btn-group me-2">
+                <a href="{% url 'security:journal_activite' %}?export=csv" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-download me-1"></i> Exporter CSV
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="utilisateur" class="form-label">Utilisateur</label>
+                    <select name="utilisateur" id="utilisateur" class="form-select">
+                        <option value="">Tous les utilisateurs</option>
+                        {% for user in utilisateurs %}
+                        <option value="{{ user.id }}" {% if request.GET.utilisateur == user.id|stringformat:"s" %}selected{% endif %}>
+                            {{ user.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="action" class="form-label">Type d'action</label>
+                    <select name="action" id="action" class="form-select">
+                        <option value="">Toutes les actions</option>
+                        {% for action in actions %}
+                        <option value="{{ action.0 }}" {% if request.GET.action == action.0 %}selected{% endif %}>
+                            {{ action.1 }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="bi bi-funnel me-1"></i> Filtrer
+                    </button>
+                    <a href="{% url 'security:journal_activite' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tableau des activités -->
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date/Heure</th>
+                            <th>Utilisateur</th>
+                            <th>Action</th>
+                            <th>Modèle</th>
+                            <th>Détails</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for activite in activites %}
+                        <tr>
+                            <td>{{ activite.date_heure|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                {% if activite.utilisateur %}
+                                    {{ activite.utilisateur.username }}
+                                {% else %}
+                                    Système
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ activite.action|action_color }}">
+                                    {{ activite.get_action_display }}
+                                </span>
+                            </td>
+                            <td>{{ activite.modele|default:"-" }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" 
+                                        data-bs-target="#detailsModal{{ activite.id }}">
+                                    <i class="bi bi-eye me-1"></i> Voir
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">Aucune activité trouvée</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if activites.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if activites.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if request.GET.utilisateur %}&utilisateur={{ request.GET.utilisateur }}{% endif %}{% if request.GET.action %}&action={{ request.GET.action }}{% endif %}">
+                            &laquo; Première
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ activites.previous_page_number }}{% if request.GET.utilisateur %}&utilisateur={{ request.GET.utilisateur }}{% endif %}{% if request.GET.action %}&action={{ request.GET.action }}{% endif %}">
+                            Précédent
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in activites.paginator.page_range %}
+                    {% if activites.number == num %}
+                    <li class="page-item active">
+                        <a class="page-link" href="#">{{ num }}</a>
+                    </li>
+                    {% elif num > activites.number|add:'-3' and num < activites.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if request.GET.utilisateur %}&utilisateur={{ request.GET.utilisateur }}{% endif %}{% if request.GET.action %}&action={{ request.GET.action }}{% endif %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if activites.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ activites.next_page_number }}{% if request.GET.utilisateur %}&utilisateur={{ request.GET.utilisateur }}{% endif %}{% if request.GET.action %}&action={{ request.GET.action }}{% endif %}">
+                            Suivant
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ activites.paginator.num_pages }}{% if request.GET.utilisateur %}&utilisateur={{ request.GET.utilisateur }}{% endif %}{% if request.GET.action %}&action={{ request.GET.action }}{% endif %}">
+                            Dernière &raquo;
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modals pour les détails d'activité -->
+{% for activite in activites %}
+<div class="modal fade" id="detailsModal{{ activite.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Détails de l'activité</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p><strong>Date/Heure:</strong> {{ activite.date_heure|date:"d/m/Y H:i" }}</p>
+                        <p><strong>Utilisateur:</strong> 
+                            {% if activite.utilisateur %}
+                                {{ activite.utilisateur.username }}
+                            {% else %}
+                                Système
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Action:</strong> {{ activite.get_action_display }}</p>
+                        <p><strong>Adresse IP:</strong> {{ activite.ip }}</p>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Détails complets :</h6>
+                    <div class="bg-light p-3 rounded">
+                        <pre>{{ activite.details|pprint }}</pre>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

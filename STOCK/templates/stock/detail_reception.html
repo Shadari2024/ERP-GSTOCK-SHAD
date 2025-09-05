@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Réception {{ reception.numero }}</h2>
+        <span class="badge bg-{% if reception.status == 'V' %}success{% elif reception.status == 'A' %}danger{% else %}warning{% endif %}">
+            {{ reception.get_status_display }}
+        </span>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">Informations</div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Date :</strong> {{ reception.date_reception|date:"d/m/Y" }}</p>
+                    <p><strong>Fournisseur :</strong> {{ reception.fournisseur.nom }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Créée par :</strong> {{ reception.created_by.get_full_name }}</p>
+                    <p><strong>Notes :</strong> {{ reception.notes|default:"Aucune" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">Articles</div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Produit</th>
+                        <th>Quantité</th>
+                        <th>Prix unitaire</th>
+                        <th>Lot</th>
+                        <th>Péremption</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ligne in reception.lignes.all %}
+                    <tr>
+                        <td>{{ ligne.produit.designation }}</td>
+                        <td>{{ ligne.quantite }}</td>
+                        <td>{{ ligne.prix_unitaire }} €</td>
+                        <td>{{ ligne.lot|default:"-" }}</td>
+                        <td>{{ ligne.date_peremption|date:"d/m/Y"|default:"-" }}</td>
+                        <td>{{ ligne.montant }} €</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="5">Total</th>
+                        <th>{{ reception.total }} €</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    
+    {% if reception.status == 'B' %}
+    <div class="mt-3">
+        <a href="{% url 'valider_reception' reception.pk %}" class="btn btn-success">
+            <i class="fas fa-check"></i> Valider la réception
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

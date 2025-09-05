@@ -1,0 +1,59 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title text-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        {% trans "Confirmer la suppression" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p>{% trans "Êtes-vous sûr de vouloir supprimer cette présence ?" %}</p>
+                    
+                    <div class="alert alert-info">
+                        <strong>{{ object.employe.nom_complet }}</strong><br>
+                        <strong>{% trans "Date" %}:</strong> {{ object.date|date:"d/m/Y" }}<br>
+                        <strong>{% trans "Statut" %}:</strong> 
+                        <span class="badge bg-{% if object.statut == 'PRESENT' %}success{% elif object.statut == 'ABSENT' %}danger{% else %}warning{% endif %}">
+                            {{ object.get_statut_display }}
+                        </span><br>
+                        {% if object.heure_arrivee and object.heure_depart %}
+                        <strong>{% trans "Heures" %}:</strong> {{ object.heure_arrivee|time:"H:i" }} - {{ object.heure_depart|time:"H:i" }}<br>
+                        <strong>{% trans "Total" %}:</strong> {{ object.heures_travaillees }}h
+                        {% endif %}
+                    </div>
+                    
+                    {% if object.notes %}
+                    <div class="alert alert-secondary">
+                        <strong>{% trans "Notes" %}:</strong><br>
+                        {{ object.notes }}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        {% trans "Cette action est irréversible. La présence sera définitivement supprimée." %}
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash me-2"></i>{% trans "Oui, supprimer" %}
+                            </button>
+                            <a href="{% url 'grh:presence_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>{% trans "Annuler" %}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

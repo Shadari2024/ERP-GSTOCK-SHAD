@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Facture {{ facture.numero }} - {{ facture.entreprise.nom }}</title>
+    <style>
+        /* Style Odoo-like */
+        @page {
+            margin: 0;
+            size: A4 portrait;
+        }
+        
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            margin: 0;
+            padding: 1.5cm;
+            background: #fff;
+        }
+        
+        .container {
+            max-width: 100%;
+        }
+        
+        /* Header style Odoo */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #875A7B;
+        }
+        
+        .company-header {
+            flex: 1;
+        }
+        
+        .company-logo {
+            max-width: 180px;
+            max-height: 80px;
+            margin-bottom: 10px;
+        }
+        
+        .company-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #875A7B;
+            margin: 0 0 5px 0;
+        }
+        
+        .company-address {
+            font-size: 11px;
+            color: #666;
+            line-height: 1.3;
+        }
+        
+        .invoice-header {
+            text-align: right;
+            flex: 1;
+        }
+        
+        .invoice-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #875A7B;
+            margin: 0 0 10px 0;
+        }
+        
+        .invoice-number {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        /* Tables style Odoo */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .info-table td {
+            padding: 12px;
+            border: 1px solid #dee2e6;
+            vertical-align: top;
+        }
+        
+        .info-table strong {
+            color: #875A7B;
+            display: block;
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+        
+        /* Items table style */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background: #fff;
+        }
+        
+        .items-table th {
+            background: #875A7B;
+            color: white;
+            padding: 10px;
+            text-align: left;
+            font-weight: bold;
+            border: 1px solid #875A7B;
+        }
+        
+        .items-table td {
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            text-align: left;
+        }
+        
+        .items-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        .items-table tr:hover {
+            background-color: #e9ecef;
+        }
+        
+        /* Totals style Odoo */
+        .totals-container {
+            margin-top: 30px;
+            margin-left: auto;
+            width: 50%;
+        }
+        
+        .total-line {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .total-line:last-child {
+            border-bottom: none;
+        }
+        
+        .total-label {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .total-amount {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .total-main {
+            background: #875A7B;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 12px;
+            border-radius: 4px;
+        }
+        
+        .total-main .total-label {
+            color: white;
+        }
+        
+        .total-main .total-amount {
+            color: white;
+        }
+        
+        /* Signature style */
+        .signature-section {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #875A7B;
+        }
+        
+        .signature-box {
+            display: inline-block;
+            width: 45%;
+            vertical-align: top;
+            padding: 15px;
+        }
+        
+        .signature-line {
+            border-top: 1px solid #333;
+            margin: 40px 0 10px 0;
+        }
+        
+        /* Status badges */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .status-paid {
+            background: #28a745;
+            color: white;
+        }
+        
+        .status-draft {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .status-open {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .status-cancelled {
+            background: #dc3545;
+            color: white;
+        }
+        
+        /* Payment info */
+        .payment-info {
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            border-left: 4px solid #17a2b8;
+        }
+        
+        .payment-info h4 {
+            color: #17a2b8;
+            margin: 0 0 10px 0;
+            font-size: 14px;
+        }
+        
+        /* Footer */
+        .footer {
+            margin-top: 40px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+            font-size: 10px;
+            color: #666;
+            text-align: center;
+        }
+        
+        /* Responsive */
+        @media print {
+            body {
+                padding: 1cm;
+            }
+            .items-table {
+                page-break-inside: avoid;
+            }
+            .signature-section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header style Odoo -->
+        <div class="header">
+            <div class="company-header">
+                {% if facture.entreprise.logo %}
+                <img src="{{ facture.entreprise.logo.url }}" alt="Logo {{ facture.entreprise.nom }}" class="company-logo">
+                {% endif %}
+                <h1 class="company-name">{{ facture.entreprise.nom }}</h1>
+                <div class="company-address">
+                    {% if facture.entreprise.adresse %}{{ facture.entreprise.adresse }}<br>{% endif %}
+                    {% if facture.entreprise.telephone %}Tél: {{ facture.entreprise.telephone }}<br>{% endif %}
+                    {% if facture.entreprise.email %}Email: {{ facture.entreprise.email }}<br>{% endif %}
+                    {% if facture.entreprise.site_web %}Site: {{ facture.entreprise.site_web }}<br>{% endif %}
+                    {% if facture.entreprise.numero_fiscal %}N° fiscal: {{ facture.entreprise.numero_fiscal }}{% endif %}
+                </div>
+            </div>
+            
+            <div class="invoice-header">
+                <h2 class="invoice-title">FACTURE</h2>
+                <div class="invoice-number">N° {{ facture.numero }}</div>
+                <div class="status-badge status-{{ facture.statut }}">
+                    {{ facture.get_statut_display }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations client et facture -->
+        <table class="info-table">
+            <tr>
+                <td width="50%">
+                    <strong>CLIENT</strong>
+                    {{ facture.client.nom }}<br>
+                    {% if facture.client.adresse %}{{ facture.client.adresse }}<br>{% endif %}
+                    {% if facture.client.telephone %}Tél: {{ facture.client.telephone }}<br>{% endif %}
+                    {% if facture.client.email %}{{ facture.client.email }}{% endif %}
+                    {% if facture.reference_client %}<br>Réf. client: {{ facture.reference_client }}{% endif %}
+                </td>
+                <td width="50%">
+                    <strong>INFORMATIONS FACTURE</strong>
+                    Date: {{ facture.date|date:"d/m/Y" }}<br>
+                    Échéance: {{ facture.echeance|date:"d/m/Y" }}<br>
+                    Mode de paiement: {{ facture.get_mode_paiement_display }}<br>
+                    {% if facture.devis %}Devis: {{ facture.devis.numero }}<br>{% endif %}
+                    {% if facture.commande %}Commande: {{ facture.commande.numero }}<br>{% endif %}
+                </td>
+            </tr>
+        </table>
+
+        <!-- Tableau des articles -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th width="40%">Désignation</th>
+                    <th width="15%">Quantité</th>
+                    <th width="15%">Prix unitaire HT</th>
+                    <th width="15%">TVA</th>
+                    <th width="15%">Total HT</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in facture.items.all %}
+                <tr>
+                    <td>{{ item.produit.nom }}</td>
+                    <td>{{ item.quantite|floatformat:2 }}</td>
+                    <td>{{ item.prix_unitaire|floatformat:2 }} {{ devise_principale_symbole }}</td>
+                    <td>{{ item.taux_tva|floatformat:2 }}%</td>
+                    <td>{{ item.montant_ht|floatformat:2 }} {{ devise_principale_symbole }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Totaux style Odoo -->
+        <div class="totals-container">
+            <div class="total-line">
+                <span class="total-label">Total HT:</span>
+                <span class="total-amount">{{ facture.total_ht|floatformat:2 }} {{ devise_principale_symbole }}</span>
+            </div>
+            
+            <div class="total-line">
+                <span class="total-label">Total TVA:</span>
+                <span class="total-amount">{{ facture.total_tva|floatformat:2 }} {{ devise_principale_symbole }}</span>
+            </div>
+            
+            {% if facture.remise > 0 %}
+            <div class="total-line">
+                <span class="total-label">Remise ({{ facture.remise }}%):</span>
+                <span class="total-amount">- {{ facture.total_remise|floatformat:2 }} {{ devise_principale_symbole }}</span>
+            </div>
+            {% endif %}
+            
+            <div class="total-line total-main">
+                <span class="total-label">TOTAL TTC:</span>
+                <span class="total-amount">{{ facture.total_ttc|floatformat:2 }} {{ devise_principale_symbole }}</span>
+            </div>
+        </div>
+
+        <!-- Informations de paiement -->
+        {% if facture.paiements.exists %}
+        <div class="payment-info">
+            <h4>ÉTAT DES PAIEMENTS</h4>
+            {% for paiement in facture.paiements.all %}
+            <div>{{ paiement.date|date:"d/m/Y" }} - {{ paiement.montant|floatformat:2 }} {{ devise_principale_symbole }} ({{ paiement.get_mode_paiement_display }})</div>
+            {% endfor %}
+            <div style="margin-top: 10px; font-weight: bold;">
+                Total payé: {{ facture.montant_paye|floatformat:2 }} {{ devise_principale_symbole }} | 
+                Reste à payer: {{ facture.montant_restant|floatformat:2 }} {{ devise_principale_symbole }}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Notes et conditions -->
+        {% if facture.notes %}
+        <div class="payment-info">
+            <h4>NOTES</h4>
+            {{ facture.notes|linebreaks }}
+        </div>
+        {% endif %}
+
+        {% if facture.conditions_paiement %}
+        <div class="payment-info">
+            <h4>CONDITIONS DE PAIEMENT</h4>
+            {{ facture.conditions_paiement|linebreaks }}
+        </div>
+        {% endif %}
+
+        <!-- Signatures -->
+        <div class="signature-section">
+            <div class="signature-box">
+                <strong>Pour {{ facture.entreprise.nom }}</strong><br>
+                <div class="signature-line"></div>
+                {{ user_full_name }}{% if user_position %} - {{ user_position }}{% endif %}<br>
+                Le {{ current_date|date:"d/m/Y" }}
+            </div>
+            
+            <div class="signature-box">
+                <strong>Bon pour accord</strong><br>
+                <div class="signature-line"></div>
+                {{ facture.client.nom }}<br>
+                Client<br>
+                Le ___________________
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>
+                {{ facture.entreprise.nom }}
+                {% if facture.entreprise.numero_fiscal %} - N° fiscal: {{ facture.entreprise.numero_fiscal }}{% endif %}
+                {% if facture.entreprise.telephone %} - Tél: {{ facture.entreprise.telephone }}{% endif %}
+            </p>
+            <p>Facture générée le {% now "d/m/Y à H:i" %}</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{# emails/commande_email_body.txt #}
+Bonjour {{ client.nom }},
+
+Veuillez trouver ci-joint votre bon de commande numéro {{ commande.numero }} en provenance de {{ entreprise_info.nom }}.
+
+Détails de la commande :
+Numéro : {{ commande.numero }}
+Date : {{ commande.date|date:"d/m/Y" }}
+Statut : {{ commande.get_statut_display }}
+Montant Total TTC : {{ commande.total_ttc }}
+
+Vous pouvez consulter les détails de votre commande à tout moment en cliquant sur ce lien :
+{{ base_url }}{% url 'ventes:commande_detail' commande.pk %}
+
+Merci pour votre commande !
+
+Cordialement,
+L'équipe de {{ entreprise_info.nom }}

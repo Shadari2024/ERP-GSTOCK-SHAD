@@ -1,0 +1,422 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h3 class="mb-0">
+                <i class="fas fa-file-invoice me-2"></i>
+                {% if object %}Modifier{% else %}Créer{% endif %} un Devis
+            </h3>
+        </div>
+        
+        {% if debug_info %}
+        <div class="alert alert-info small mx-3 mt-3">
+            <strong>Debug Info:</strong><br>
+            Entreprise: {{ debug_info.entreprise }}<br>
+            Clients disponibles: {{ debug_info.clients_count }}<br>
+            Produits disponibles: {{ debug_info.produits_count }}<br>
+            Devise principale: {{ devise_principale_symbole }}
+        </div>
+        {% endif %}
+        
+        <div class="card-body">
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form method="post" id="devis-form">
+                {% csrf_token %}
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            <label for="{{ form.client.id_for_label }}" class="form-label">Client</label>
+                            {{ form.client }}
+                            {% if form.client.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.client.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    {{ form.date.label_tag }}
+                                    {{ form.date }}
+                                    {% if form.date.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.date.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    {{ form.echeance.label_tag }}
+                                    {{ form.echeance }}
+                                    {% if form.echeance.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.echeance.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group mb-3">
+                            {{ form.remise.label_tag }}
+                            <div class="input-group">
+                                {{ form.remise }}
+                                <span class="input-group-text">%</span>
+                            </div>
+                            {% if form.remise.errors %}
+                                <div class="invalid-feedback d-block">{{ form.remise.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-group mb-3">
+                            {{ form.notes.label_tag }}
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback d-block">{{ form.notes.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <h4 class="mb-3 border-bottom pb-2">
+                    <i class="fas fa-boxes me-2"></i>Articles
+                </h4>
+                
+                {{ formset.management_form }}
+                <div class="table-responsive">
+                    <table class="table table-striped" id="items-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="40%">Produit</th>
+                                <th width="15%">Quantité</th>
+                                <th width="15%">Prix Unitaire ({{ devise_principale_symbole }})</th>
+                                <th width="15%">TVA (%)</th>
+                                <th width="10%">Montant HT ({{ devise_principale_symbole }})</th>
+                                <th width="5%"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="formset-container">
+                            {% for form_line in formset %} 
+                            <tr class="item-form {% if form_line.errors %}table-danger{% endif %}">
+                                <td>
+                                    {{ form_line.produit }}
+                                    {% if form_line.produit.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form_line.produit.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ form_line.quantite }}
+                                    {% if form_line.quantite.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form_line.quantite.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ form_line.prix_unitaire }}
+                                    {% if form_line.prix_unitaire.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form_line.prix_unitaire.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ form_line.taux_tva }}
+                                    {% if form_line.taux_tva.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in form_line.taux_tva.errors %}{{ error }}{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td class="montant-ht text-end fw-bold">0.00</td>
+                                <td>
+                                    {% if form_line.instance.pk %}
+                                        {{ form_line.DELETE }}
+                                        <label class="form-check-label" for="{{ form_line.DELETE.id_for_label }}">
+                                            <i class="fas fa-trash text-danger"></i>
+                                        </label>
+                                    {% else %}
+                                        <button type="button" class="btn btn-sm btn-outline-danger remove-item-button">
+                                            <i class="fas fa-minus-circle"></i>
+                                        </button>
+                                    {% endif %}
+                                </td>
+                                {% for hidden in form_line.hidden_fields %}
+                                    {{ hidden }}
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" id="add-item" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-plus me-1"></i> Ajouter un article
+                    </button>
+                    <div>
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-save me-1"></i> Enregistrer
+                        </button>
+                        <a href="{% if object %}{% url 'ventes:devis_detail' object.pk %}{% else %}{% url 'ventes:devis_list' %}{% endif %}" 
+                           class="btn btn-secondary">
+                            <i class="fas fa-times me-1"></i> Annuler
+                        </a>
+                    </div>
+                </div>
+
+                <div class="row justify-content-end mt-4">
+                    <div class="col-md-5">
+                        <table class="table table-sm">
+                            <tr>
+                                <th class="text-end">Total HT:</th>
+                                <td id="total-ht" class="text-end fw-bold">0.00 {{ devise_principale_symbole }}</td>
+                            </tr>
+                            <tr>
+                                <th class="text-end">Total TVA:</th>
+                                <td id="total-tva" class="text-end fw-bold">0.00 {{ devise_principale_symbole }}</td>
+                            </tr>
+                            <tr>
+                                <th class="text-end">Remise:</th>
+                                <td id="remise-display" class="text-end fw-bold">{{ form.remise.value|default:"0.00" }}%</td>
+                            </tr>
+                            <tr>
+                                <th class="text-end h5">Total TTC:</th>
+                                <td id="total-ttc" class="text-end h5 fw-bold">0.00 {{ devise_principale_symbole }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# Invisible template for adding new formset forms via JS #}
+<template id="empty-form-template">
+    <tr class="item-form">
+        <td>
+            {{ formset.empty_form.produit }} 
+            <div class="invalid-feedback d-block"></div> 
+        </td>
+        <td>
+            {{ formset.empty_form.quantite }}
+            <div class="invalid-feedback d-block"></div>
+        </td>
+        <td>
+            {{ formset.empty_form.prix_unitaire }}
+            <div class="invalid-feedback d-block"></div>
+        </td>
+        <td>
+            {{ formset.empty_form.taux_tva }}
+            <div class="invalid-feedback d-block"></div>
+        </td>
+        <td class="montant-ht text-end fw-bold">0.00</td>
+        <td>
+            <button type="button" class="btn btn-sm btn-outline-danger remove-item-button">
+                <i class="fas fa-minus-circle"></i>
+            </button>
+            {{ formset.empty_form.id }}
+            {{ formset.empty_form.DELETE }}
+        </td>
+    </tr>
+</template>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    const formsetContainer = $('#formset-container');
+    const addItemButton = $('#add-item');
+    const totalFormsInput = $('#id_form-TOTAL_FORMS');
+    const emptyFormTemplate = $('#empty-form-template');
+    const remiseInput = $('#id_remise');
+    const deviseSymbole = "{{ devise_principale_symbole|escapejs }}";
+    const getPrixUrl = "{% url 'ventes:get_prix_produit' %}";
+
+    // Fonction pour mettre à jour le prix unitaire lorsqu'un produit est sélectionné
+    function updatePrixUnitaire(selectElement) {
+        const produitId = $(selectElement).val();
+        const row = $(selectElement).closest('.item-form');
+        const prixInput = row.find('[name$="-prix_unitaire"]');
+        const tvaInput = row.find('[name$="-taux_tva"]');
+        
+        if (produitId) {
+            $.ajax({
+                url: getPrixUrl,
+                data: {
+                    'produit_id': produitId
+                },
+                dataType: 'json',
+                success: function(data) {
+                    if (data.success) {
+                        prixInput.val(data.prix_unitaire.toFixed(2));
+                        if (data.taux_tva !== undefined) {
+                            tvaInput.val(data.taux_tva.toFixed(2));
+                        }
+                        // Déclencher le calcul du total pour cette ligne
+                        calculateRowTotal(row);
+                    } else {
+                        console.error('Erreur:', data.error);
+                        alert('Erreur lors de la récupération du prix: ' + data.error);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Erreur AJAX:', error);
+                    alert('Erreur de connexion lors de la récupération du prix');
+                }
+            });
+        } else {
+            prixInput.val('');
+            tvaInput.val('');
+            calculateRowTotal(row);
+        }
+    }
+
+    // Fonction pour calculer le total d'une ligne
+    function calculateRowTotal(row) {
+        const qteInput = row.find('[name$="-quantite"]');
+        const prixInput = row.find('[name$="-prix_unitaire"]');
+        const tvaInput = row.find('[name$="-taux_tva"]');
+        const montantHtCell = row.find('.montant-ht');
+        
+        const qte = parseFloat(qteInput.val()) || 0;
+        const prix = parseFloat(prixInput.val()) || 0;
+        const tva = parseFloat(tvaInput.val()) || 0;
+        
+        const montantHT = qte * prix;
+        montantHtCell.text(montantHT.toFixed(2));
+        
+        calculateTotals();
+    }
+
+    // Fonction pour calculer les totaux généraux
+    function calculateTotals() {
+        let totalHT = 0;
+        let totalTVA = 0;
+        const remiseVal = parseFloat(remiseInput.val()) || 0;
+        
+        $('.item-form').each(function() {
+            const deleteCheckbox = $(this).find('[name$="-DELETE"]');
+            // Ignorer les lignes marquées pour suppression
+            if (deleteCheckbox.length && deleteCheckbox.is(':checked')) {
+                return;
+            }
+
+            const qte = parseFloat($(this).find('[name$="-quantite"]').val()) || 0;
+            const prix = parseFloat($(this).find('[name$="-prix_unitaire"]').val()) || 0;
+            const tva = parseFloat($(this).find('[name$="-taux_tva"]').val()) || 0;
+            
+            const montantHT = qte * prix;
+            const montantTVA = montantHT * (tva / 100);
+            
+            totalHT += montantHT;
+            totalTVA += montantTVA;
+        });
+        
+        const totalTTC = (totalHT + totalTVA) * (1 - remiseVal / 100);
+        
+        $('#total-ht').text(totalHT.toFixed(2) + ' ' + deviseSymbole);
+        $('#total-tva').text(totalTVA.toFixed(2) + ' ' + deviseSymbole);
+        $('#remise-display').text(remiseVal.toFixed(2) + '%');
+        $('#total-ttc').text(totalTTC.toFixed(2) + ' ' + deviseSymbole);
+    }
+
+    // Fonction pour mettre à jour les index des formulaires
+    function updateFormsetIndexes() {
+        const rows = formsetContainer.find('.item-form');
+        totalFormsInput.val(rows.length);
+        
+        rows.each(function(index) {
+            $(this).find('input, select').each(function() {
+                const name = $(this).attr('name');
+                const id = $(this).attr('id');
+                
+                if (name) {
+                    $(this).attr('name', name.replace(/form-(\d+)-/, `form-${index}-`));
+                }
+                if (id) {
+                    $(this).attr('id', id.replace(/id_form-(\d+)-/, `id_form-${index}-`));
+                }
+            });
+        });
+    }
+
+    // Fonction pour attacher les événements à une ligne
+    function attachEventListenersToRow(row) {
+        row.find('[name$="-produit"]').on('change', function() {
+            updatePrixUnitaire(this);
+        });
+        
+        row.find('[name$="-quantite"], [name$="-prix_unitaire"], [name$="-taux_tva"]').on('input', function() {
+            calculateRowTotal(row);
+        });
+        
+        row.find('.remove-item-button').on('click', function() {
+            const deleteCheckbox = row.find('[name$="-DELETE"]');
+            if (deleteCheckbox.length) {
+                deleteCheckbox.prop('checked', true);
+                row.hide();
+            } else {
+                row.remove();
+            }
+            updateFormsetIndexes();
+            calculateTotals();
+        });
+    }
+
+    // Attacher les événements aux lignes existantes
+    $('.item-form').each(function() {
+        attachEventListenersToRow($(this));
+    });
+
+    // Événement pour le champ de remise
+    remiseInput.on('input', calculateTotals);
+
+    // Événement pour ajouter une nouvelle ligne
+    addItemButton.on('click', function() {
+        const newFormHtml = emptyFormTemplate.html().replace(/__prefix__/g, totalFormsInput.val());
+        const newRow = $(newFormHtml);
+        
+        // Nettoyer les valeurs
+        newRow.find('input').val('');
+        newRow.find('select').val('');
+        newRow.find('.montant-ht').text('0.00');
+        
+        formsetContainer.append(newRow);
+        attachEventListenersToRow(newRow);
+        updateFormsetIndexes();
+        calculateTotals();
+    });
+
+    // Calcul initial des totaux
+    calculateTotals();
+
+    // Pré-remplir les prix pour les lignes existantes qui ont déjà un produit sélectionné
+    $('.item-form').each(function() {
+        const produitSelect = $(this).find('[name$="-produit"]');
+        if (produitSelect.val()) {
+            updatePrixUnitaire(produitSelect[0]);
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,1232 @@
+{% extends "achats/base_achats.html" %}
+{% load achats_tags %}
+{% load crispy_forms_tags %}
+
+{% block page_title %}Liste des Commandes d'Achat{% endblock %}
+
+{% block achats_content %}
+<div class="erp-commandes-container">
+    <div class="erp-content-header">
+        <h2 class="erp-content-title">Commandes d'Achat</h2>
+        
+        <div class="erp-content-actions">
+            {# View Toggle Buttons #}
+            <div class="erp-view-toggles">
+                <button id="listViewBtn" class="erp-btn erp-btn-secondary active" data-view="list" data-tooltip="Afficher les commandes sous forme de liste.">
+                    <i class="bi bi-list-ul"></i> Liste
+                </button>
+                <button id="tableViewBtn" class="erp-btn erp-btn-secondary" data-view="table" data-tooltip="Afficher les commandes sous forme de tableau, avec des colonnes détaillées.">
+                    <i class="bi bi-table"></i> Tableau
+                </button>
+                <button id="gridViewBtn" class="erp-btn erp-btn-secondary" data-view="grid" data-tooltip="Afficher les commandes sous forme de cartes visuelles, idéal pour un aperçu rapide.">
+                    <i class="bi bi-grid-3x3-gap-fill"></i> Grille
+                </button>
+            </div>
+
+            {% if perms.achats.add_commandeachat %}
+            <a href="{% url 'achats:creer_commande' %}" class="erp-btn erp-btn-primary"
+                data-tooltip="Cliquez ici pour créer une nouvelle commande d'achat.">
+                <i class="bi bi-plus-circle"></i> Nouvelle Commande
+            </a>
+            {% endif %}
+            
+            {% if perms.achats.exporter_commandeachat %}
+            <a href="{% url 'achats:exporter_commandes_excel_all' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" 
+                class="erp-btn erp-btn-secondary"
+                data-tooltip="Exporter la liste actuelle des commandes (avec les filtres appliqués) au format Excel.">
+                <i class="bi bi-file-earmark-excel"></i> Exporter
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="erp-filter-card">
+        <form method="GET" class="erp-filter-form">
+            <div class="erp-filter-row">
+                <div class="erp-filter-group">
+                    <input type="text" name="search" class="erp-input" 
+                            placeholder="N° Commande ou Fournisseur" value="{{ search }}"
+                            data-tooltip="Recherchez une commande par son numéro ou par le nom du fournisseur.">
+                </div>
+                
+                <div class="erp-filter-group">
+                    <select name="statut" class="erp-select"
+                            data-tooltip="Filtrer les commandes par leur statut : Brouillon, Validée, Livrée, Annulée.">
+                        {% for value, label in statuts_choices %}
+                            <option value="{{ value }}" {% if value|stringformat:"s" == statut_filter %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="erp-filter-group">
+                    <select name="fournisseur" class="erp-select"
+                            data-tooltip="Sélectionnez un fournisseur pour afficher ses commandes spécifiques.">
+                        <option value="">Tous les Fournisseurs</option>
+                        {% for fournisseur in fournisseurs_list %}
+                            <option value="{{ fournisseur.pk }}" {% if fournisseur.pk|stringformat:"s" == fournisseur_filter %}selected{% endif %}>
+                                {{ fournisseur.nom }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="erp-filter-row">
+                <div class="erp-filter-group">
+                    <label for="date_debut">Date de début</label>
+                    <input type="date" id="date_debut" name="date_debut" class="erp-input" value="{{ date_debut_filter }}"
+                            data-tooltip="Sélectionnez une date de début pour filtrer les commandes passées après cette date.">
+                </div>
+                
+                <div class="erp-filter-group">
+                    <label for="date_fin">Date de fin</label>
+                    <input type="date" id="date_fin" name="date_fin" class="erp-input" value="{{ date_fin_filter }}"
+                            data-tooltip="Sélectionnez une date de fin pour filtrer les commandes passées avant cette date.">
+                </div>
+                
+                <button type="submit" class="erp-btn erp-btn-filter"
+                                data-tooltip="Cliquez pour appliquer les filtres et mettre à jour la liste des commandes.">
+                    <i class="bi bi-funnel"></i> Filtrer
+                </button>
+                
+                <a href="{% url 'achats:liste_commandes' %}" class="erp-btn erp-btn-reset"
+                    data-tooltip="Réinitialise tous les filtres et affiche toutes les commandes.">
+                    <i class="bi bi-arrow-counterclockwise"></i> Réinitialiser
+                </a>
+            </div>
+        </form>
+    </div>
+
+    {# --- Display Views --- #}
+    <div id="commandesDisplay" class="erp-display-area">
+        {# Table View (Default) #}
+        <div id="tableView" class="erp-table-container">
+            <div class="erp-table-responsive">
+                <table class="erp-table">
+                    <thead>
+                        <tr>
+                            <th>N° Commande</th>
+                            <th>Fournisseur</th>
+                            <th>Date</th>
+                            <th>Montant HT</th>
+                            <th>TVA</th>
+                            <th>Montant TTC</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for commande in commandes %}
+                        <tr>
+                            <td>
+                                <span class="erp-badge erp-badge-id"
+                                        data-tooltip="Numéro unique d'identification de cette commande d'achat.">{{ commande.numero_commande }}</span>
+                            </td>
+                            <td data-tooltip="Nom du fournisseur associé à cette commande.">{{ commande.fournisseur.nom }}</td>
+                            <td data-tooltip="Date à laquelle la commande a été passée.">{{ commande.date_commande|date:"d/m/Y" }}</td>
+                            {# Affichage des montants avec les valeurs agrégées #}
+                            <td class="erp-amount" data-tooltip="Montant total hors taxes de la commande.">{{ commande.total_ht_agrege|default:"0.00"|floatformat:2 }}</td>
+                            <td class="erp-amount" data-tooltip="Montant de la TVA appliquée sur cette commande.">{{ commande.total_tva_agrege|default:"0.00"|floatformat:2 }}</td>
+                            <td class="erp-amount" data-tooltip="Montant total toutes taxes comprises de la commande.">
+                                {# Utilisez le champ calculé montant_total_ttc #}
+                                {{ commande.montant_total_ttc|default:"0.00"|floatformat:2 }}
+                                {% if devise_principale %}
+                                    {{ devise_principale.code }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="erp-status-badge erp-status-{{ commande.statut }}"
+                                        data-tooltip="Indique l'état actuel de la commande : {{ commande.statut|get_statut_display }}.">
+                                    {{ commande.statut|get_statut_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="erp-actions">
+                                    <a href="{% url 'achats:detail_commande' commande.pk %}" 
+                                       class="erp-action-btn erp-action-view" 
+                                       data-tooltip="Voir les détails complets de cette commande d'achat.">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+
+                                    <a href="{% url 'achats:creer_bon' commande.pk %}" 
+                                       class="erp-action-btn erp-action-bon" 
+                                       data-tooltip="Créer un bon de réception pour les articles de cette commande.">
+                                        <i class="bi bi-boxes"></i>
+                                    </a>
+                                    
+                                    {% if commande.statut == 'brouillon' and perms.achats.change_commandeachat %}
+                                    <a href="{% url 'achats:modifier_commande' commande.pk %}" 
+                                       class="erp-action-btn erp-action-edit" 
+                                       data-tooltip="Modifier cette commande (uniquement si elle est en statut brouillon).">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% endif %}
+                                    
+                                    {% if commande.statut == 'brouillon' and perms.achats.valider_commandeachat %}
+                                    <form action="{% url 'achats:valider_commande' commande.pk %}" method="post" style="display:inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" 
+                                                class="erp-action-btn erp-action-validate" 
+                                                data-tooltip="Valider cette commande d'achat. Elle passera au statut 'Validée'.">
+                                            <i class="bi bi-check-circle"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    
+                                    {% if perms.achats.exporter_commandeachat %}
+                                    <div class="erp-dropdown">
+                                        <button class="erp-action-btn erp-action-export"
+                                                data-tooltip="Options d'exportation pour cette commande.">
+                                            <i class="bi bi-download"></i>
+                                        </button>
+                                        <div class="erp-dropdown-content">
+                                            <a href="{% url 'achats:exporter_commande_excel' commande.pk %}"
+                                               data-tooltip="Exporter les détails de cette commande au format Excel.">
+                                                <i class="bi bi-file-earmark-excel"></i> Excel
+                                            </a>
+                                            <a href="{% url 'achats:exporter_commande_pdf' commande.pk %}"
+                                               data-tooltip="Exporter les détails de cette commande au format PDF.">
+                                                <i class="bi bi-file-earmark-pdf"></i> PDF
+                                            </a>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="erp-empty">
+                                <i class="bi bi-inbox"></i>
+                                <span>Aucune commande trouvée</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {# List View #}
+        <div id="listView" class="erp-list-container" style="display: none;">
+            {% for commande in commandes %}
+            <div class="erp-list-item erp-card">
+                <div class="erp-list-item-header">
+                    <span class="erp-badge erp-badge-id" data-tooltip="Numéro unique de la commande d'achat.">{{ commande.numero_commande }}</span>
+                    <span class="erp-status-badge erp-status-{{ commande.statut }}" data-tooltip="Statut actuel de la commande.">
+                        {{ commande.statut|get_statut_display }}
+                    </span>
+                </div>
+                <div class="erp-list-item-body">
+                    <p data-tooltip="Nom du fournisseur."><strong>Fournisseur:</strong> {{ commande.fournisseur.nom }}</p>
+                    <p data-tooltip="Date de la commande."><strong>Date:</strong> {{ commande.date_commande|date:"d/m/Y" }}</p>
+                    <p data-tooltip="Montant total de la commande, toutes taxes comprises."><strong>Montant:</strong> 
+                        <span class="erp-amount">
+                            {{ commande.montant_total_ttc|default:"0.00"|floatformat:2 }}
+                            {% if devise_principale %}
+                                {{ devise_principale.code }}
+                            {% endif %}
+                        </span>
+                    </p>
+                </div>
+                <div class="erp-list-item-actions">
+                    <div class="erp-actions">
+                        <a href="{% url 'achats:detail_commande' commande.pk %}" class="erp-action-btn erp-action-view" data-tooltip="Voir les détails de la commande.">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="{% url 'achats:creer_bon' commande.pk %}" class="erp-action-btn erp-action-bon" data-tooltip="Créer un bon de réception.">
+                            <i class="bi bi-boxes"></i>
+                        </a>
+                        {% if commande.statut == 'brouillon' and perms.achats.change_commandeachat %}
+                        <a href="{% url 'achats:modifier_commande' commande.pk %}" class="erp-action-btn erp-action-edit" data-tooltip="Modifier la commande.">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        {% endif %}
+                        {% if commande.statut == 'brouillon' and perms.achats.valider_commandeachat %}
+                        <form action="{% url 'achats:valider_commande' commande.pk %}" method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="erp-action-btn erp-action-validate" data-tooltip="Valider la commande.">
+                                <i class="bi bi-check-circle"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                        {% if perms.achats.exporter_commandeachat %}
+                        <div class="erp-dropdown">
+                            <button class="erp-action-btn erp-action-export" data-tooltip="Options d'exportation.">
+                                <i class="bi bi-download"></i>
+                            </button>
+                            <div class="erp-dropdown-content">
+                                <a href="{% url 'achats:exporter_commande_excel' commande.pk %}" data-tooltip="Exporter en Excel.">
+                                    <i class="bi bi-file-earmark-excel"></i> Excel
+                                </a>
+                                <a href="{% url 'achats:exporter_commande_pdf' commande.pk %}" data-tooltip="Exporter en PDF.">
+                                    <i class="bi bi-file-earmark-pdf"></i> PDF
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="erp-empty">
+                <i class="bi bi-inbox"></i>
+                <span>Aucune commande trouvée en mode liste.</span>
+            </div>
+            {% endfor %}
+        </div>
+
+        {# Grid View #}
+        <div id="gridView" class="erp-grid-container" style="display: none;">
+            {% for commande in commandes %}
+            <div class="erp-grid-item erp-card">
+                <div class="erp-grid-item-header">
+                    <span class="erp-badge erp-badge-id" data-tooltip="Numéro unique de la commande d'achat.">{{ commande.numero_commande }}</span>
+                    <span class="erp-status-badge erp-status-{{ commande.statut }}" data-tooltip="Statut actuel de la commande.">
+                        {{ commande.statut|get_statut_display }}
+                    </span>
+                </div>
+                <div class="erp-grid-item-body">
+                    <h3 data-tooltip="Nom du fournisseur.">Fournisseur: {{ commande.fournisseur.nom }}</h3>
+                    <p data-tooltip="Date de la commande.">Date: {{ commande.date_commande|date:"d/m/Y" }}</p>
+                    <p data-tooltip="Montant total de la commande, toutes taxes comprises.">Montant: 
+                        <span class="erp-amount">
+                            {{ commande.montant_total_ttc|default:"0.00"|floatformat:2 }}
+                            {% if devise_principale %}
+                                {{ devise_principale.code }}
+                            {% endif %}
+                        </span>
+                    </p>
+                </div>
+                <div class="erp-grid-item-actions">
+                    <div class="erp-actions">
+                        <a href="{% url 'achats:detail_commande' commande.pk %}" class="erp-action-btn erp-action-view" data-tooltip="Voir les détails de la commande.">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="{% url 'achats:creer_bon' commande.pk %}" class="erp-action-btn erp-action-bon" data-tooltip="Créer un bon de réception.">
+                            <i class="bi bi-boxes"></i>
+                        </a>
+                        {% if commande.statut == 'brouillon' and perms.achats.change_commandeachat %}
+                        <a href="{% url 'achats:modifier_commande' commande.pk %}" class="erp-action-btn erp-action-edit" data-tooltip="Modifier la commande.">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        {% endif %}
+                        {% if commande.statut == 'brouillon' and perms.achats.valider_commandeachat %}
+                        <form action="{% url 'achats:valider_commande' commande.pk %}" method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="erp-action-btn erp-action-validate" data-tooltip="Valider la commande.">
+                                <i class="bi bi-check-circle"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                        {% if perms.achats.exporter_commandeachat %}
+                        <div class="erp-dropdown">
+                            <button class="erp-action-btn erp-action-export" data-tooltip="Options d'exportation.">
+                                <i class="bi bi-download"></i>
+                            </button>
+                            <div class="erp-dropdown-content">
+                                <a href="{% url 'achats:exporter_commande_excel' commande.pk %}" data-tooltip="Exporter en Excel.">
+                                    <i class="bi bi-file-earmark-excel"></i> Excel
+                                </a>
+                                <a href="{% url 'achats:exporter_commande_pdf' commande.pk %}" data-tooltip="Exporter en PDF.">
+                                    <i class="bi bi-file-earmark-pdf"></i> PDF
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="erp-empty">
+                <i class="bi bi-inbox"></i>
+                <span>Aucune commande trouvée en mode grille.</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {# --- End Display Views --- #}
+
+
+    {% if is_paginated %}
+    <div class="erp-pagination">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}&statut={{ statut_filter }}&search={{ search }}&date_debut={{ date_debut_filter }}&date_fin={{ date_fin_filter }}&fournisseur={{ fournisseur_filter }}" 
+            class="erp-pagination-btn"
+            data-tooltip="Afficher la page précédente des commandes.">
+            <i class="bi bi-chevron-left"></i>
+        </a>
+        {% endif %}
+        
+        <span class="erp-pagination-info" data-tooltip="Indique la page actuelle et le nombre total de pages.">
+            Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+        </span>
+        
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}&statut={{ statut_filter }}&search={{ search }}&date_debut={{ date_debut_filter }}&date_fin={{ date_fin_filter }}&fournisseur={{ fournisseur_filter }}" 
+            class="erp-pagination-btn"
+            data-tooltip="Afficher la page suivante des commandes.">
+            <i class="bi bi-chevron-right"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+{# Ajoutez ceci là où vous voulez voir vos contrôles de pagination, par exemple après votre tableau de commandes #}
+
+{% if is_paginated %}
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{{ request.GET.urlencode }}" aria-label="Précédent">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link" aria-hidden="true">&laquo;</span>
+                </li>
+            {% endif %}
+
+            {% for i in paginator.page_range %}
+                {% if page_obj.number == i %}
+                    <li class="page-item active" aria-current="page">
+                        <span class="page-link">{{ i }} <span class="sr-only">(current)</span></span>
+                    </li>
+                {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ i }}{{ request.GET.urlencode }}">{{ i }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{{ request.GET.urlencode }}" aria-label="Suivant">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link" aria-hidden="true">&raquo;</span>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+{% endif %}
+{% block extra_css %}
+<style>
+    /* Global Variables for Dark Mode */
+    :root {
+        --primary-color: #5b50b0; /* Deep Purple */
+        --primary-color-rgb: 91, 80, 176;
+        --secondary-color: #7c72cf; /* Lighter Purple */
+        --accent-color: #4CAF50; /* Green accent for highlight/success */
+        --accent-color-rgb: 76, 175, 80;
+
+        --background-body: #1a1a2e; /* Dark blue-ish background */
+        --card-background: #16213e; /* Slightly lighter dark blue for cards */
+        --dark-color: #0f1c30; /* Even darker for some elements/hover */
+        --text-color-light: #e0e0e0; /* Light gray for main text */
+        --text-color-dark: #a0a0a0; /* Darker gray for secondary text/labels */
+        --border-color: #3e3e5c; /* Subtle border color */
+        --box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4); /* Pronounced dark shadow */
+        --border-radius: 8px;
+        --transition: all 0.3s ease;
+    }
+
+    /* Base body styling for dark mode - should be in your base_achats.html or global CSS */
+    body {
+        background-color: var(--background-body);
+        color: var(--text-color-light);
+        font-family: 'Inter', sans-serif; /* Example font */
+        margin: 0;
+        padding: 0;
+    }
+
+    /* General ERP Component Styles */
+    .erp-commandes-container {
+        padding: 2rem;
+        background: var(--card-background);
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        margin: 2rem auto; /* Center the container */
+        max-width: 1200px; /* Max width for better layout */
+    }
+    
+    .erp-content-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .erp-content-title {
+        font-size: 2.2rem; /* Slightly larger title */
+        font-weight: 700;
+        color: var(--text-color-light);
+        margin: 0;
+        text-shadow: 0 2px 5px rgba(0,0,0,0.3); /* Subtle text shadow */
+    }
+
+    .erp-content-actions {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center; /* Align action buttons vertically */
+    }
+
+    .erp-view-toggles {
+        display: flex;
+        border-radius: var(--border-radius);
+        overflow: hidden; /* For seamless button group */
+        border: 1px solid var(--border-color); /* Border around the toggle group */
+    }
+
+    .erp-view-toggles .erp-btn-secondary {
+        border: none; /* Remove individual button borders */
+        border-radius: 0; /* Remove individual button border-radius */
+        background-color: transparent; /* Make background transparent initially */
+        color: var(--text-color-dark);
+        padding: 0.6rem 1.2rem; /* Adjust padding for toggle buttons */
+    }
+
+    .erp-view-toggles .erp-btn-secondary.active {
+        background-color: var(--primary-color);
+        color: white;
+        box-shadow: none; /* Remove shadow for active toggle */
+    }
+
+    .erp-view-toggles .erp-btn-secondary:not(.active):hover {
+        background-color: var(--dark-color);
+        color: var(--text-color-light);
+        transform: none; /* No transform on hover for toggles */
+        box-shadow: none;
+    }
+
+    .erp-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius);
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        transition: var(--transition);
+        border: none;
+        text-decoration: none;
+        font-size: 1rem; /* Consistent font size for buttons */
+    }
+
+    .erp-btn-primary {
+        background-color: var(--primary-color);
+        color: white;
+        box-shadow: 0 4px 12px rgba(var(--primary-color-rgb), 0.3);
+    }
+    .erp-btn-primary:hover {
+        background-color: var(--secondary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(var(--primary-color-rgb), 0.5);
+    }
+
+    .erp-btn-secondary {
+        background-color: var(--card-background); /* Card background for secondary */
+        color: var(--text-color-light);
+        border: 1px solid var(--border-color);
+        box-shadow: none;
+    }
+    .erp-btn-secondary:hover {
+        background-color: var(--dark-color);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .erp-filter-card {
+        background: var(--dark-color); /* Darker background for filter card */
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--box-shadow);
+        border: 1px solid var(--border-color); /* Subtle border */
+    }
+    
+    .erp-filter-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem; /* Increased gap for better spacing */
+    }
+    
+    .erp-filter-row {
+        display: flex;
+        gap: 1rem;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+    
+    .erp-filter-group {
+        flex: 1;
+        min-width: 200px; /* Slightly larger min-width for filter groups */
+    }
+    
+    .erp-filter-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        color: var(--text-color-dark);
+        font-weight: 500;
+    }
+    
+    .erp-input, .erp-select {
+        background-color: var(--card-background);
+        color: var(--text-color-light);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        padding: 0.8rem 1rem; /* Slightly more padding for inputs */
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+        transition: border-color var(--transition), box-shadow var(--transition);
+        width: 100%;
+    }
+
+    .erp-input:focus, .erp-select:focus {
+        border-color: var(--primary-color); /* Primary color on focus */
+        box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.3);
+        outline: none;
+    }
+
+    .erp-input::placeholder {
+        color: var(--text-color-dark);
+        opacity: 0.8;
+    }
+
+    .erp-select option {
+        background-color: var(--card-background);
+        color: var(--text-color-light);
+    }
+
+    .erp-btn-filter {
+        background: var(--primary-color);
+        color: white;
+        box-shadow: 0 4px 12px rgba(var(--primary-color-rgb), 0.3);
+    }
+    .erp-btn-filter:hover {
+        background-color: var(--secondary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(var(--primary-color-rgb), 0.5);
+    }
+    
+    .erp-btn-reset {
+        background: transparent;
+        color: var(--text-color-dark); /* Reset button uses darker text */
+        border: 1px solid var(--border-color);
+        box-shadow: none;
+    }
+    .erp-btn-reset:hover {
+        background: var(--border-color); /* Hover to border color */
+        color: var(--text-color-light);
+        transform: translateY(-2px);
+    }
+    
+    /* Table Styles */
+    .erp-table-container {
+        overflow-x: auto;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        background-color: var(--card-background);
+    }
+    
+    .erp-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        color: var(--text-color-light);
+    }
+    
+    .erp-table th {
+        background: var(--primary-color);
+        color: white;
+        font-weight: 600;
+        padding: 1rem;
+        text-align: left;
+        position: sticky;
+        top: 0;
+        font-size: 0.9rem; /* Slightly larger font for headers */
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .erp-table thead tr th:first-child { border-top-left-radius: var(--border-radius); }
+    .erp-table thead tr th:last-child { border-top-right-radius: var(--border-radius); }
+    
+    .erp-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border-color);
+        vertical-align: middle; /* Center content vertically */
+    }
+    
+    .erp-table tr:hover td {
+        background: rgba(var(--primary-color-rgb), 0.1); /* Lighter hover for dark theme */
+    }
+
+    .erp-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .erp-table tbody tr:last-child td:first-child {
+        border-bottom-left-radius: var(--border-radius);
+    }
+    .erp-table tbody tr:last-child td:last-child {
+        border-bottom-right-radius: var(--border-radius);
+    }
+    
+    /* Status Badges */
+    .erp-status-badge {
+        display: inline-block;
+        padding: 0.35rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        text-transform: capitalize; /* Capitalize status text */
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2); /* Subtle shadow for badges */
+    }
+    
+    .erp-status-brouillon {
+        background: rgba(255, 193, 7, 0.15); /* Orange (warning) */
+        color: #ffc107;
+    }
+    
+    .erp-status-validee {
+        background: rgba(0, 123, 255, 0.15); /* Blue (info) */
+        color: #007bff;
+    }
+    
+    .erp-status-livree {
+        background: rgba(40, 167, 69, 0.15); /* Green (success) */
+        color: #28a745;
+    }
+    
+    .erp-status-annulee {
+        background: rgba(220, 53, 69, 0.15); /* Red (danger) */
+        color: #dc3545;
+    }
+
+    /* Order Number Badge */
+    .erp-badge-id {
+        display: inline-block;
+        background-color: rgba(var(--accent-color-rgb), 0.1);
+        color: var(--accent-color);
+        padding: 0.2rem 0.6rem;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+
+    .erp-amount {
+        font-weight: 600;
+        color: var(--accent-color);
+        font-size: 1.05rem; /* Slightly larger amount text */
+    }
+    
+    /* Actions */
+    .erp-actions {
+        display: flex;
+        gap: 0.75rem; /* Increased gap for actions */
+        align-items: center;
+    }
+    
+    .erp-action-btn {
+        width: 38px; /* Slightly larger and more prominent */
+        height: 38px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        cursor: pointer;
+        transition: var(--transition);
+        font-size: 1rem;
+        color: var(--text-color-light);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Subtle shadow for action buttons */
+    }
+    
+    .erp-action-view {
+        background: rgba(var(--primary-color-rgb), 0.15); /* Slightly more opaque for dark theme */
+        color: var(--primary-color);
+    }
+    .erp-action-view:hover {
+        background: var(--primary-color);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(var(--primary-color-rgb), 0.4);
+    }
+
+    .erp-action-bon { /* New style for the "Bon de réception" button */
+        background: rgba(23, 162, 184, 0.15); /* Info color */
+        color: #17a2b8;
+    }
+    .erp-action-bon:hover {
+        background: #17a2b8;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(23, 162, 184, 0.4);
+    }
+    
+    .erp-action-edit {
+        background: rgba(255, 193, 7, 0.15);
+        color: #ffc107;
+    }
+    .erp-action-edit:hover {
+        background: #ffc107;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(255, 193, 7, 0.4);
+    }
+    
+    .erp-action-validate {
+        background: rgba(40, 167, 69, 0.15);
+        color: #28a745;
+    }
+    .erp-action-validate:hover {
+        background: #28a745;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.4);
+    }
+    
+    .erp-action-export {
+        background: rgba(108, 117, 125, 0.15); /* Grey for export */
+        color: #6c757d;
+    }
+    .erp-action-export:hover {
+        background: #6c757d;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(108, 117, 125, 0.4);
+    }
+
+    /* Dropdown for Export Actions */
+    .erp-dropdown {
+        position: relative;
+        display: inline-block;
+    }
+
+    .erp-dropdown-content {
+        display: none;
+        position: absolute;
+        background-color: var(--dark-color); /* Darker background for dropdown */
+        min-width: 160px;
+        box-shadow: var(--box-shadow);
+        border-radius: var(--border-radius);
+        z-index: 1;
+        right: 0; /* Align dropdown to the right */
+        top: 100%; /* Position below the button */
+        margin-top: 8px; /* Spacing from the button */
+        border: 1px solid var(--border-color);
+        padding: 8px 0;
+    }
+
+    .erp-dropdown-content a {
+        color: var(--text-color-light);
+        padding: 10px 16px;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .erp-dropdown-content a:hover {
+        background-color: var(--primary-color);
+        color: white;
+    }
+
+    .erp-dropdown:hover .erp-dropdown-content {
+        display: block;
+    }
+
+    /* List View Styles */
+    .erp-list-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+
+    .erp-list-item {
+        background: var(--card-background);
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 1.5rem;
+        border: 1px solid var(--border-color);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .erp-list-item:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    }
+
+    .erp-list-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .erp-list-item-body p {
+        margin: 0.5rem 0;
+        font-size: 1rem;
+        color: var(--text-color-light);
+    }
+
+    .erp-list-item-body strong {
+        color: var(--text-color-dark);
+    }
+
+    .erp-list-item-actions {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: flex-end; /* Align actions to the right */
+    }
+
+    /* Grid View Styles */
+    .erp-grid-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Responsive grid */
+        gap: 1.5rem;
+    }
+
+    .erp-grid-item {
+        background: var(--card-background);
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        padding: 1.5rem;
+        border: 1px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .erp-grid-item:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    }
+
+    .erp-grid-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .erp-grid-item-body h3 {
+        margin-top: 0;
+        margin-bottom: 0.5rem;
+        color: var(--text-color-light);
+        font-size: 1.25rem;
+    }
+
+    .erp-grid-item-body p {
+        margin: 0.25rem 0;
+        color: var(--text-color-dark);
+    }
+
+    .erp-grid-item-actions {
+        margin-top: 1.5rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    /* Empty State */
+    .erp-empty {
+        text-align: center;
+        padding: 3rem;
+        background: var(--dark-color);
+        border-radius: var(--border-radius);
+        color: var(--text-color-dark);
+        font-size: 1.2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: var(--box-shadow);
+        border: 1px solid var(--border-color);
+    }
+    .erp-empty i {
+        font-size: 3rem;
+        color: var(--text-color-dark);
+    }
+
+    /* Pagination Styles */
+    .erp-pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .erp-pagination-btn {
+        background-color: var(--card-background);
+        color: var(--text-color-light);
+        border: 1px solid var(--border-color);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        transition: var(--transition);
+        font-size: 1.1rem;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .erp-pagination-btn:hover {
+        background-color: var(--primary-color);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(var(--primary-color-rgb), 0.4);
+    }
+
+    .erp-pagination-info {
+        color: var(--text-color-dark);
+        font-size: 0.95rem;
+    }
+
+    /* Tooltip Styles */
+    [data-tooltip] {
+        position: relative;
+        cursor: help; /* Indicate interactable element */
+    }
+
+    [data-tooltip]:hover::before,
+    [data-tooltip]:hover::after {
+        display: block;
+    }
+
+    /* The tooltip itself */
+    [data-tooltip]::before {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 100%; /* Position above the element */
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: var(--dark-color); /* Darker background for tooltip */
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+        z-index: 1000; /* Ensure tooltip is on top */
+        pointer-events: none; /* Allows clicks on underlying elements */
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5); /* Stronger shadow for tooltip */
+        border: 1px solid var(--border-color);
+    }
+
+    /* The arrow of the tooltip */
+    [data-tooltip]::after {
+        content: '';
+        position: absolute;
+        bottom: calc(100% - 4px); /* Position arrow slightly below tooltip content */
+        left: 50%;
+        transform: translateX(-50%) rotate(45deg); /* Rotate for triangle shape */
+        width: 10px;
+        height: 10px;
+        background-color: var(--dark-color); /* Match tooltip background */
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+        z-index: 999;
+        pointer-events: none;
+        border-bottom: 1px solid var(--border-color); /* Add border to arrow */
+        border-right: 1px solid var(--border-color);
+    }
+
+    /* Show tooltip on hover */
+    [data-tooltip]:hover::before {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(-50%) translateY(-10px); /* Move up slightly on hover */
+    }
+
+    [data-tooltip]:hover::after {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(-50%) translateY(0px) rotate(45deg); /* Adjust arrow position */
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+        .erp-content-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .erp-content-actions {
+            width: 100%;
+            justify-content: flex-start;
+        }
+
+        .erp-filter-row {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .erp-filter-group {
+            min-width: unset;
+            width: 100%;
+        }
+
+        .erp-table thead {
+            display: none; /* Hide table headers on small screens */
+        }
+
+        .erp-table, .erp-table tbody, .erp-table tr, .erp-table td {
+            display: block;
+            width: 100%;
+        }
+
+        .erp-table tr {
+            margin-bottom: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            background-color: var(--card-background);
+            box-shadow: var(--box-shadow);
+        }
+
+        .erp-table td {
+            text-align: right;
+            position: relative;
+            padding-left: 50%;
+            border: none;
+            border-bottom: 1px dashed var(--border-color); /* Dashed border for readability */
+        }
+
+        .erp-table td:last-child {
+            border-bottom: none;
+        }
+
+        .erp-table td::before {
+            content: attr(data-label); /* Use data-label for pseudo-elements */
+            position: absolute;
+            left: 0;
+            width: 50%;
+            padding-left: 1rem;
+            font-weight: 600;
+            text-align: left;
+            color: var(--text-color-dark);
+            font-size: 0.9rem;
+        }
+
+        /* Set data-label for each table cell */
+        .erp-table td:nth-of-type(1)::before { content: "N° Commande"; }
+        .erp-table td:nth-of-type(2)::before { content: "Fournisseur"; }
+        .erp-table td:nth-of-type(3)::before { content: "Date"; }
+        .erp-table td:nth-of-type(4)::before { content: "Montant HT"; }
+        .erp-table td:nth-of-type(5)::before { content: "TVA"; }
+        .erp-table td:nth-of-type(6)::before { content: "Montant TTC"; }
+        .erp-table td:nth-of-type(7)::before { content: "Statut"; }
+        .erp-table td:nth-of-type(8)::before { content: "Actions"; }
+
+        .erp-table .erp-actions {
+            justify-content: flex-end;
+            padding-right: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const listViewBtn = document.getElementById('listViewBtn');
+        const tableViewBtn = document.getElementById('tableViewBtn');
+        const gridViewBtn = document.getElementById('gridViewBtn');
+
+        const tableView = document.getElementById('tableView');
+        const listView = document.getElementById('listView');
+        const gridView = document.getElementById('gridView');
+
+        // Function to set the active view and store in localStorage
+        function setActiveView(viewName) {
+            // Remove 'active' class from all buttons
+            listViewBtn.classList.remove('active');
+            tableViewBtn.classList.remove('active');
+            gridViewBtn.classList.remove('active');
+
+            // Hide all views
+            tableView.style.display = 'none';
+            listView.style.display = 'none';
+            gridView.style.display = 'none';
+
+            // Set active button and display corresponding view
+            if (viewName === 'list') {
+                listViewBtn.classList.add('active');
+                listView.style.display = 'block';
+            } else if (viewName === 'table') {
+                tableViewBtn.classList.add('active');
+                tableView.style.display = 'block';
+            } else if (viewName === 'grid') {
+                gridViewBtn.classList.add('active');
+                gridView.style.display = 'grid'; // Use 'grid' for grid display
+            }
+            // Store the active view in localStorage
+            localStorage.setItem('activePurchaseOrderView', viewName);
+        }
+
+        // Event Listeners for view toggle buttons
+        listViewBtn.addEventListener('click', () => setActiveView('list'));
+        tableViewBtn.addEventListener('click', () => setActiveView('table'));
+        gridViewBtn.addEventListener('click', () => setActiveView('grid'));
+
+        // Load preferred view from localStorage on page load
+        const storedView = localStorage.getItem('activePurchaseOrderView');
+        if (storedView) {
+            setActiveView(storedView);
+        } else {
+            // Default to table view if no preference is stored
+            setActiveView('table');
+        }
+
+        // Handle dropdowns (for export buttons)
+        document.querySelectorAll('.erp-dropdown').forEach(dropdown => {
+            const button = dropdown.querySelector('.erp-action-export');
+            const content = dropdown.querySelector('.erp-dropdown-content');
+
+            button.addEventListener('click', function(event) {
+                event.stopPropagation(); // Prevent document click from closing immediately
+                content.style.display = content.style.display === 'block' ? 'none' : 'block';
+            });
+        });
+
+        // Close dropdowns if clicked outside
+        document.addEventListener('click', function(event) {
+            document.querySelectorAll('.erp-dropdown-content').forEach(content => {
+                if (content.style.display === 'block' && !content.parentElement.contains(event.target)) {
+                    content.style.display = 'none';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

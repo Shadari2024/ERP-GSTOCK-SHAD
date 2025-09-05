@@ -1,0 +1,455 @@
+<ul class="navbar-nav me-auto">
+    <li class="nav-item"><a class="nav-link nav-anim {% if active == 'dashboard' %}active{% endif %}" href="{% url 'principal' %}"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a></li>
+    <li class="nav-item"><a class="nav-link nav-anim" href="{% url 'produits_par_categorie' %}"><i class="bi bi-box-seam me-1"></i> Produits</a></li>
+    <li class="nav-item"><a class="nav-link nav-anim" href="{% url 'liste_cat' %}"><i class="bi bi-tags me-1"></i> Catégories</a></li>
+    <li class="nav-item"><a class="nav-link nav-anim" href="{% url 'liste_client' %}"><i class="bi bi-people me-1"></i> Clients</a></li>
+    <li class="nav-item"><a class="nav-link nav-anim" href="{% url 'liste_commandes' %}"><i class="bi bi-receipt me-1"></i> Commandes</a></li>
+    <li class="nav-item"><a class="nav-link nav-anim" href="#"><i class="bi bi-file-earmark-text me-1"></i> Factures</a></li>
+  </ul>
+  
+  <ul class="navbar-nav">
+    <li class="nav-item"><a class="nav-link nav-anim" href="{% url 'ventes_du_jour' %}"><i class="bi bi-cash-coin me-1"></i> Ventes</a></li>
+    <li class="nav-item"><a class="nav-link nav-anim" href="#"><i class="bi bi-truck me-1"></i> Achats</a></li>
+    <li class="nav-item"><a class="nav-link nav-anim" href="#"><i class="bi bi-people-fill me-1"></i> Fournisseurs</a></li>
+    <li class="nav-item"><a class="nav-link nav-anim" href="#"><i class="bi bi-bar-chart-line me-1"></i> Rapports</a></li>
+    <li class="nav-item"><a class="nav-link nav-anim" href="{% url 'afficher_parametres' %}"><i class="bi bi-gear me-1"></i> Paramètres</a></li>
+  </ul>
+
+  class Produit(models.Model):
+    # Vos autres champs ici...
+    categorie = models.ForeignKey(Categorie, on_delete=models.SET_NULL, null=True, blank=True)
+    nom = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    prix_achat = models.DecimalField(max_digits=10, decimal_places=2)
+    prix_vente = models.DecimalField(max_digits=10, decimal_places=2)
+    stock = models.IntegerField(default=0)
+    seuil_alerte = models.IntegerField(default=10)
+    photo = models.ImageField(upload_to='media/produits/', blank=True, null=True)
+    code_barre = models.ImageField(upload_to='media/barcodes/', blank=True, null=True)
+
+    def generate_barcode(self):
+        # Créer un identifiant de produit unique (id du produit avec des zéros à gauche pour faire 12 chiffres)
+        product_code = f"{self.id:012d}"  # Cela garantit que l'id a 12 chiffres
+
+        # Générer le code-barres EAN13
+        barcode_data = barcode.get_barcode_class('EAN13')(product_code, writer=ImageWriter())
+
+        # Sauvegarder le code-barres dans un fichier
+        buffer = BytesIO()
+        barcode_data.write(buffer)
+        buffer.seek(0)
+
+        # Créer un fichier Image à partir du code-barres généré
+        filename = f"{self.id}_barcode.png"
+        self.code_barre.save(filename, ContentFile(buffer.read()), save=False)
+
+        buffer.close()
+
+
+
+
+
+
+
+
+        from django.db import models
+from django.utils import timezone
+from django.contrib.auth.models import User
+from django.core.files.storage import default_storage
+import barcode
+from django.core.files.base import ContentFile
+from barcode.writer import ImageWriter
+from io import BytesIO
+from django.core.files import File
+from io import BytesIO
+from django.core.files.base import ContentFile
+from django.db.models import Avg, F
+from django.db.models import Sum
+from decimal import Decimal
+
+
+
+
+#Notification 
+
+
+
+
+# -------------------- PARAMÈTRES --------------------
+class Parametre(models.Model):
+    nom_societe = models.CharField(max_length=100)
+    adresse = models.TextField()
+    telephone = models.CharField(max_length=20)
+    email = models.EmailField()
+    logo = models.ImageField(upload_to="logos/", null=True, blank=True)
+    taux_tva = models.DecimalField(max_digits=5, decimal_places=2, default=18.00)
+    devise = models.CharField(max_length=10, default="€")
+
+    def __str__(self):
+        return self.nom_societe
+
+# -------------------- CATÉGORIE --------------------
+class Categorie(models.Model):
+    nom = models.CharField(max_length=100)
+    photo = models.ImageField(upload_to='media/', blank=True, null=True)
+
+    def __str__(self):
+        return self.nom
+
+
+
+# -------------------- PRODUIT --------------------
+class Produit(models.Model):
+    categorie = models.ForeignKey('Categorie', on_delete=models.SET_NULL, null=True, blank=True)
+    nom = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    prix_achat = models.DecimalField(max_digits=10, decimal_places=2)
+    prix_vente = models.DecimalField(max_digits=10, decimal_places=2)
+    stock = models.IntegerField(default=0)
+    seuil_alerte = models.IntegerField(default=10)
+    photo = models.ImageField(upload_to='media/produits/', blank=True, null=True)
+    code_barre = models.ImageField(upload_to='media/barcodes/', blank=True, null=True)
+    code_barre_numero = models.CharField(max_length=13, blank=True, null=True, editable=False)
+
+
+    def __str__(self):
+        return f"{self.nom} ({self.code_barre_numero})"
+
+    def save(self, *args, **kwargs):
+        # Création initiale (sans ID)
+        is_new = self.pk is None
+        super().save(*args, **kwargs)  # Sauvegarde une première fois pour avoir un ID
+
+        if is_new:
+            self.generate_barcode()
+            super().save(update_fields=['code_barre', 'code_barre_numero'])  # Met à jour les champs manquants
+            
+
+    def generate_barcode(self):
+        product_code = f"{self.id:012d}"[:12]
+        checksum = self.calculate_ean13_checksum(product_code)
+        ean13_code = f"{product_code}{checksum}"
+        self.code_barre_numero = ean13_code
+
+        ean = barcode.get_barcode_class('ean13')
+        barcode_data = ean(ean13_code, writer=ImageWriter())
+
+        buffer = BytesIO()
+        barcode_data.write(buffer)
+        filename = f"barcode_{self.id}.png"
+        self.code_barre.save(filename, ContentFile(buffer.getvalue()), save=False)
+        buffer.close()
+
+    def calculate_ean13_checksum(self, code):
+        total = 0
+        for i, digit in enumerate(code):
+            n = int(digit)
+            total += n if i % 2 == 0 else n * 3
+        return str((10 - total % 10) % 10)
+
+    @staticmethod
+    def calculate_ean13_checksum(code):
+        """Calcule le chiffre de contrôle EAN13"""
+        if len(code) != 12:
+            raise ValueError("Le code doit avoir 12 chiffres")
+        
+        sum_odd = sum(int(code[i]) for i in range(0, 12, 2))
+        sum_even = sum(int(code[i]) for i in range(1, 12, 2))
+        total = sum_odd * 3 + sum_even
+        checksum = (10 - (total % 10)) % 10
+        return str(checksum)
+    
+    def prix_vente_suggere(self):
+        """
+        Suggestion de prix basé sur la marge moyenne de la catégorie
+        ou un coefficient par défaut si aucune donnée.
+        """
+        if self.categorie:
+            produits_categorie = Produit.objects.filter(categorie=self.categorie).exclude(id=self.id)
+            moyenne_marge = produits_categorie.annotate(
+                marge=F('prix_vente') - F('prix_achat')
+            ).aggregate(marge_moy=Avg('marge'))['marge_moy']
+        else:
+            moyenne_marge = None
+
+        if moyenne_marge and moyenne_marge > 0:
+            return round(float(self.prix_achat) + float(moyenne_marge), 2)
+        else:
+            coefficient_par_defaut = 1.25  # 25% de marge par défaut
+            return round(float(self.prix_achat) * coefficient_par_defaut, 2)
+        
+# -------------------- CLIENT --------------------
+class Client(models.Model):
+    nom = models.CharField(max_length=100)
+    email = models.EmailField(blank=True, null=True)
+    telephone = models.CharField(max_length=20)
+    adresse = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.nom
+
+# -------------------- COMMANDE --------------------
+class Commande(models.Model):
+    STATUT_CHOICES = [
+        ("en_attente", "En attente"),
+        ("confirmee", "Confirmée"),
+        ("expediee", "Expédiée"),
+        ("livree", "Livrée"),
+        ("annulee", "Annulée"),
+    ]
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default="en_attente")
+    client = models.ForeignKey(Client, on_delete=models.CASCADE)
+    date_commande = models.DateTimeField(default=timezone.now)
+    expiration = models.DateField()
+    paiement = models.CharField(max_length=50, choices=[('cash', 'Cash'), ('30j', '30 jours')])
+    montant_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    vendeur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    vente_confirmee = models.BooleanField(default=False)
+    vente_au_comptoir = models.BooleanField(default=False)  # 👈 Nouveau champ
+    
+    
+    def valider_commande(self):
+        # Vérifie que tous les produits ont un stock suffisant
+        for ligne in self.lignes.select_related("produit").all():
+            if ligne.produit.stock < ligne.quantite:
+                return False  # Échec de validation
+
+        # Déduire le stock
+        for ligne in self.lignes.select_related("produit").all():
+            produit = ligne.produit
+            produit.stock -= ligne.quantite
+            produit.save()
+
+        self.vente_confirmee = True
+        self.statut = "confirmee"
+        self.save()
+        return True
+
+
+    def __str__(self):
+        return f"Commande {self.id} - {self.client.nom}"
+
+    def calculer_total(self):
+        total = sum([ligne.total_ligne_ttc() for ligne in self.lignes.all()])
+        self.montant_total = total
+        self.save()
+        return total
+    
+    def total_ht(self):
+        return sum(l.total_ligne_ht() for l in self.lignes.all())
+
+    def total_tva(self):
+        return sum(l.tva_ligne() for l in self.lignes.all())
+
+    def total_ttc(self):
+        return self.total_ht() + self.total_tva()
+    @classmethod
+    def creer_vente_comptoir(cls, produits, vendeur):
+        """
+        produits = [
+            {"produit": instance_produit, "quantite": 2, "prix_unitaire": 100.00},
+            ...
+        ]
+        """
+        commande = cls.objects.create(
+            client=Client.objects.get_or_create(nom="Vente Comptoir")[0],  # client par défaut
+            expiration=timezone.now().date(),
+            paiement="cash",
+            vendeur=vendeur,
+            vente_au_comptoir=True
+        )
+
+        for item in produits:
+            LigneCommande.objects.create(
+                commande=commande,
+                produit=item["produit"],
+                quantite=item["quantite"],
+                prix_unitaire=item["prix_unitaire"]
+            )
+
+        commande.calculer_total()
+        commande.valider_commande()
+        return commande
+
+
+# -------------------- LIGNE COMMANDE --------------------
+class LigneCommande(models.Model):
+    commande = models.ForeignKey(Commande, related_name='lignes', on_delete=models.CASCADE)
+    produit = models.ForeignKey(Produit, on_delete=models.CASCADE, related_name="lignecommande")
+    quantite = models.IntegerField()
+    prix_unitaire = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def total_ligne_ht(self):
+        return self.quantite * self.prix_unitaire
+
+    def tva_ligne(self):
+        param = Parametre.objects.first()
+        return (self.total_ligne_ht() * param.taux_tva / 100) if param else 0
+
+    def total_ligne_ttc(self):
+        return self.total_ligne_ht() + self.tva_ligne()
+    @property
+    def total(self):
+         return self.quantite * self.prix_unitaire
+
+
+
+
+class ClotureCaisse(models.Model):
+    vendeur = models.ForeignKey(User, on_delete=models.CASCADE)
+    date_cloture = models.DateTimeField(auto_now_add=True)
+    date_jour = models.DateField()
+    montant_total = models.DecimalField(max_digits=10, decimal_places=2)
+    nombre_ventes = models.PositiveIntegerField()
+    montant_espece = models.DecimalField(max_digits=10, decimal_places=2)
+    montant_carte = models.DecimalField(max_digits=10, decimal_places=2)
+    commentaire = models.TextField(blank=True)
+    validee = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-date_cloture']
+        verbose_name = "Clôture de caisse"
+        verbose_name_plural = "Clôtures de caisse"
+
+    def __str__(self):
+        return f"Clôture du {self.date_jour} par {self.vendeur.username}"
+
+class EcartCaisse(models.Model):
+    TYPES_ECART = [
+        ('manquant', 'Manquant'),
+        ('excedent', 'Excédent'),
+    ]
+
+    cloture = models.ForeignKey(ClotureCaisse, on_delete=models.CASCADE, related_name='ecarts')
+    montant = models.DecimalField(max_digits=10, decimal_places=2)
+    type_ecart = models.CharField(max_length=10, choices=TYPES_ECART)
+    date_decouverte = models.DateTimeField(auto_now_add=True)
+    commentaire = models.TextField(blank=True)
+    notifie_admin = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Écart de caisse"
+        verbose_name_plural = "Écarts de caisse"
+
+    def __str__(self):
+        return f"Écart {self.type_ecart} de {self.montant}€ (Clôture #{self.cloture.id})"
+
+
+# -------------------- FACTURE --------------------
+class Facture(models.Model):
+    STATUTS = (
+        ('payee', 'Payée'),
+        ('partielle', 'Partiellement payée'),
+        ('impayee', 'Impayée'),
+    )
+
+    numero = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    commande = models.OneToOneField('Commande', on_delete=models.PROTECT)
+    date = models.DateField(default=timezone.now)
+    montant_total = models.DecimalField(max_digits=10, decimal_places=2)
+    montant_paye = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    statut = models.CharField(max_length=20, choices=STATUTS, default='impayee')
+
+    def reste_a_payer(self):
+        return self.montant_total - self.montant_paye
+
+    def __str__(self):
+        return f"Facture {self.numero}"
+
+class Paiement(models.Model):
+    facture = models.ForeignKey(Facture, on_delete=models.CASCADE)
+    montant = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateTimeField(auto_now_add=True)
+    methode = models.CharField(max_length=50, choices=[
+        ('especes', 'Espèces'),
+        ('carte', 'Carte bancaire'),
+        ('cheque', 'Chèque'),
+    ])
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.facture.montant_paye += Decimal(str(self.montant))
+        self.facture.save()
+
+
+# -------------------- FOURNISSEUR --------------------
+class Fournisseur(models.Model):
+    nom = models.CharField(max_length=100)
+    telephone = models.CharField(max_length=20)
+    email = models.EmailField(blank=True, null=True)
+    adresse = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.nom
+
+# -------------------- ACHAT --------------------
+class Achat(models.Model):
+    fournisseur = models.ForeignKey(Fournisseur, on_delete=models.CASCADE)
+    produit = models.ForeignKey(Produit, on_delete=models.CASCADE)
+    quantite = models.IntegerField()
+    prix_achat = models.DecimalField(max_digits=10, decimal_places=2)
+    date_achat = models.DateTimeField(default=timezone.now)
+
+    def total_achat(self):
+        return self.quantite * self.prix_achat
+
+# -------------------- RAPPORT --------------------
+class Rapport(models.Model):
+    titre = models.CharField(max_length=100)
+    date_generation = models.DateTimeField(auto_now_add=True)
+    type = models.CharField(max_length=50, choices=[
+        ('vente', 'Vente'),
+        ('achat', 'Achat'),
+        ('stock', 'Stock')
+    ])
+    contenu = models.TextField()
+
+    def __str__(self):
+        return f"{self.titre} ({self.type})"
+    
+class HistoriqueStatut(models.Model):
+    commande = models.ForeignKey(Commande, related_name='historiques', on_delete=models.CASCADE)
+    ancien_statut = models.CharField(max_length=20)
+    nouveau_statut = models.CharField(max_length=20)
+    modifie_par = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    date_modification = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.commande} - {self.ancien_statut} → {self.nouveau_statut} ({self.date_modification})"
+
+class MouvementStock(models.Model):
+    TYPE_CHOICES = [
+        ('entree', 'Entrée'),
+        ('sortie', 'Sortie'),
+        ('correction', 'Correction'),
+    ]
+    
+    produit = models.ForeignKey('Produit', on_delete=models.CASCADE)
+    type_mouvement = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    quantite = models.PositiveIntegerField()
+    date_mouvement = models.DateTimeField(auto_now_add=True)
+    utilisateur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    commentaire = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.type_mouvement} - {self.produit.nom} ({self.quantite})"
+
+
+#INVENTAIRE PHYSIQUE
+
+# models.py
+
+class InventairePhysique(models.Model):
+    produit = models.ForeignKey(Produit, on_delete=models.CASCADE)
+    stock_theorique = models.IntegerField()
+    stock_physique = models.IntegerField()
+    ecart = models.IntegerField()
+    utilisateur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    date = models.DateTimeField(auto_now_add=True)
+    valide = models.BooleanField(default=False)
+
+    def calculer_ecart(self):
+        return self.stock_physique - self.stock_theorique
+
+    def __str__(self):
+        return f"{self.produit.nom} - Ecart: {self.ecart}"
+

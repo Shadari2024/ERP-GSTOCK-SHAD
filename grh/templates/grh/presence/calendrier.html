@@ -1,0 +1,89 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>{% trans "Calendrier des présences" %}</h2>
+        </div>
+        <div class="col text-end">
+            <select id="select-employe" class="form-select" style="width: auto; display: inline-block;">
+                <option value="">{% trans "Tous les employés" %}</option>
+                {% for emp in employes %}
+                    <option value="{{ emp.id }}">{{ emp.nom_complet }}</option>
+                {% endfor %}
+            </select>
+            <select id="select-mois" class="form-select ms-2" style="width: auto; display: inline-block;">
+                {% for i in range %}
+                <option value="{{ i }}">{{ i }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div id="calendrier-presences"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<style>
+.fc-event {
+    cursor: pointer;
+    font-size: 0.85em;
+    padding: 2px 4px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/fr.js'></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendrier-presences');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'fr',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        events: function(fetchInfo, successCallback, failureCallback) {
+            const employeId = document.getElementById('select-employe').value;
+            const mois = fetchInfo.startStr.substring(0, 7);
+            
+           fetch(`/grh/api/presences/data/?mois=${mois}&employe=${employeId}`)
+                .then(response => response.json())
+                .then(data => successCallback(data))
+                .catch(error => failureCallback(error));
+        },
+        eventClick: function(info) {
+            alert(
+                `Employé: ${info.event.extendedProps.employe}\n` +
+                `Date: ${info.event.start.toLocaleDateString()}\n` +
+                `Statut: ${info.event.extendedProps.statut}\n` +
+                `Heures: ${info.event.extendedProps.heures}h`
+            );
+        }
+    });
+    
+    calendar.render();
+    
+    // Gestion des filtres
+    document.getElementById('select-employe').addEventListener('change', function() {
+        calendar.refetchEvents();
+    });
+    
+    document.getElementById('select-mois').addEventListener('change', function() {
+        calendar.gotoDate(this.value + '-01');
+    });
+});
+</script>
+{% endblock %}

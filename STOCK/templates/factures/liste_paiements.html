@@ -1,0 +1,682 @@
+{% extends "base.html" %}
+{% load paiement_tags %}
+
+{% block content %}
+<div class="container-fluid paiement-dashboard">
+    <!-- En-tête avec informations entreprise -->
+    <div class="dashboard-header">
+        <div class="company-info">
+           
+        </div>
+        <div class="dashboard-actions">
+            <button onclick="window.print()" class="btn btn-print">
+                <i class="fas fa-print"></i> Imprimer
+            </button>
+        </div>
+    </div>
+
+    <div class="dashboard-title-container">
+        <h1 class="dashboard-title">
+            <i class="fas fa-money-bill-wave"></i> Historique des Paiements
+        </h1>
+        <div class="devise-badge">
+            <i class="fas fa-coins"></i> {{ parametres.devise }}
+        </div>
+    </div>
+    
+    <!-- Contrôles de filtrage -->
+    <div class="card filter-card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Recherche</label>
+                    <div class="search-input-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="searchInput" class="form-control" 
+                               placeholder="Rechercher facture, client...">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Méthode de paiement</label>
+                    <select id="methodFilter" class="form-select">
+                        <option value="">Toutes méthodes</option>
+                        {% for code, libelle in methodes %}
+                        <option value="{{ code }}">{{ libelle }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Période</label>
+                    <div class="input-group date-range-picker">
+                        <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                        <input type="date" id="dateStart" class="form-control" placeholder="Début">
+                        <span class="input-group-text">à</span>
+                        <input type="date" id="dateEnd" class="form-control" placeholder="Fin">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <button id="resetFilters" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-sync-alt"></i> Réinitialiser
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau des paiements -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="paiementsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Date</th>
+                            <th>Facture</th>
+                            <th>Client</th>
+                            <th class="text-end pe-4">Montant</th>
+                            <th>Méthode</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for paiement in paiements %}
+                        <tr class="payment-row align-middle" 
+                            data-date="{{ paiement.date|date:'Y-m-d' }}"
+                            data-method="{{ paiement.methode }}"
+                            data-search="{{ paiement.facture.numero }} {{ paiement.facture.commande.client.nom }} {{ paiement.notes }}">
+                            <td class="ps-4">
+                                <div class="date-cell">
+                                    <span class="date-day">{{ paiement.date|date:"d" }}</span>
+                                    <span class="date-month">{{ paiement.date|date:"M" }}</span>
+                                    <span class="date-time">{{ paiement.date|date:"H:i" }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <a href="{% url 'detail_facture' paiement.facture.id %}" class="invoice-link">
+                                    <i class="fas fa-file-invoice me-2"></i>{{ paiement.facture.numero }}
+                                </a>
+                            </td>
+                            <td>
+                                <div class="client-cell">
+                                    <i class="fas fa-user-circle me-2"></i>
+                                    {{ paiement.facture.commande.client.nom }}
+                                </div>
+                            </td>
+                            <td class="text-end pe-4 amount-cell">
+                                {{ paiement.montant }} <span class="currency">{{ parametres.devise }}</span>
+                            </td>
+                            <td>
+                                <span class="badge payment-method payment-method-{{ paiement.methode }}">
+                                    <i class="fas {{ paiement.methode|get_method_icon }} me-2"></i>
+                                    {{ paiement.get_methode_display }}
+                                </span>
+                            </td>
+                            <td class="notes-cell">
+                                {% if paiement.notes %}
+                                <div class="notes-tooltip" data-bs-toggle="tooltip" title="{{ paiement.notes }}">
+                                    <i class="fas fa-sticky-note"></i>
+                                    <span>{{ paiement.notes|truncatechars:20 }}</span>
+                                </div>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 empty-state">
+                                <i class="fas fa-money-bill-wave fa-2x mb-3"></i>
+                                <h5>Aucun paiement enregistré</h5>
+                                <p class="text-muted">Commencez par enregistrer un paiement</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Résumé statistique -->
+    <div class="row mt-4 g-3">
+        <div class="col-md-4">
+            <div class="card summary-card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase text-muted mb-2">Total</h6>
+                            <h3 class="card-value mb-0">
+                                {{ total_paiements|default:"0" }} <small>{{ parametres.devise }}</small>
+                            </h3>
+                        </div>
+                        <div class="summary-icon bg-primary-light">
+                            <i class="fas fa-receipt text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card summary-card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase text-muted mb-2">Nombre</h6>
+                            <h3 class="card-value mb-0">{{ paiements.count }}</h3>
+                        </div>
+                        <div class="summary-icon bg-success-light">
+                            <i class="fas fa-list-ol text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card summary-card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-uppercase text-muted mb-2">Moyenne</h6>
+                            <h3 class="card-value mb-0">
+                                {% if paiements.count > 0 %}
+                                {{ moyenne_paiements|floatformat:2 }} <small>{{ parametres.devise }}</small>
+                                {% else %}
+                                0 <small>{{ parametres.devise }}</small>
+                                {% endif %}
+                            </h3>
+                        </div>
+                        <div class="summary-icon bg-info-light">
+                            <i class="fas fa-calculator text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Couleurs de base */
+    :root {
+        --primary-color: #4e73df;
+        --secondary-color: #858796;
+        --success-color: #1cc88a;
+        --info-color: #36b9cc;
+        --warning-color: #f6c23e;
+        --danger-color: #e74a3b;
+        --light-color: #f8f9fc;
+        --dark-color: #5a5c69;
+    }
+
+    /* Structure principale */
+    .paiement-dashboard {
+        padding: 2rem;
+        background-color: #f8f9fc;
+        min-height: 100vh;
+    }
+
+    /* En-tête */
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid #e3e6f0;
+    }
+
+    .company-info {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    .company-logo {
+        height: 60px;
+        width: auto;
+        object-fit: contain;
+    }
+
+    .company-info h2 {
+        color: var(--dark-color);
+        margin-bottom: 0.25rem;
+        font-weight: 600;
+    }
+
+    .company-details {
+        color: var(--secondary-color);
+        margin-bottom: 0;
+        font-size: 0.9rem;
+    }
+
+    .company-details i {
+        width: 16px;
+        text-align: center;
+        margin-right: 5px;
+    }
+
+    /* Titre */
+    .dashboard-title-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+    }
+
+    .dashboard-title {
+        color: var(--dark-color);
+        font-weight: 600;
+        margin-bottom: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .devise-badge {
+        background-color: var(--light-color);
+        color: var(--dark-color);
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* Filtres */
+    .filter-card {
+        border: none;
+        border-radius: 0.5rem;
+        background-color: white;
+    }
+
+    .filter-card .card-body {
+        padding: 1.5rem;
+    }
+
+    .search-input-container {
+        position: relative;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--secondary-color);
+    }
+
+    .search-input-container .form-control {
+        padding-left: 40px;
+    }
+
+    .date-range-picker .input-group-text {
+        background-color: white;
+    }
+
+    /* Tableau */
+    .table {
+        --bs-table-hover-bg: rgba(78, 115, 223, 0.05);
+    }
+
+    .table thead th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        color: var(--secondary-color);
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+        border-bottom-width: 1px;
+    }
+
+    .table tbody td {
+        vertical-align: middle;
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+
+    .date-cell {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .date-day {
+        font-size: 1.1rem;
+        font-weight: 600;
+        line-height: 1;
+    }
+
+    .date-month {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        color: var(--secondary-color);
+    }
+
+    .date-time {
+        font-size: 0.8rem;
+        color: var(--secondary-color);
+        margin-top: 2px;
+    }
+
+    .invoice-link {
+        color: var(--primary-color);
+        font-weight: 500;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+    }
+
+    .invoice-link:hover {
+        color: #2e59d9;
+        text-decoration: underline;
+    }
+
+    .client-cell {
+        display: flex;
+        align-items: center;
+    }
+
+    .amount-cell {
+        font-weight: 600;
+        color: var(--dark-color);
+    }
+
+    .amount-cell .currency {
+        color: var(--secondary-color);
+        font-size: 0.85em;
+    }
+
+    .payment-method {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.35rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.85rem;
+    }
+
+    .payment-method-especes {
+        background-color: rgba(40, 167, 69, 0.1);
+        color: #28a745;
+    }
+
+    .payment-method-carte {
+        background-color: rgba(23, 162, 184, 0.1);
+        color: #17a2b8;
+    }
+
+    .payment-method-cheque {
+        background-color: rgba(108, 117, 125, 0.1);
+        color: #6c757d;
+    }
+
+    .payment-method-virement {
+        background-color: rgba(111, 66, 193, 0.1);
+        color: #6f42c1;
+    }
+
+    .notes-cell {
+        max-width: 200px;
+    }
+
+    .notes-tooltip {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--secondary-color);
+        cursor: help;
+    }
+
+    .notes-tooltip i {
+        color: var(--warning-color);
+    }
+
+    .empty-state {
+        color: var(--secondary-color);
+        padding: 3rem !important;
+    }
+
+    .empty-state i {
+        opacity: 0.5;
+    }
+
+    /* Cartes de résumé */
+    .summary-card {
+        border-radius: 0.5rem;
+        transition: transform 0.3s ease;
+    }
+
+    .summary-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .summary-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+
+    .bg-primary-light {
+        background-color: rgba(78, 115, 223, 0.1);
+    }
+
+    .bg-success-light {
+        background-color: rgba(28, 200, 138, 0.1);
+    }
+
+    .bg-info-light {
+        background-color: rgba(54, 185, 204, 0.1);
+    }
+
+    .card-title {
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+
+    .card-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    .card-value small {
+        font-size: 0.85rem;
+        font-weight: 400;
+        color: var(--secondary-color);
+    }
+
+    /* Bouton d'impression */
+    .btn-print {
+        background-color: var(--dark-color);
+        color: white;
+        border: none;
+        padding: 0.5rem 1.25rem;
+        border-radius: 50px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s;
+    }
+
+    .btn-print:hover {
+        background-color: #4d4f5e;
+        color: white;
+    }
+
+    /* Responsive */
+    @media (max-width: 992px) {
+        .dashboard-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1.5rem;
+        }
+        
+        .company-info {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .company-logo {
+            height: 50px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .paiement-dashboard {
+            padding: 1.5rem;
+        }
+        
+        .filter-card .row > div {
+            margin-bottom: 1rem;
+        }
+        
+        .filter-card .row > div:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    /* Styles d'impression */
+    @media print {
+        body {
+            background: white !important;
+            font-size: 10pt;
+        }
+        
+        .paiement-dashboard {
+            padding: 0;
+        }
+        
+        .dashboard-actions,
+        .filter-card {
+            display: none !important;
+        }
+        
+        .dashboard-header {
+            flex-direction: row;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .company-logo {
+            height: 50px;
+        }
+        
+        .table {
+            font-size: 9pt;
+        }
+        
+        .table th {
+            background-color: #f8f9fa !important;
+            color: black !important;
+        }
+        
+        .badge {
+            border: 1px solid #ddd;
+        }
+        
+        .summary-card {
+            break-inside: avoid;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialisation des tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Filtrage
+    const searchInput = document.getElementById('searchInput');
+    const methodFilter = document.getElementById('methodFilter');
+    const dateStart = document.getElementById('dateStart');
+    const dateEnd = document.getElementById('dateEnd');
+    const resetBtn = document.getElementById('resetFilters');
+    const paymentRows = document.querySelectorAll('.payment-row');
+
+    function filterPayments() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const methodValue = methodFilter.value;
+        const startDate = dateStart.value;
+        const endDate = dateEnd.value;
+
+        paymentRows.forEach(row => {
+            const rowSearch = row.getAttribute('data-search').toLowerCase();
+            const rowMethod = row.getAttribute('data-method');
+            const rowDate = row.getAttribute('data-date');
+
+            const matchesSearch = searchTerm === '' || rowSearch.includes(searchTerm);
+            const matchesMethod = methodValue === '' || rowMethod === methodValue;
+            const matchesDate = (
+                (startDate === '' || rowDate >= startDate) && 
+                (endDate === '' || rowDate <= endDate)
+            );
+
+            if (matchesSearch && matchesMethod && matchesDate) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    // Écouteurs d'événements
+    searchInput.addEventListener('input', filterPayments);
+    methodFilter.addEventListener('change', filterPayments);
+    dateStart.addEventListener('change', filterPayments);
+    dateEnd.addEventListener('change', filterPayments);
+
+    // Réinitialisation
+    resetBtn.addEventListener('click', function() {
+        searchInput.value = '';
+        methodFilter.value = '';
+        dateStart.value = '';
+        dateEnd.value = '';
+        filterPayments();
+    });
+
+    // Tri des colonnes
+    const table = document.getElementById('paiementsTable');
+    const headers = table.querySelectorAll('th');
+    
+    headers.forEach((header, index) => {
+        header.style.cursor = 'pointer';
+        header.addEventListener('click', () => {
+            sortTable(index);
+        });
+    });
+    
+    function sortTable(column) {
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr:not([style*="display: none"])'));
+        const isAsc = !table.querySelector(`th:nth-child(${column + 1})`).classList.contains('asc');
+        
+        // Reset all headers
+        headers.forEach(h => h.classList.remove('asc', 'desc'));
+        
+        // Set current header
+        table.querySelector(`th:nth-child(${column + 1})`).classList.add(isAsc ? 'asc' : 'desc');
+        
+        rows.sort((a, b) => {
+            const aValue = a.querySelector(`td:nth-child(${column + 1})`).textContent.trim();
+            const bValue = b.querySelector(`td:nth-child(${column + 1})`).textContent.trim();
+            
+            if (!isNaN(parseFloat(aValue)) && !isNaN(parseFloat(bValue))) {
+                return isAsc ? parseFloat(aValue) - parseFloat(bValue) : parseFloat(bValue) - parseFloat(aValue);
+            } else {
+                return isAsc ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+            }
+        });
+        
+        rows.forEach(row => tbody.appendChild(row));
+    }
+});
+</script>
+{% endblock %}

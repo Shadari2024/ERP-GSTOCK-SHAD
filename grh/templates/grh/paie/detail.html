@@ -1,0 +1,195 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>{% trans "Détails du bulletin de paie" %}</h2>
+        </div>
+        <div class="col text-end">
+            <a href="{% url 'grh:bulletin_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i> {% trans "Retour" %}
+            </a>
+        </div>
+    </div>
+<div class="btn-group">
+    <a href="{% url 'grh:bulletin_download' object.pk %}" class="btn btn-primary">
+        <i class="fas fa-download me-2"></i>Télécharger PDF
+    </a>
+    <form method="post" action="{% url 'grh:bulletin_regenerate_pdf' object.pk %}" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-warning">
+            <i class="fas fa-sync me-2"></i>Régénérer PDF
+        </button>
+    </form>
+</div>
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Informations du bulletin" %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">{% trans "Période" %}:</dt>
+                                <dd class="col-sm-8">{{ bulletin.periode }}</dd>
+                                
+                                <dt class="col-sm-4">{% trans "Employé" %}:</dt>
+                                <dd class="col-sm-8">{{ bulletin.employe.nom_complet }}</dd>
+                                
+                                <dt class="col-sm-4">{% trans "Matricule" %}:</dt>
+                                <dd class="col-sm-8">{{ bulletin.employe.matricule }}</dd>
+                                
+                                <dt class="col-sm-4">{% trans "Poste" %}:</dt>
+                                <dd class="col-sm-8">{{ bulletin.employe.poste.intitule }}</dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl class="row">
+                                <dt class="col-sm-4">{% trans "Date édition" %}:</dt>
+                                <dd class="col-sm-8">{{ bulletin.date_edition|date:"d/m/Y" }}</dd>
+                                
+                                <dt class="col-sm-4">{% trans "Jours travaillés" %}:</dt>
+                                <dd class="col-sm-8">{{ bulletin.jours_travailles }}</dd>
+                                
+                                <dt class="col-sm-4">{% trans "Heures travaillées" %}:</dt>
+                                <dd class="col-sm-8">{{ bulletin.heures_travaillees }}h</dd>
+                                
+                                <dt class="col-sm-4">{% trans "Contrat" %}:</dt>
+                                <dd class="col-sm-8">{{ bulletin.contrat.reference }}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Détail des gains et retenues -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Détail de la paie" %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Type" %}</th>
+                                    <th>{% trans "Libellé" %}</th>
+                                    <th class="text-end">{% trans "Montant" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ligne in bulletin.lignes.all %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-{% if ligne.type_ligne == 'GAINS' %}success{% else %}danger{% endif %}">
+                                            {{ ligne.get_type_ligne_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ ligne.libelle }}</td>
+                                    <td class="text-end">{{ ligne.montant }} {{ devise_principale_symbole }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-primary">
+                                    <td colspan="2"><strong>{% trans "SALAIRE BRUT" %}</strong></td>
+                                    <td class="text-end"><strong>{{ bulletin.salaire_brut }} {{ devise_principale_symbole }}</strong></td>
+                                </tr>
+                                <tr class="table-danger">
+                                    <td colspan="2"><strong>{% trans "TOTAL COTISATIONS" %}</strong></td>
+                                    <td class="text-end"><strong>-{{ bulletin.total_cotisations }} {{ devise_principale_symbole }}</strong></td>
+                                </tr>
+                                <tr class="table-success">
+                                    <td colspan="2"><strong>{% trans "SALAIRE NET" %}</strong></td>
+                                    <td class="text-end"><strong>{{ bulletin.salaire_net }} {{ devise_principale_symbole }}</strong></td>
+                                </tr>
+                                <tr class="table-info">
+                                    <td colspan="2"><strong>{% trans "NET À PAYER" %}</strong></td>
+                                    <td class="text-end"><strong>{{ bulletin.net_a_payer }} {{ devise_principale_symbole }}</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <!-- Récapitulatif -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Récapitulatif" %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <h6>{% trans "Synthèse de la paie" %}</h6>
+                        <div class="d-flex justify-content-between">
+                            <span>{% trans "Salaire brut" %}:</span>
+                            <strong>{{ bulletin.salaire_brut }} {{ devise_principale_symbole }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>{% trans "Total cotisations" %}:</span>
+                            <strong class="text-danger">-{{ bulletin.total_cotisations }} {{ devise_principale_symbole }}</strong>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <span>{% trans "Salaire net" %}:</span>
+                            <strong class="text-success">{{ bulletin.salaire_net }} {{ devise_principale_symbole }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mt-2">
+                            <span>{% trans "Net à payer" %}:</span>
+                            <strong class="text-primary">{{ bulletin.net_a_payer }} {{ devise_principale_symbole }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Document" %}</h5>
+                </div>
+                <div class="card-body text-center">
+                    {% if bulletin.fichier_bulletin %}
+                    <a href="{{ bulletin.fichier_bulletin.url }}" target="_blank" class="btn btn-primary mb-2">
+                        <i class="fas fa-download me-1"></i> {% trans "Télécharger le bulletin" %}
+                    </a>
+                    <p class="text-muted small">
+                        {% trans "Format PDF" %}
+                    </p>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        {% trans "Aucun document attaché" %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Actions" %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'grh:bulletin_create' %}?employe={{ bulletin.employe.pk }}&periode={{ bulletin.periode }}" 
+                           class="btn btn-outline-primary">
+                            <i class="fas fa-copy me-1"></i> {% trans "Dupliquer" %}
+                        </a>
+                        {% if not bulletin.fichier_bulletin %}
+                        <a href="#" class="btn btn-outline-info">
+                            <i class="fas fa-file-pdf me-1"></i> {% trans "Générer PDF" %}
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

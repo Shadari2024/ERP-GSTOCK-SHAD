@@ -1,0 +1,648 @@
+from django.shortcuts import render
+
+# Create your views here.
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from datetime import timedelta
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required, permission_required
+from django.views.generic import ListView, DetailView, CreateView, UpdateView
+from django.urls import reverse_lazy
+from django.contrib import messages
+from django.db import transaction
+from parametres.models import *
+from STOCK.models import *
+from .models import *
+from .forms import DevisForm, LigneDevisFormSet
+from .forms import CommandeForm, LigneCommandeFormSet
+from .forms import LivraisonForm, LigneLivraisonFormSet
+from .forms import FactureForm, LigneFactureFormSet
+from .forms import PaiementForm
+from .forms import OuvertureCaisseForm, ClotureCaisseForm
+from django.http import HttpResponse
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+
+@login_required
+@permission_required('ventes.add_devis', raise_exception=True)
+def create_devis(request):
+    entreprise = request.user.entreprise
+    if request.method == 'POST':
+        form = DevisForm(request.POST, entreprise=entreprise)
+        formset = LigneDevisFormSet(request.POST)
+        
+        if form.is_valid() and formset.is_valid():
+            with transaction.atomic():
+                devis = form.save(commit=False)
+                devis.created_by = request.user
+                devis.entreprise = entreprise
+                devis.save()
+                
+                for form in formset:
+                    if form.cleaned_data.get('produit'):
+                        ligne = form.save(commit=False)
+                        ligne.devis = devis
+                        ligne.save()
+                
+                messages.success(request, "Devis créé avec succès")
+                return redirect('ventes:devis_detail', pk=devis.pk)
+    else:
+        form = DevisForm(entreprise=entreprise)
+        formset = LigneDevisFormSet(queryset=LigneDevis.objects.none())
+    
+    return render(request, 'ventes/devis/create.html', {
+        'form': form,
+        'formset': formset,
+    })
+
+class DevisListView(ListView):
+    model = Devis
+    template_name = 'ventes/devis/liste.html'
+    context_object_name = 'devis'
+    
+    def get_queryset(self):
+        return Devis.objects.filter(entreprise=self.request.user.entreprise)
+
+class DevisDetailView(DetailView):
+    model = Devis
+    template_name = 'ventes/devis/detail.html'
+    context_object_name = 'devis'
+
+@login_required
+@permission_required('ventes.change_devis', raise_exception=True)
+def edit_devis(request, pk):
+    entreprise = request.user.entreprise
+    devis = get_object_or_404(Devis, pk=pk, entreprise=entreprise)
+    
+    if request.method == 'POST':
+        form = DevisForm(request.POST, instance=devis, entreprise=entreprise)
+        formset = LigneDevisFormSet(request.POST, instance=devis)
+        
+        if form.is_valid() and formset.is_valid():
+            with transaction.atomic():
+                form.save()
+                formset.save()
+                messages.success(request, "Devis mis à jour avec succès")
+                return redirect('ventes:devis_detail', pk=devis.pk)
+    else:
+        form = DevisForm(instance=devis, entreprise=entreprise)
+        formset = LigneDevisFormSet(instance=devis)
+    
+    return render(request, 'ventes/devis/edit.html', {
+        'form': form,
+        'formset': formset,
+        'devis': devis,
+    })
+    
+    
+
+@login_required
+@permission_required('ventes.add_commandeclient', raise_exception=True)
+def create_commande(request):
+    entreprise = request.user.entreprise
+    devis_id = request.GET.get('devis_id')
+    initial_data = {}
+    
+    if devis_id:
+        devis = get_object_or_404(Devis, pk=devis_id, entreprise=entreprise)
+        initial_data = {
+            'client': devis.client,
+            'devis': devis,
+            'remise': devis.remise,
+        }
+    
+    if request.method == 'POST':
+        form = CommandeForm(request.POST, entreprise=entreprise)
+        formset = LigneCommandeFormSet(request.POST)
+        
+        if form.is_valid() and formset.is_valid():
+            with transaction.atomic():
+                commande = form.save(commit=False)
+                commande.created_by = request.user
+                commande.entreprise = entreprise
+                commande.save()
+                
+                for form in formset:
+                    if form.cleaned_data.get('produit'):
+                        ligne = form.save(commit=False)
+                        ligne.commande = commande
+                        ligne.save()
+                
+                messages.success(request, "Commande créée avec succès")
+                return redirect('ventes:commande_detail', pk=commande.pk)
+    else:
+        form = CommandeForm(initial=initial_data, entreprise=entreprise)
+        formset = LigneCommandeFormSet(
+            queryset=LigneCommande.objects.none(),
+            initial=[{'produit': item.produit, 'quantite': item.quantite, 'prix_unitaire': item.prix_unitaire, 'remise': item.remise, 'tva': item.tva} 
+                    for item in devis.lignes.all()] if devis_id else None
+        )
+    
+    return render(request, 'ventes/commandes/create.html', {
+        'form': form,
+        'formset': formset,
+        'devis': devis if devis_id else None,
+    })
+
+class CommandeListView(ListView):
+    model = CommandeClient
+    template_name = 'ventes/commandes/liste.html'
+    context_object_name = 'commandes'
+    
+    def get_queryset(self):
+        return CommandeClient.objects.filter(entreprise=self.request.user.entreprise)
+
+class CommandeDetailView(DetailView):
+    model = CommandeClient
+    template_name = 'ventes/commandes/detail.html'
+    context_object_name = 'commande'
+    
+    
+    
+@login_required
+@permission_required('ventes.add_livraison', raise_exception=True)
+def create_livraison(request, commande_id):
+    entreprise = request.user.entreprise
+    commande = get_object_or_404(CommandeClient, pk=commande_id, entreprise=entreprise)
+    
+    if request.method == 'POST':
+        form = LivraisonForm(request.POST, entreprise=entreprise)
+        formset = LigneLivraisonFormSet(request.POST, commande=commande)
+        
+        if form.is_valid() and formset.is_valid():
+            with transaction.atomic():
+                livraison = form.save(commit=False)
+                livraison.commande = commande
+                livraison.created_by = request.user
+                livraison.entreprise = entreprise
+                livraison.save()
+                
+                for form in formset:
+                    if form.cleaned_data.get('quantite') > 0:
+                        ligne = form.save(commit=False)
+                        ligne.livraison = livraison
+                        ligne.save()
+                        
+                        # Mettre à jour la quantité livrée dans la commande
+                        ligne.ligne_commande.quantite_livree += ligne.quantite
+                        ligne.ligne_commande.save()
+                
+                # Mettre à jour le statut de la commande
+                self.update_commande_status(commande)
+                
+                messages.success(request, "Livraison créée avec succès")
+                return redirect('ventes:livraison_detail', pk=livraison.pk)
+    else:
+        form = LivraisonForm(initial={'commande': commande}, entreprise=entreprise)
+        formset = LigneLivraisonFormSet(
+            queryset=LigneLivraison.objects.none(),
+            commande=commande
+        )
+    
+    return render(request, 'ventes/livraisons/create.html', {
+        'form': form,
+        'formset': formset,
+        'commande': commande,
+    })
+
+def update_commande_status(self, commande):
+    total_livree = sum(l.quantite_livree for l in commande.lignes.all())
+    total_commandee = sum(l.quantite for l in commande.lignes.all())
+    
+    if total_livree == 0:
+        commande.statut = 'confirme'
+    elif total_livree < total_commandee:
+        commande.statut = 'livre_partiel'
+    else:
+        commande.statut = 'livre'
+    commande.save()
+
+class LivraisonListView(ListView):
+    model = Livraison
+    template_name = 'ventes/livraisons/liste.html'
+    context_object_name = 'livraisons'
+    
+    def get_queryset(self):
+        return Livraison.objects.filter(entreprise=self.request.user.entreprise)
+
+class LivraisonDetailView(DetailView):
+    model = Livraison
+    template_name = 'ventes/livraisons/detail.html'
+    context_object_name = 'livraison'
+    
+    
+    
+    
+@login_required
+@permission_required('ventes.add_facture', raise_exception=True)
+def create_facture(request):
+    entreprise = request.user.entreprise
+    commande_id = request.GET.get('commande_id')
+    devis_id = request.GET.get('devis_id')
+    initial_data = {}
+    
+    if commande_id:
+        commande = get_object_or_404(CommandeClient, pk=commande_id, entreprise=entreprise)
+        initial_data = {
+            'client': commande.client,
+            'commande': commande,
+            'devis': commande.devis,
+            'remise': commande.remise,
+        }
+    elif devis_id:
+        devis = get_object_or_404(Devis, pk=devis_id, entreprise=entreprise)
+        initial_data = {
+            'client': devis.client,
+            'devis': devis,
+            'remise': devis.remise,
+        }
+    
+    if request.method == 'POST':
+        form = FactureForm(request.POST, entreprise=entreprise)
+        formset = LigneFactureFormSet(request.POST)
+        
+        if form.is_valid() and formset.is_valid():
+            with transaction.atomic():
+                facture = form.save(commit=False)
+                facture.created_by = request.user
+                facture.entreprise = entreprise
+                facture.save()
+                
+                for form in formset:
+                    if form.cleaned_data.get('produit'):
+                        ligne = form.save(commit=False)
+                        ligne.facture = facture
+                        ligne.save()
+                
+                # Mettre à jour le statut de la commande et du devis si nécessaire
+                if facture.commande:
+                    facture.commande.statut = 'facture'
+                    facture.commande.save()
+                
+                if facture.devis:
+                    facture.devis.statut = 'facture'
+                    facture.devis.save()
+                
+                messages.success(request, "Facture créée avec succès")
+                return redirect('ventes:facture_detail', pk=facture.pk)
+    else:
+        form = FactureForm(initial=initial_data, entreprise=entreprise)
+        formset = LigneFactureFormSet(
+            queryset=LigneFacture.objects.none(),
+            initial=[{'produit': item.produit, 'quantite': item.quantite, 'prix_unitaire': item.prix_unitaire, 'remise': item.remise, 'tva': item.tva} 
+                    for item in commande.lignes.all()] if commande_id else 
+                   [{'produit': item.produit, 'quantite': item.quantite, 'prix_unitaire': item.prix_unitaire, 'remise': item.remise, 'tva': item.tva} 
+                    for item in devis.lignes.all()] if devis_id else None
+        )
+    
+    return render(request, 'ventes/factures/create.html', {
+        'form': form,
+        'formset': formset,
+        'commande': commande if commande_id else None,
+        'devis': devis if devis_id else None,
+    })
+
+class FactureListView(ListView):
+    model = Facture
+    template_name = 'ventes/factures/liste.html'
+    context_object_name = 'factures'
+    
+    def get_queryset(self):
+        return Facture.objects.filter(entreprise=self.request.user.entreprise)
+
+class FactureDetailView(DetailView):
+    model = Facture
+    template_name = 'ventes/factures/detail.html'
+    context_object_name = 'facture'
+
+@login_required
+@permission_required('ventes.view_facture', raise_exception=True)
+def export_facture_pdf(request, pk):
+    facture = get_object_or_404(Facture, pk=pk, entreprise=request.user.entreprise)
+    template = get_template('ventes/factures/pdf_template.html')
+    html = template.render({'facture': facture})
+    
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="facture_{facture.reference}.pdf"'
+    
+    pisa_status = pisa.CreatePDF(html, dest=response)
+    if pisa_status.err:
+        return HttpResponse('Erreur lors de la génération du PDF')
+    return response
+
+
+
+@login_required
+@permission_required('ventes.add_paiement', raise_exception=True)
+def create_paiement(request, facture_id):
+    entreprise = request.user.entreprise
+    facture = get_object_or_404(Facture, pk=facture_id, entreprise=entreprise)
+    caisse_ouverte = Caisse.objects.filter(utilisateur=request.user, statut=True, entreprise=entreprise).first()
+    
+    if request.method == 'POST':
+        form = PaiementForm(request.POST, entreprise=entreprise, facture=facture)
+        
+        if form.is_valid():
+            with transaction.atomic():
+                paiement = form.save(commit=False)
+                paiement.facture = facture
+                paiement.created_by = request.user
+                paiement.entreprise = entreprise
+                
+                if paiement.mode_paiement == 'espece' and caisse_ouverte:
+                    paiement.caisse = caisse_ouverte
+                
+                paiement.save()
+                
+                # Mettre à jour le statut de la facture
+                self.update_facture_status(facture)
+                
+                messages.success(request, "Paiement enregistré avec succès")
+                return redirect('ventes:facture_detail', pk=facture.pk)
+    else:
+        form = PaiementForm(
+            initial={'montant': facture.solde_restant()},
+            entreprise=entreprise,
+            facture=facture
+        )
+    
+    return render(request, 'ventes/paiements/create.html', {
+        'form': form,
+        'facture': facture,
+        'caisse_ouverte': caisse_ouverte,
+    })
+
+def update_facture_status(self, facture):
+    if facture.montant_paye() >= facture.montant_total():
+        facture.statut = 'payee'
+    elif facture.montant_paye() > 0:
+        facture.statut = 'partiel'
+    facture.save()
+
+class PaiementListView(ListView):
+    model = Paiement
+    template_name = 'ventes/paiements/liste.html'
+    context_object_name = 'paiements'
+    
+    def get_queryset(self):
+        return Paiement.objects.filter(entreprise=self.request.user.entreprise)
+    
+    
+    
+@login_required
+@permission_required('ventes.ouvrir_caisse', raise_exception=True)
+def ouvrir_caisse(request):
+    entreprise = request.user.entreprise
+    caisse_ouverte = Caisse.objects.filter(utilisateur=request.user, statut=True, entreprise=entreprise).exists()
+    
+    if caisse_ouverte:
+        messages.warning(request, "Vous avez déjà une caisse ouverte")
+        return redirect('ventes:etat_caisse')
+    
+    if request.method == 'POST':
+        form = OuvertureCaisseForm(request.POST)
+        if form.is_valid():
+            caisse = form.save(commit=False)
+            caisse.utilisateur = request.user
+            caisse.entreprise = entreprise
+            caisse.save()
+            messages.success(request, "Caisse ouverte avec succès")
+            return redirect('ventes:etat_caisse')
+    else:
+        form = OuvertureCaisseForm()
+    
+    return render(request, 'ventes/caisse/ouverture.html', {'form': form})
+
+@login_required
+@permission_required('ventes.fermer_caisse', raise_exception=True)
+def cloturer_caisse(request):
+    entreprise = request.user.entreprise
+    caisse = get_object_or_404(Caisse, utilisateur=request.user, statut=True, entreprise=entreprise)
+    
+    if request.method == 'POST':
+        form = ClotureCaisseForm(request.POST, instance=caisse)
+        if form.is_valid():
+            with transaction.atomic():
+                caisse = form.save(commit=False)
+                caisse.statut = False
+                caisse.date_fermeture = timezone.now()
+                caisse.save()
+                messages.success(request, "Caisse clôturée avec succès")
+                return redirect('ventes:journal_caisse')
+    else:
+        total_paiements = Paiement.objects.filter(
+            caisse=caisse,
+            mode_paiement='espece'
+        ).aggregate(total=Sum('montant'))['total'] or 0
+        
+        form = ClotureCaisseForm(instance=caisse, initial={
+            'montant_fermeture': caisse.montant_ouverture + total_paiements
+        })
+    
+    return render(request, 'ventes/caisse/cloture.html', {
+        'form': form,
+        'caisse': caisse,
+    })
+
+class EtatCaisseView(TemplateView):
+    template_name = 'ventes/caisse/etat.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        entreprise = self.request.user.entreprise
+        caisse = Caisse.objects.filter(
+            utilisateur=self.request.user,
+            statut=True,
+            entreprise=entreprise
+        ).first()
+        
+        if caisse:
+            paiements = Paiement.objects.filter(
+                caisse=caisse,
+                mode_paiement='espece'
+            )
+            total_paiements = paiements.aggregate(total=Sum('montant'))['total'] or 0
+            solde_theorique = caisse.montant_ouverture + total_paiements
+            
+            context.update({
+                'caisse': caisse,
+                'paiements': paiements,
+                'total_paiements': total_paiements,
+                'solde_theorique': solde_theorique,
+            })
+        
+        return context
+
+class JournalCaisseListView(ListView):
+    template_name = 'ventes/caisse/journal.html'
+    context_object_name = 'caisses'
+    
+    def get_queryset(self):
+        return Caisse.objects.filter(
+            utilisateur=self.request.user,
+            entreprise=self.request.user.entreprise
+        ).order_by('-date_ouverture')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Filtres par date
+        date_debut = self.request.GET.get('date_debut')
+        date_fin = self.request.GET.get('date_fin')
+        
+        queryset = self.get_queryset()
+        
+        if date_debut:
+            date_debut = datetime.strptime(date_debut, '%Y-%m-%d')
+            queryset = queryset.filter(date_ouverture__gte=date_debut)
+        
+        if date_fin:
+            date_fin = datetime.strptime(date_fin, '%Y-%m-%d') + timedelta(days=1)
+            queryset = queryset.filter(date_ouverture__lte=date_fin)
+        
+        context['caisses'] = queryset
+        context['total_ouvertures'] = queryset.aggregate(total=Sum('montant_ouverture'))['total'] or 0
+        context['total_fermetures'] = queryset.exclude(montant_fermeture=None).aggregate(total=Sum('montant_fermeture'))['total'] or 0
+        
+        return context
+    
+    
+    
+@login_required
+def dashboard_ventes(request):
+    entreprise = request.user.entreprise
+    today = timezone.now().date()
+    month_start = today.replace(day=1)
+    last_month = month_start - timedelta(days=1)
+    last_month_start = last_month.replace(day=1)
+    
+    # Statistiques des devis
+    devis_stats = {
+        'total': Devis.objects.filter(entreprise=entreprise).count(),
+        'ce_mois': Devis.objects.filter(
+            entreprise=entreprise,
+            date_creation__date__gte=month_start
+        ).count(),
+        'mois_dernier': Devis.objects.filter(
+            entreprise=entreprise,
+            date_creation__date__gte=last_month_start,
+            date_creation__date__lte=last_month
+        ).count(),
+    }
+    
+    # Statistiques des commandes
+    commandes_stats = {
+        'total': CommandeClient.objects.filter(entreprise=entreprise).count(),
+        'ce_mois': CommandeClient.objects.filter(
+            entreprise=entreprise,
+            date_creation__date__gte=month_start
+        ).count(),
+        'mois_dernier': CommandeClient.objects.filter(
+            entreprise=entreprise,
+            date_creation__date__gte=last_month_start,
+            date_creation__date__lte=last_month
+        ).count(),
+    }
+    
+    # Statistiques des factures
+    factures_stats = {
+        'total': Facture.objects.filter(entreprise=entreprise).count(),
+        'ce_mois': Facture.objects.filter(
+            entreprise=entreprise,
+            date_creation__date__gte=month_start
+        ).count(),
+        'mois_dernier': Facture.objects.filter(
+            entreprise=entreprise,
+            date_creation__date__gte=last_month_start,
+            date_creation__date__lte=last_month
+        ).count(),
+        'impayees': Facture.objects.filter(
+            entreprise=entreprise,
+            statut__in=['emise', 'partiel']
+        ).count(),
+    }
+    
+    # Statistiques des paiements
+    paiements_stats = {
+        'total': Paiement.objects.filter(entreprise=entreprise).aggregate(total=Sum('montant'))['total'] or 0,
+        'ce_mois': Paiement.objects.filter(
+            entreprise=entreprise,
+            date_paiement__date__gte=month_start
+        ).aggregate(total=Sum('montant'))['total'] or 0,
+        'mois_dernier': Paiement.objects.filter(
+            entreprise=entreprise,
+            date_paiement__date__gte=last_month_start,
+            date_paiement__date__lte=last_month
+        ).aggregate(total=Sum('montant'))['total'] or 0,
+    }
+    
+    # Dernières activités
+    derniers_devis = Devis.objects.filter(entreprise=entreprise).order_by('-date_creation')[:5]
+    dernieres_commandes = CommandeClient.objects.filter(entreprise=entreprise).order_by('-date_creation')[:5]
+    dernieres_factures = Facture.objects.filter(entreprise=entreprise).order_by('-date_creation')[:5]
+    derniers_paiements = Paiement.objects.filter(entreprise=entreprise).order_by('-date_paiement')[:5]
+    
+    context = {
+        'devis_stats': devis_stats,
+        'commandes_stats': commandes_stats,
+        'factures_stats': factures_stats,
+        'paiements_stats': paiements_stats,
+        'derniers_devis': derniers_devis,
+        'dernieres_commandes': dernieres_commandes,
+        'dernieres_factures': dernieres_factures,
+        'derniers_paiements': derniers_paiements,
+    }
+    
+    return render(request, 'ventes/dashboard.html', context)
+
+
+
+
+
+
+
+from django.urls import path
+from ventes.views import *
+
+app_name = 'ventes'
+
+urlpatterns = [
+    # Dashboard
+    path('', dashboard_ventes, name='dashboard'),
+    path('devis/', views.liste_devis, name='liste_devis'),
+    path('devis/nouveau/', views.creer_devis, name='creer_devis'),
+    path('devis/<int:pk>/', views.detail_devis, name='detail_devis'),
+    
+    # Devis
+    path('devis/', DevisListView.as_view(), name='devis_list'),
+    path('devis/nouveau/', create_devis, name='devis_create'),
+    path('devis/<int:pk>/', DevisDetailView.as_view(), name='devis_detail'),
+    path('devis/<int:pk>/modifier/', edit_devis, name='devis_edit'),
+    
+    # Commandes
+    path('commandes/', CommandeListView.as_view(), name='commande_list'),
+    path('commandes/nouvelle/', create_commande, name='commande_create'),
+    path('commandes/<int:pk>/', CommandeDetailView.as_view(), name='commande_detail'),
+    
+    # Livraisons
+    path('livraisons/', LivraisonListView.as_view(), name='livraison_list'),
+    path('commandes/<int:commande_id>/livraison/nouvelle/', create_livraison, name='livraison_create'),
+    path('livraisons/<int:pk>/', LivraisonDetailView.as_view(), name='livraison_detail'),
+    
+    # Factures
+    path('factures/', FactureListView.as_view(), name='facture_list'),
+    path('factures/nouvelle/', create_facture, name='facture_create'),
+    path('factures/<int:pk>/', FactureDetailView.as_view(), name='facture_detail'),
+    path('factures/<int:pk>/pdf/', export_facture_pdf, name='facture_pdf'),
+    
+    # Paiements
+    path('paiements/', PaiementListView.as_view(), name='paiement_list'),
+    path('factures/<int:facture_id>/paiement/nouveau/', create_paiement, name='paiement_create'),
+    
+    # Caisse
+    path('caisse/ouvrir/', ouvrir_caisse, name='ouvrir_caisse'),
+    path('caisse/cloturer/', cloturer_caisse, name='cloturer_caisse'),
+    path('caisse/etat/', EtatCaisseView.as_view(), name='etat_caisse'),
+    path('caisse/journal/', JournalCaisseListView.as_view(), name='journal_caisse'),
+]

@@ -1,0 +1,77 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+
+{% block page_title %}{% trans "Gestion des départements" %}{% endblock %}
+{% block page_description %}{% trans "Ajoutez, modifiez ou supprimez les départements de votre entreprise." %}{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item active" aria-current="page">{% trans "Départements" %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="card-title mb-0">{% trans "Liste des départements" %}</h5>
+        <div class="d-flex align-items-center">
+            <form method="get" class="d-flex me-3">
+                <input type="text" name="q" class="form-control form-control-sm" placeholder="{% trans 'Rechercher un département...' %}" value="{{ request.GET.q }}">
+                <button type="submit" class="btn btn-outline-primary btn-sm ms-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Lancer la recherche">
+                    <i class="bi bi-search"></i>
+                </button>
+            </form>
+            <a href="{% url 'grh:departement_create' %}" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Créer un nouveau département">
+                <i class="bi bi-plus-circle-fill me-1"></i> {% trans "Nouveau département" %}
+            </a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle">
+            <thead>
+                <tr>
+                    <th scope="col" class="text-secondary">{% trans "Code" %}</th>
+                    <th scope="col" class="text-secondary">{% trans "Nom" %}</th>
+                    <th scope="col" class="text-secondary">{% trans "Responsable" %}</th>
+                    <th scope="col" class="text-secondary">{% trans "Statut" %}</th>
+                    <th scope="col" class="text-secondary text-end">{% trans "Actions" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for departement in departements %}
+                <tr>
+                    <td><span class="text-muted">{{ departement.code }}</span></td>
+                    <td><a href="{% url 'grh:departement_update' departement.pk %}" class="text-decoration-none text-white">{{ departement.nom }}</a></td>
+                    <td>
+                        {% if departement.responsable %}
+                            <span class="text-primary">{{ departement.responsable.nom_complet }}</span>
+                        {% else %}
+                            <span class="text-muted">{% trans "Non assigné" %}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge rounded-pill bg-{% if departement.actif %}success{% else %}danger{% endif %} py-2 px-3">
+                            {% if departement.actif %}<i class="bi bi-check-circle me-1"></i> {% trans "Actif" %}{% else %}<i class="bi bi-x-circle me-1"></i> {% trans "Inactif" %}{% endif %}
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'grh:departement_update' departement.pk %}" class="btn btn-sm btn-outline-warning" data-bs-toggle="tooltip" data-bs-placement="top" title="Modifier le département">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a href="{% url 'grh:departement_delete' departement.pk %}" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" data-bs-placement="top" title="Supprimer le département">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center text-secondary py-4">
+                        <i class="bi bi-emoji-frown d-block mb-2 fs-4"></i>
+                        {% trans "Aucun département trouvé." %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

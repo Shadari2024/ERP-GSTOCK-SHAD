@@ -1,0 +1,40 @@
+{# ventes/commandes/confirm_delete.html #}
+{% extends 'base.html' %}
+
+{% block title %}Confirmer la Suppression de la Commande{% endblock %}
+
+{% block content %}
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-6 offset-md-3">
+                <div class="card border-danger shadow-sm">
+                    <div class="card-header bg-danger text-white">
+                        <h4 class="mb-0">Confirmation de Suppression</h4>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">Êtes-vous sûr de vouloir supprimer la commande suivante ?</p>
+                        <ul class="list-group list-group-flush mb-4">
+                            <li class="list-group-item"><strong>Numéro de commande :</strong> {{ object.numero }}</li>
+                            <li class="list-group-item"><strong>Client :</strong> {{ object.client.nom }}</li>
+                            <li class="list-group-item"><strong>Date :</strong> {{ object.date|date:"d/m/Y" }}</li>
+                            <li class="list-group-item"><strong>Statut :</strong> {{ object.get_statut_display }}</li>
+                            <li class="list-group-item"><strong>Total TTC :</strong> {{ object.total_ttc }}</li>
+                        </ul>
+                        <div class="alert alert-warning" role="alert">
+                            <strong>Attention :</strong> Cette action est irréversible et supprimera toutes les données associées à cette commande, y compris ses articles et son historique.
+                        </div>
+                        <form method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger me-2">
+                                <i class="fas fa-trash-alt"></i> Confirmer la Suppression
+                            </button>
+                            <a href="{% url 'ventes:commande_detail' object.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-times-circle"></i> Annuler
+                            </a>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

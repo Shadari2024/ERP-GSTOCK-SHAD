@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="alert alert-danger">
+    <h3>Erreur</h3>
+    <p>{{ message }}</p>
+    <a href="{% url 'vente_au_comptoir' %}" class="btn btn-primary">
+        Retour aux ventes
+    </a>
+</div>
+{% endblock %}

@@ -1,0 +1,113 @@
+{% extends 'parametres/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Liste des Modules</h5>
+        <div>
+            <a href="{% url 'parametres:module_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Ajouter
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <form method="get" class="form-inline">
+                    <input type="text" name="search" class="form-control mr-2" placeholder="Rechercher..." 
+                           value="{{ search_query }}">
+                    <select name="categorie" class="form-control mr-2">
+                        <option value="">Toutes catégories</option>
+                        {% for value, label in categories %}
+                            <option value="{{ value }}" {% if selected_categorie == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-secondary">
+                        <i class="fas fa-filter"></i> Filtrer
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Code</th>
+                        <th>Nom</th>
+                        <th>Catégorie</th>
+                        <th>Actif par défaut</th>
+                        <th>Ordre</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for module in modules %}
+                    <tr>
+                        <td>{{ module.code }}</td>
+                        <td>{{ module.nom }}</td>
+                        <td>{{ module.get_categorie_display }}</td>
+                        <td>
+                            {% if module.actif_par_defaut %}
+                                <span class="badge badge-success">Oui</span>
+                            {% else %}
+                                <span class="badge badge-secondary">Non</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ module.ordre_affichage }}</td>
+                        <td>
+                            <a href="{% url 'parametres:module_detail' module.pk %}" class="btn btn-sm btn-info">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{% url 'parametres:module_update' module.pk %}" class="btn btn-sm btn-warning">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{% url 'parametres:module_delete' module.pk %}" class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center">Aucun module trouvé</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if is_paginated %}
+        <div class="d-flex justify-content-center mt-3">
+            <nav aria-label="Page navigation">
+                <ul class="pagination">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}&categorie={{ selected_categorie }}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if num == page_obj.number %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}&search={{ search_query }}&categorie={{ selected_categorie }}">{{ num }}</a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&search={{ search_query }}&categorie={{ selected_categorie }}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

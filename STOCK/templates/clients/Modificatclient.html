@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4 animate__animated animate__fadeIn">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0 text-warning fw-bold">
+                <i class="bi bi-pencil-square me-2"></i>Modifier le Client: {{ client.nom }}
+            </h2>
+            <p class="text-muted small">Mettez à jour les informations du client.</p>
+        </div>
+        <a href="{% url 'details_client' client.pk %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Annuler et Retour
+        </a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="card shadow-sm mb-4">
+        {% csrf_token %}
+        
+        <div class="card-header bg-light fw-bold text-dark">
+            <i class="bi bi-info-circle me-2"></i>Informations Générales
+        </div>
+        <div class="card-body">
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger" role="alert">
+                    {% for error in form.non_field_errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="id_nom" class="form-label required">Nom du client</label>
+                    <input type="text" class="form-control {% if form.nom.errors %}is-invalid{% endif %}" id="id_nom" name="nom" value="{{ client.nom|default:'' }}" required>
+                    {% if form.nom.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.nom.errors %}{{ error }}{% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label for="id_type_client" class="form-label">Type de client</label>
+                    <select class="form-select" id="id_type_client" name="type_client">
+                        <option value="PART" {% if client.type_client == 'PART' %}selected{% endif %}>Particulier</option>
+                        <option value="ENT" {% if client.type_client == 'ENT' %}selected{% endif %}>Entreprise</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="id_statut" class="form-label">Statut</label>
+                    <select class="form-select" id="id_statut" name="statut">
+                        <option value="ACTIF" {% if client.statut == 'ACTIF' %}selected{% endif %}>Actif</option>
+                        <option value="INACTIF" {% if client.statut == 'INACTIF' %}selected{% endif %}>Inactif</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="id_code_client" class="form-label">Code Client</label>
+                    <input type="text" class="form-control" id="id_code_client" name="code_client" value="{{ client.code_client|default:'' }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="id_numero_fiscal" class="form-label">Numéro Fiscal</label>
+                    <input type="text" class="form-control" id="id_numero_fiscal" name="numero_fiscal" value="{{ client.numero_fiscal|default:'' }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="id_numero_tva" class="form-label">Numéro TVA</label>
+                    <input type="text" class="form-control" id="id_numero_tva" name="numero_tva" value="{{ client.numero_tva|default:'' }}">
+                </div>
+                <div class="col-12">
+                    <label for="id_notes" class="form-label">Notes Internes</label>
+                    <textarea class="form-control" id="id_notes" name="notes" rows="3">{{ client.notes|default:'' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-header bg-light fw-bold text-dark mt-4">
+            <i class="bi bi-telephone-fill me-2"></i>Coordonnées
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="id_telephone" class="form-label">Téléphone Principal</label>
+                    <input type="tel" class="form-control" id="id_telephone" name="telephone" value="{{ client.telephone|default:'' }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="id_telephone_secondaire" class="form-label">Téléphone Secondaire</label>
+                    <input type="tel" class="form-control" id="id_telephone_secondaire" name="telephone_secondaire" value="{{ client.telephone_secondaire|default:'' }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="id_email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="id_email" name="email" value="{{ client.email|default:'' }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="id_website" class="form-label">Site Web</label>
+                    <input type="url" class="form-control" id="id_website" name="website" value="{{ client.website|default:'' }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="card-header bg-light fw-bold text-dark mt-4">
+            <i class="bi bi-geo-alt-fill me-2"></i>Adresse Postale
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <label for="id_adresse" class="form-label">Adresse complète</label>
+                    <input type="text" class="form-control" id="id_adresse" name="adresse" value="{{ client.adresse|default:'' }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="id_ville" class="form-label">Ville</label>
+                    <input type="text" class="form-control" id="id_ville" name="ville" value="{{ client.ville|default:'' }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="id_code_postal" class="form-label">Code Postal</label>
+                    <input type="text" class="form-control" id="id_code_postal" name="code_postal" value="{{ client.code_postal|default:'' }}">
+                </div>
+                <div class="col-md-4">
+                    <label for="id_pays" class="form-label">Pays</label>
+                    <select class="form-select" id="id_pays" name="pays">
+                        <option value="">Sélectionner un pays</option>
+                        {% for code, nom in pays_liste %}
+                            <option value="{{ code }}" {% if client.pays.code == code %}selected{% endif %}>{{ nom }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-header bg-light fw-bold text-dark mt-4">
+            <i class="bi bi-cash-stack me-2"></i>Conditions Financières
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="id_limite_credit" class="form-label">Limite de Crédit</label>
+                    <div class="input-group">
+                        <input type="number" step="0.01" class="form-control text-end" id="id_limite_credit" name="limite_credit" value="{{ client.limite_credit|default:'0.00' }}">
+                        {% if client.devise_preferee %}<span class="input-group-text">{{ client.devise_preferee.symbole }}</span>{% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label for="id_delai_paiement" class="form-label">Délai de Paiement (jours)</label>
+                    <input type="number" class="form-control text-end" id="id_delai_paiement" name="delai_paiement" value="{{ client.delai_paiement|default:'0' }}">
+                </div>
+                <div class="col-md-6">
+                    <label for="id_taux_remise" class="form-label">Taux de Remise (%)</label>
+                    <div class="input-group">
+                        <input type="number" step="0.01" class="form-control text-end" id="id_taux_remise" name="taux_remise" value="{{ client.taux_remise|default:'0.00' }}">
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label for="id_devise_preferee" class="form-label">Devise Préférée</label>
+                    <select class="form-select" id="id_devise_preferee" name="devise_preferee">
+                        <option value="">Non spécifié</option>
+                        {% for devise in devises %}
+                            <option value="{{ devise.pk }}" {% if client.devise_preferee.pk == devise.pk %}selected{% endif %}>{{ devise.nom }} ({{ devise.symbole }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="id_exonere_tva" name="exonere_tva" {% if client.exonere_tva %}checked{% endif %}>
+                        <label class="form-check-label" for="id_exonere_tva">
+                            Exonéré de TVA
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Section pour la photo si vous l'avez #}
+        <div class="card-header bg-light fw-bold text-dark mt-4">
+            <i class="bi bi-image me-2"></i>Photo de Profil
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                {% if client.photo %}
+                    <img src="{{ client.photo.url }}" alt="Photo de {{ client.nom }}" class="img-thumbnail mb-2" style="max-width: 150px; height: auto;">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="clear_photo" name="clear_photo">
+                        <label class="form-check-label" for="clear_photo">
+                            Supprimer la photo actuelle
+                        </label>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Aucune photo de profil.</p>
+                {% endif %}
+                <label for="id_photo" class="form-label mt-2">Changer la photo</label>
+                <input class="form-control" type="file" id="id_photo" name="photo" accept="image/*">
+            </div>
+        </div>
+
+
+        <div class="card-footer text-end bg-light pt-3 pb-3">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="bi bi-save me-2"></i>Enregistrer les Modifications
+            </button>
+            <a href="{% url 'details_client' client.pk %}" class="btn btn-secondary btn-lg ms-2">
+                <i class="bi bi-x-circle me-2"></i>Annuler
+            </a>
+        </div>
+    </form>
+</div>
+
+<style>
+    body {
+        background-color: #f8f9fa; /* Light background for Odoo feel */
+    }
+    .card {
+        border: none;
+        border-radius: 0.5rem;
+    }
+    .card-header {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        background-color: #f0f2f5 !important; /* Slightly darker header */
+        font-size: 0.95rem;
+    }
+    .form-label {
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+    .form-label.required::after {
+        content: " *";
+        color: red;
+    }
+    .form-control, .form-select {
+        border-radius: 0.3rem;
+        font-size: 0.9rem;
+    }
+    .input-group-text {
+        font-size: 0.9rem;
+    }
+    .btn-sm {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    .img-thumbnail {
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        padding: 0.25rem;
+        background-color: #fff;
+    }
+</style>
+{% endblock %}

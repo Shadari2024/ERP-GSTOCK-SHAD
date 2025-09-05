@@ -1,0 +1,32 @@
+{# ventes/factures/confirm_delete.html #}
+{% extends "base.html" %}
+
+{% block title %}Supprimer la Facture{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-2 text-gray-800">Supprimer la Facture</h1>
+    <p class="mb-4">Êtes-vous sûr de vouloir supprimer cette facture ? Cette action est irréversible.</p>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Confirmation de Suppression</h6>
+        </div>
+        <div class="card-body">
+            <p>Voulez-vous vraiment supprimer la facture suivante :</p>
+            <ul>
+                <li><strong>Numéro:</strong> {{ facture.numero }}</li>
+                <li><strong>Client:</strong> {{ facture.client.get_full_name|default:facture.client.nom }}</li>
+                <li><strong>Date:</strong> {{ facture.date|date:"d/m/Y" }}</li>
+                <li><strong>Total TTC:</strong> {{ facture.total_ttc|floatformat:2 }} {{ devise_principale_symbole }}</li>
+            </ul>
+
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">Oui, Supprimer</button>
+                <a href="{% url 'ventes:facture_detail' pk=facture.pk %}" class="btn btn-secondary ml-2">Annuler</a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

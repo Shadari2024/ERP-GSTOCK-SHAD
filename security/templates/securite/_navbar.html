@@ -1,0 +1,67 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{% url 'tableau_de_bord' %}">
+            <i class="fas fa-warehouse me-2"></i>Gestion Stock & Vente
+        </a>
+        
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarContent">
+            <ul class="navbar-nav me-auto">
+                {% if user.is_authenticated %}
+                    {% if user.niveau_acces >= 2 %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'gestion_stock_et_produit' %}">
+                            <i class="fas fa-boxes me-1"></i> Stock
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% if user.niveau_acces >= 3 %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'vente_enligne_' %}">
+                            <i class="fas fa-cash-register me-1"></i> Ventes
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% if user.niveau_acces >= 4 %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-cog me-1"></i> Administration
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'liste_utilisateurs' %}">Utilisateurs</a></li>
+                            <li><a class="dropdown-item" href="{% url 'liste_groupes' %}">Groupes</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'Liste_parametres' %}">Paramètres</a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                {% endif %}
+            </ul>
+            
+            <ul class="navbar-nav">
+                {% if user.is_authenticated %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle me-1"></i> {{ user.get_short_name }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{% url 'modifier_profil' %}">Profil</a></li>
+                        <li><a class="dropdown-item" href="{% url 'changer_mdp' %}">Changer mot de passe</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'deconnexion' %}">Déconnexion</a></li>
+                    </ul>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'connexion' %}">Connexion</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>

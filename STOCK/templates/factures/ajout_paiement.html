@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="paiement-form">
+    <h2>Enregistrer un paiement pour la facture {{ facture.numero }}</h2>
+    
+    <form method="post" action="{% url 'enregistrer_paiement' facture.id %}">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="montant">Montant:</label>
+            <input type="number" id="montant" name="montant" 
+                   step="0.01" min="0.01" max="{{ facture.reste_a_payer }}"
+                   required class="form-input">
+        </div>
+        
+        <div class="form-group">
+            <label for="methode">Méthode de paiement:</label>
+            <select id="methode" name="methode" class="form-input">
+                <option value="especes">Espèces</option>
+                <option value="carte">Carte bancaire</option>
+                <option value="cheque">Chèque</option>
+            </select>
+        </div>
+        
+        <button type="submit" class="btn-submit">Enregistrer</button>
+    </form>
+</div>
+
+<style>
+    .paiement-form {
+        max-width: 500px;
+        margin: 20px auto;
+        padding: 20px;
+        background: #f9f9f9;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .form-group {
+        margin-bottom: 15px;
+    }
+    .form-input {
+        width: 100%;
+        padding: 10px;
+        margin-top: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .btn-submit {
+        background: #2196F3;
+        color: white;
+        padding: 10px 15px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+    }
+</style>
+{% endblock %}

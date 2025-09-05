@@ -1,0 +1,165 @@
+{# ventes/livraisons/liste.html #}
+{% extends "base.html" %} {# Adjust with your base template #}
+
+{% block title %}Liste des Bons de Livraison{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="h3 mb-2 text-gray-800">Bons de Livraison</h1>
+    <p class="mb-4">Gérez et consultez tous les bons de livraison de votre entreprise.</p>
+
+    {# Messages cadre #}
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Liste des Bons de Livraison</h6>
+            <a href="{% url 'ventes:livraison_create' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus"></i> Nouveau Bon de Livraison
+            </a>
+        </div>
+        <div class="card-body">
+            {# --- Formulaire de Recherche Avancée --- #}
+            <form method="get" class="mb-4">
+                <div class="form-row align-items-end">
+                    <div class="col-md-3 mb-2">
+                        {# Updated placeholder for 'q' to reflect search by number only #}
+                        <label for="{{ filter.form.q.id_for_label }}">Recherche</label>
+                        <input type="text" name="{{ filter.form.q.name }}" id="{{ filter.form.q.id_for_label }}"
+                               class="form-control" placeholder="Numéro BL"
+                               value="{{ filter.form.q.value|default_if_none:'' }}">
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        {{ filter.form.statut.label_tag }}
+                        {{ filter.form.statut }}
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        {{ filter.form.date_gte.label_tag }}
+                        {{ filter.form.date_gte }}
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        {{ filter.form.date_lte.label_tag }}
+                        {{ filter.form.date_lte }}
+                    </div>
+                    <div class="col-md-12 text-right">
+                        <button type="submit" class="btn btn-info btn-sm">
+                            <i class="fas fa-filter"></i> Filtrer
+                        </button>
+                        <a href="{% url 'ventes:livraison_list' %}" class="btn btn-secondary btn-sm ml-2">
+                            <i class="fas fa-sync-alt"></i> Réinitialiser
+                        </a>
+                    </div>
+                </div>
+            </form>
+            {# --- Fin Formulaire de Recherche Avancée --- #}
+
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Numéro</th>
+                            <th>Date</th>
+                            <th>Client</th> {# Keep client column, but fix lookup #}
+                            <th>Statut</th>
+                            <th>Total (HT)</th>
+                            <th>Total (TTC)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bl in bons_livraison %}
+                        <tr>
+                            <td>{{ bl.numero }}</td>
+                            <td>{{ bl.date|date:"d/m/Y" }}</td>
+                            {# Corrected: Access client through 'commande' #}
+                            <td>
+                                {% if bl.commande.client %}
+                                    {{ bl.commande.client.get_full_name }}
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge badge-{{ bl.get_status_badge_class }}">
+                                    {{ bl.get_statut_display }}
+                                </span>
+                            </td>
+                            <td>{{ bl.total_ht|floatformat:2 }} {{ devise_principale_symbole }}</td>
+                            <td>{{ bl.total_ttc|floatformat:2 }} {{ devise_principale_symbole }}</td>
+                            <td>
+                                <a href="{% url 'ventes:livraison_detail' pk=bl.pk %}" class="btn btn-info btn-sm" title="Détails">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if perms.ventes.change_bonlivraison %}
+                                <a href="{% url 'ventes:livraison_update' pk=bl.pk %}" class="btn btn-warning btn-sm" title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% endif %}
+                                {% if perms.ventes.delete_bonlivraison %}
+                                <a href="{% url 'ventes:livraison_delete' pk=bl.pk %}" class="btn btn-danger btn-sm" title="Supprimer">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">Aucun bon de livraison trouvé.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {# --- Pagination --- #}
+            {% if is_paginated %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        {# Important: preserve existing GET parameters for filters #}
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}" aria-label="Précédent">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for i in paginator.page_range %}
+                    {% if page_obj.number == i %}
+                    <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                    {% else %}
+                    <li class="page-item">
+                        {# Important: preserve existing GET parameters for filters #}
+                        <a class="page-link" href="?page={{ i }}&{{ request.GET.urlencode }}">{{ i }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        {# Important: preserve existing GET parameters for filters #}
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}" aria-label="Suivant">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {# --- Fin Pagination --- #}
+
+        </div>
+    </div>
+</div>
+{% endblock %}

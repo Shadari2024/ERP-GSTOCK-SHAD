@@ -1,0 +1,667 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load math_filters %}
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="card shadow-lg border-0">
+    <!-- En-tête modernisée -->
+    <div class="card-header bg-gradient-primary text-white">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <h3 class="mb-0"><i class="fas fa-boxes me-2"></i>Gestion des Produits</h3>
+          <small class="opacity-75">Gérez efficacement votre inventaire</small>
+        </div>
+        <div class="btn-group">
+          <a href="{% url 'ajouter_produit' %}" class="btn btn-light btn-sm rounded-start">
+            <i class="fas fa-plus-circle me-1"></i> Ajouter
+          </a>
+          <a href="{% url 'ajout_multiple_produits' %}" class="btn btn-light btn-sm rounded-end">
+            <i class="fas fa-layer-group me-1"></i> Multiple
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barre d'outils améliorée -->
+    <div class="px-4 pt-3 d-flex justify-content-between align-items-center flex-wrap">
+      <div class="d-flex mb-2">
+        <a href="{% url 'exporter_produits_excel' %}" class="btn btn-success btn-sm me-2">
+          <i class="fas fa-file-excel me-1"></i> Excel
+        </a>
+        <a href="{% url 'exporter_produits_pdf' %}" class="btn btn-danger btn-sm" id="pdfDownloadBtn">
+          <i class="fas fa-file-pdf me-1"></i> PDF
+        </a>
+      </div>
+      
+      <!-- Sélecteur de vue -->
+      <div class="btn-group btn-group-sm mb-2">
+        <button class="btn btn-outline-secondary active view-btn" data-view="table">
+          <i class="fas fa-table me-1"></i> Tableau
+        </button>
+        <button class="btn btn-outline-secondary view-btn" data-view="compact">
+          <i class="fas fa-list me-1"></i> Compact
+        </button>
+        <button class="btn btn-outline-secondary view-btn" data-view="kanban">
+          <i class="fas fa-th-large me-1"></i> Boîtes
+        </button>
+      </div>
+      
+      <!-- Sélecteur de devise -->
+      <div class="d-flex align-items-center mb-2">
+        <span class="me-2">Devise :</span>
+        <select class="form-select form-select-sm" id="deviseSelector" style="width: 100px;">
+          {% for devise in devises_acceptees %}
+            <option value="{{ devise }}" {% if devise_active == devise %}selected{% endif %}>
+              {{ devise }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div class="d-flex align-items-center mb-2">
+        <span class="badge bg-info me-2">
+          <i class="fas fa-box me-1"></i> {{ page_obj.paginator.count }} produits
+        </span>
+      </div>
+    </div>
+
+    <div class="card-body px-0 pt-0 pb-2">
+      <!-- Barre de recherche améliorée -->
+      <div class="row mx-4 mt-2 mb-3">
+        <div class="col-md-8">
+          <div class="input-group">
+            <span class="input-group-text bg-transparent"><i class="fas fa-search"></i></span>
+            <input type="text" class="form-control" id="searchInput" placeholder="Rechercher par nom, description, référence...">
+            <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vue Tableau (par défaut) -->
+      <div class="view-container" id="tableView">
+        <div class="table-responsive p-0">
+          <table class="table align-items-center mb-0" id="productTable">
+            <thead class="thead-light">
+              <tr>
+                <th class="text-uppercase text-secondary text-xs font-weight-bolder">Produit</th>
+                <th class="text-uppercase text-secondary text-xs font-weight-bolder">Description</th>
+                <th class="text-uppercase text-secondary text-xs font-weight-bolder text-center">Prix</th>
+                <th class="text-uppercase text-secondary text-xs font-weight-bolder text-center">Stock</th>
+                <th class="text-uppercase text-secondary text-xs font-weight-bolder text-center">Code-barres</th>
+                <th class="text-secondary text-xs font-weight-bolder text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="productTableBody">
+              {% for produit in page_obj %}
+              <tr class="{% if produit.stock < produit.seuil_alerte %}table-warning{% endif %}">
+                <td>
+                  <div class="d-flex px-3 py-1">
+                    <div>
+                      <img src="{% if produit.photo %}{{ produit.photo.url }}{% else %}{% static 'img/default-product.png' %}{% endif %}" 
+                           class="avatar avatar-sm me-3 rounded" alt="{{ produit.nom }}">
+                    </div>
+                    <div class="d-flex flex-column justify-content-center">
+                      <h6 class="mb-0 text-sm">{{ produit.nom }}</h6>
+                      <p class="text-xs text-muted mb-0">Réf: {{ produit.reference|default:"-" }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <p class="text-xs font-weight-bold mb-0" data-bs-toggle="tooltip" title="{{ produit.description|default:'Aucune description' }}">
+                    {{ produit.description|truncatechars:40|default:"-" }}
+                  </p>
+                </td>
+                <td class="text-center">
+                  <span class="text-success text-xs font-weight-bold">
+                    <span class="prix-vente" data-prix="{{ produit.prix_vente }}">{{ produit.prix_vente }}</span> 
+                    <span class="devise-symbole">{{ devise_principale }}</span>
+                  </span>
+                  <p class="text-xs text-muted mb-0">
+                    <span class="prix-achat" data-prix="{{ produit.prix_achat }}">{{ produit.prix_achat }}</span> 
+                    <span class="devise-symbole">{{ devise_principale }}</span>
+                  </p>
+                </td>
+                <td class="text-center">
+                  <div class="d-flex flex-column align-items-center">
+                      <span class="text-xs font-weight-bold mb-1">
+                          {{ produit.stock_reel|default:produit.stock }} unités
+                          {% if produit.stock != produit.stock_reel %}
+                              <small class="text-muted">(Prévu: {{ produit.stock }})</small>
+                          {% endif %}
+                      </span>
+                      <div class="progress w-75" style="height: 5px;">
+                          {% with stock_reel=produit.stock_reel|default:produit.stock %}
+                              {% widthratio stock_reel produit.seuil_alerte 100 as progress %}
+                              <div class="progress-bar bg-{% if stock_reel < produit.seuil_alerte %}warning{% else %}success{% endif %}" 
+                                   role="progressbar" style="width: {% if progress > 100 %}100{% else %}{{ progress }}{% endif %}%">
+                              </div>
+                          {% endwith %}
+                      </div>
+                      {% with stock_reel=produit.stock_reel|default:produit.stock %}
+                          {% if stock_reel < produit.seuil_alerte|add:"0"|floatformat:"0"|divisibleby:"2" %}
+                              <small class="text-danger mt-1">
+                                  <i class="fas fa-exclamation-triangle"></i> Stock très bas
+                              </small>
+                          {% elif stock_reel < produit.seuil_alerte %}
+                              <small class="text-warning mt-1">
+                                  <i class="fas fa-exclamation-circle"></i> Stock faible
+                              </small>
+                          {% endif %}
+                      {% endwith %}
+                  </div>
+                </td>
+                <td class="text-center">
+                  {% if produit.code_barre %}
+                  <div class="d-flex flex-column align-items-center">
+                    <img src="{{ produit.code_barre.url }}" alt="Code-barres" style="height: 30px;">
+                    <small class="text-muted">{{ produit.code_barre_numero|default:"" }}</small>
+                  </div>
+                  {% else %}
+                  <span class="badge bg-secondary">Non généré</span>
+                  {% endif %}
+                </td>
+                <td class="text-end pe-4">
+                  <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                            id="dropdownMenuButton{{ forloop.counter }}" data-bs-toggle="dropdown" aria-expanded="false">
+                      <i class="fas fa-ellipsis-v"></i>
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton{{ forloop.counter }}">
+                      <li>
+                        <a class="dropdown-item" href="{% url 'voir_produit' produit.id %}">
+                          <i class="fas fa-eye me-2 text-info"></i>Détails
+                        </a>
+                      </li>
+                      
+                      <li>
+                        <a class="dropdown-item" href="{% url 'modif_produit' produit.id %}">
+                          <i class="fas fa-edit me-2 text-primary"></i>Modifier
+                        </a>
+                      </li>
+                      <li>
+                        <a class="dropdown-item" href="{% url 'etiquette_produit' produit.id %}" target="_blank">
+                          <i class="fas fa-edit me-2 text-primary"></i>Etiquette
+                        </a>
+                      </li>
+                      <li><hr class="dropdown-divider"></li>
+
+                      <li>
+                        <a class="dropdown-item" href="{% url 'forecast' produit.id %}">
+                          <i class="fas fa-edit me-2 text-primary"></i>Voir prévisions
+                        </a>
+                      </li>
+                      <li><hr class="dropdown-divider"></li>
+                      
+                      <li>
+                        <a class="dropdown-item text-danger delete-btn" 
+                           data-id="{{ produit.id }}" 
+                           data-nom="{{ produit.nom }}">
+                          <i class="fas fa-trash-alt me-2"></i>Supprimer
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Vue Compacte (cachée par défaut) -->
+      <div class="view-container d-none" id="compactView">
+        <div class="table-responsive">
+          <table class="table table-hover table-sm">
+            <thead>
+              <tr>
+                <th>Référence</th>
+                <th>Nom</th>
+                <th class="text-center">Prix Vente</th>
+                <th class="text-center">Stock</th>
+                <th class="text-center">Statut</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for produit in page_obj %}
+              <tr class="{% if produit.stock < produit.seuil_alerte %}table-warning{% endif %}">
+                <td>{{ produit.reference|default:"-" }}</td>
+                <td>
+                  <div class="d-flex align-items-center">
+                    <img src="{% if produit.photo %}{{ produit.photo.url }}{% else %}{% static 'img/default-product.png' %}{% endif %}" 
+                         class="avatar avatar-xs me-2 rounded" alt="{{ produit.nom }}">
+                    {{ produit.nom }}
+                  </div>
+                </td>
+                <td class="text-center">
+                  <span class="text-success fw-bold">
+                    <span class="prix-vente" data-prix="{{ produit.prix_vente }}">{{ produit.prix_vente }}</span> 
+                    <span class="devise-symbole">{{ devise_principale }}</span>
+                  </span>
+                </td>
+                <td class="text-center">
+                  {{ produit.stock_reel|default:produit.stock }}
+                  {% if produit.stock != produit.stock_reel %}
+                    <small class="text-muted">({{ produit.stock }})</small>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  {% with stock_reel=produit.stock_reel|default:produit.stock %}
+                    {% if stock_reel < produit.seuil_alerte|add:"0"|floatformat:"0"|divisibleby:"2" %}
+                      <span class="badge bg-danger">Très bas</span>
+                    {% elif stock_reel < produit.seuil_alerte %}
+                      <span class="badge bg-warning text-dark">Faible</span>
+                    {% else %}
+                      <span class="badge bg-success">OK</span>
+                    {% endif %}
+                  {% endwith %}
+                </td>
+                <td class="text-end">
+                  <div class="btn-group btn-group-sm">
+                    <a href="{% url 'voir_produit' produit.id %}" class="btn btn-sm btn-outline-info" title="Détails">
+                      <i class="fas fa-eye"></i>
+                    </a>
+                    <a href="{% url 'modif_produit' produit.id %}" class="btn btn-sm btn-outline-primary" title="Modifier">
+                      <i class="fas fa-edit"></i>
+                    </a>
+                    <button class="btn btn-sm btn-outline-danger delete-btn" 
+                            data-id="{{ produit.id }}" 
+                            data-nom="{{ produit.nom }}" title="Supprimer">
+                      <i class="fas fa-trash-alt"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Vue Kanban (cachée par défaut) -->
+      <div class="view-container d-none" id="kanbanView">
+        <div class="row mx-2">
+          {% for produit in page_obj %}
+          <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 border-0 shadow-sm {% if produit.stock < produit.seuil_alerte %}border-warning{% endif %}">
+              <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 text-truncate">{{ produit.nom }}</h6>
+                <span class="badge bg-{% if produit.stock < produit.seuil_alerte %}warning{% else %}info{% endif %}">
+                  {{ produit.reference|default:"-" }}
+                </span>
+              </div>
+              <div class="card-body">
+                <div class="text-center mb-3">
+                  <img src="{% if produit.photo %}{{ produit.photo.url }}{% else %}{% static 'img/default-product.png' %}{% endif %}" 
+                       class="img-fluid rounded" style="max-height: 120px;" alt="{{ produit.nom }}">
+                </div>
+                
+                <div class="d-flex justify-content-between mb-2">
+                  <span class="text-muted">Prix:</span>
+                  <span class="fw-bold text-success">
+                    <span class="prix-vente" data-prix="{{ produit.prix_vente }}">{{ produit.prix_vente }}</span> 
+                    <span class="devise-symbole">{{ devise_principale }}</span>
+                  </span>
+                </div>
+                
+                <div class="mb-3">
+                  <div class="d-flex justify-content-between mb-1">
+                    <span class="text-muted">Stock:</span>
+                    <span class="fw-bold">
+                      {{ produit.stock_reel|default:produit.stock }} 
+                      {% if produit.stock != produit.stock_reel %}
+                        <small class="text-muted">({{ produit.stock }})</small>
+                      {% endif %}
+                    </span>
+                  </div>
+                  <div class="progress" style="height: 5px;">
+                    {% with stock_reel=produit.stock_reel|default:produit.stock %}
+                      {% widthratio stock_reel produit.seuil_alerte 100 as progress %}
+                      <div class="progress-bar bg-{% if stock_reel < produit.seuil_alerte %}warning{% else %}success{% endif %}" 
+                           role="progressbar" style="width: {% if progress > 100 %}100{% else %}{{ progress }}{% endif %}%">
+                      </div>
+                    {% endwith %}
+                  </div>
+                </div>
+                
+                {% if produit.description %}
+                <p class="small text-muted mb-3">
+                  {{ produit.description|truncatechars:60 }}
+                </p>
+                {% endif %}
+              </div>
+              <div class="card-footer bg-transparent border-0 d-flex justify-content-between">
+                <a href="{% url 'voir_produit' produit.id %}" class="btn btn-sm btn-outline-info" title="Détails">
+                  <i class="fas fa-eye"></i>
+                </a>
+                <a href="{% url 'modif_produit' produit.id %}" class="btn btn-sm btn-outline-primary" title="Modifier">
+                  <i class="fas fa-edit"></i>
+                </a>
+                <a href="{% url 'etiquette_produit' produit.id %}" class="btn btn-sm btn-outline-secondary" title="Étiquette" target="_blank">
+                  <i class="fas fa-tag"></i>
+                </a>
+                <button class="btn btn-sm btn-outline-danger delete-btn" 
+                        data-id="{{ produit.id }}" 
+                        data-nom="{{ produit.nom }}" title="Supprimer">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Pagination améliorée -->
+      {% if page_obj.paginator.num_pages > 1 %}
+      <div class="px-4 pt-3">
+        <nav aria-label="Page navigation">
+          <ul class="pagination justify-content-center mb-0">
+            {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page=1" aria-label="First">
+                  <i class="fas fa-angle-double-left"></i>
+                </a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                  <i class="fas fa-angle-left"></i>
+                </a>
+              </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+              {% if page_obj.number == num %}
+                <li class="page-item active">
+                  <span class="page-link">{{ num }}</span>
+                </li>
+              {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                </li>
+              {% endif %}
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                  <i class="fas fa-angle-right"></i>
+                </a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}" aria-label="Last">
+                  <i class="fas fa-angle-double-right"></i>
+                </a>
+              </li>
+            {% endif %}
+          </ul>
+        </nav>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Modal de suppression -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Confirmation</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center py-4">
+        <div class="mb-3">
+          <i class="fas fa-trash-alt fa-4x text-danger"></i>
+        </div>
+        <h5 class="mb-3">Supprimer "<span id="modalProductName"></span>" ?</h5>
+        <p class="text-muted">Cette action est irréversible et supprimera définitivement le produit.</p>
+      </div>
+      <div class="modal-footer justify-content-center border-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="fas fa-times me-1"></i> Annuler
+        </button>
+        <form method="post" id="deleteForm">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">
+            <i class="fas fa-trash-alt me-1"></i> Supprimer
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .card-header.bg-gradient-primary {
+    background: linear-gradient(195deg, #2c3e50 0%, #1a252f 100%);
+  }
+  
+  .avatar {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+  
+  .table thead th {
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    background-color: #f8f9fa !important;
+  }
+  
+  .progress {
+    height: 5px;
+  }
+  
+  .dropdown-menu {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    border: none;
+  }
+  
+  .table-warning {
+    background-color: rgba(255,193,7,0.1) !important;
+  }
+  
+  .badge.bg-info {
+    background-color: #17a2b8 !important;
+  }
+  
+  /* Styles pour la vue Kanban */
+  #kanbanView .card {
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  
+  #kanbanView .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+  }
+  
+  /* Styles pour la vue compacte */
+  #compactView .avatar-xs {
+    width: 24px;
+    height: 24px;
+  }
+  
+  /* Boutons de vue active */
+  .view-btn.active {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+    color: #495057;
+  }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialisation des tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Gestion de la recherche
+    const originalRows = Array.from(document.querySelectorAll('#productTableBody tr'));
+    
+    document.getElementById('searchInput').addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase();
+      const tbody = document.getElementById('productTableBody');
+      tbody.innerHTML = '';
+      
+      originalRows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        if (text.includes(searchTerm)) {
+          tbody.appendChild(row.cloneNode(true));
+        }
+      });
+    });
+
+    document.getElementById('clearSearch').addEventListener('click', function() {
+      document.getElementById('searchInput').value = '';
+      const tbody = document.getElementById('productTableBody');
+      tbody.innerHTML = '';
+      originalRows.forEach(row => {
+        tbody.appendChild(row.cloneNode(true));
+      });
+    });
+    
+    // Gestion de la suppression
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('delete-btn') || e.target.closest('.delete-btn')) {
+        const btn = e.target.classList.contains('delete-btn') ? e.target : e.target.closest('.delete-btn');
+        const productId = btn.getAttribute('data-id');
+        const productName = btn.getAttribute('data-nom');
+        
+        document.getElementById('modalProductName').textContent = productName;
+        document.getElementById('deleteForm').action = `/produit/supprimer/${productId}/`;
+        
+        const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        modal.show();
+      }
+    });
+    
+    // Gestion du téléchargement PDF
+    document.getElementById('pdfDownloadBtn').addEventListener('click', function(e) {
+        e.preventDefault();
+        const btn = this;
+        const progressContainer = document.getElementById('pdfProgressContainer');
+        
+        // Afficher la barre de progression
+        progressContainer.style.display = 'block';
+        
+        // Désactiver le bouton pendant le téléchargement
+        btn.classList.add('disabled');
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Génération...';
+        
+        // Lancer le téléchargement
+        fetch(btn.href)
+            .then(response => response.blob())
+            .then(blob => {
+                // Créer un lien de téléchargement
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'liste_produits.pdf';
+                document.body.appendChild(a);
+                a.click();
+                
+                // Nettoyer
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                // Réinitialiser l'interface
+                progressContainer.style.display = 'none';
+                btn.classList.remove('disabled');
+                btn.innerHTML = '<i class="fas fa-file-pdf me-1"></i> PDF';
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                progressContainer.style.display = 'none';
+                btn.classList.remove('disabled');
+                btn.innerHTML = '<i class="fas fa-file-pdf me-1"></i> PDF';
+                alert('Une erreur est survenue lors de la génération du PDF');
+            });
+    });
+    
+    // Changement dynamique de devise
+    document.getElementById('deviseSelector').addEventListener('change', function () {
+      const nouvelleDevise = this.value;
+      const symboles = {
+          'USD': '$',
+          'EUR': '€',
+          'CDF': 'FC',
+          'FC': 'FC'
+      };
+
+      const selecteur = this;
+      const devisePrincipale = '{{ devise_principale }}';
+
+      // Désactiver le sélecteur pendant chargement
+      selecteur.disabled = true;
+
+      fetch(`/api/taux-change/?devise=${nouvelleDevise}`)
+          .then(response => {
+              if (!response.ok) throw new Error('Erreur réseau');
+              return response.json();
+          })
+          .then(data => {
+              if (data.error) throw new Error(data.error);
+
+              const taux = data.taux;
+
+              // Mise à jour des prix de vente
+              document.querySelectorAll('.prix-vente').forEach(el => {
+                  const prix = parseFloat(el.getAttribute('data-prix'));
+                  el.textContent = (nouvelleDevise === devisePrincipale ? prix : prix * taux).toFixed(2);
+              });
+
+              // Mise à jour des prix d'achat
+              document.querySelectorAll('.prix-achat').forEach(el => {
+                  const prix = parseFloat(el.getAttribute('data-prix'));
+                  el.textContent = (nouvelleDevise === devisePrincipale ? prix : prix * taux).toFixed(2);
+              });
+
+              // Mise à jour des symboles
+              document.querySelectorAll('.devise-symbole').forEach(el => {
+                  el.textContent = symboles[nouvelleDevise] || nouvelleDevise;
+              });
+
+              // Met à jour l'URL dans la barre d'adresse sans rechargement
+              const url = new URL(window.location);
+              url.searchParams.set('devise', nouvelleDevise);
+              window.history.replaceState({}, '', url);
+
+              selecteur.disabled = false;
+          })
+          .catch(error => {
+              console.error(error);
+              alert("Erreur lors de la conversion : " + error.message);
+              selecteur.disabled = false;
+          });
+    });
+
+    // Gestion du changement de vue
+    const viewButtons = document.querySelectorAll('.view-btn');
+    const viewContainers = document.querySelectorAll('.view-container');
+    
+    viewButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        // Désactive tous les boutons
+        viewButtons.forEach(btn => btn.classList.remove('active'));
+        // Active le bouton cliqué
+        this.classList.add('active');
+        
+        // Cache tous les conteneurs
+        viewContainers.forEach(container => container.classList.add('d-none'));
+        // Affiche le conteneur correspondant
+        const viewToShow = document.getElementById(`${this.dataset.view}View`);
+        if (viewToShow) viewToShow.classList.remove('d-none');
+      });
+    });
+});
+</script>
+{% endblock %}

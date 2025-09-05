@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<h2>Changer le statut de la commande #{{ commande.id }}</h2>
+<form method="post">
+    {% csrf_token %}
+    <label for="statut">Nouveau statut :</label>
+    <select name="statut" id="statut" class="form-control">
+        {% for key, value in commande.STATUT_CHOICES %}
+        <option value="{{ key }}" {% if key == commande.statut %}selected{% endif %}>{{ value }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-primary mt-2">Mettre à jour</button>
+</form>
+{% endblock %}

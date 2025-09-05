@@ -1,0 +1,395 @@
+{% extends "comptabilite/base.html" %}
+{% load static %}
+
+{% block title %}Bilan Comptable{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active" aria-current="page">Bilan Comptable</li>
+{% endblock %}
+
+{% block page_title %}Bilan Comptable{% endblock %}
+
+{% block actions %}
+<div>
+    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#exportModal">
+        <i class="fas fa-download me-1"></i> Exporter
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title">Bilan Comptable</h5>
+        <p class="card-subtitle text-muted">Situation patrimoniale au {{ date_fin|date:"d/m/Y" }}</p>
+    </div>
+    <div class="card-body">
+        <!-- Filtres -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <input type="date" class="form-control" id="date-fin" name="date_fin" 
+                       value="{{ date_fin }}" placeholder="Date de clôture">
+            </div>
+            <div class="col-md-2">
+                <button type="button" id="filter-btn" class="btn btn-primary w-100">
+                    <i class="fas fa-filter me-1"></i> Appliquer
+                </button>
+            </div>
+            <div class="col-md-6 text-end">
+                <span class="badge {% if equilibre %}bg-success{% else %}bg-danger{% endif %}">
+                    {% if equilibre %}
+                        <i class="fas fa-check-circle me-1"></i> Bilan équilibré
+                    {% else %}
+                        <i class="fas fa-exclamation-triangle me-1"></i> Bilan déséquilibré
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+
+        <!-- Bilan Comptable -->
+        <div class="row">
+            <!-- ACTIF -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-building me-2"></i>ACTIF
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-striped mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Comptes d'actif</th>
+                                    <th class="text-end">Montant ({{ devise_principale_symbole }})</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Classe 1 - Capitaux -->
+                                {% if bilan_data.1.details %}
+                                <tr class="table-info">
+                                    <td colspan="2"><strong>CLASSE 1 - CAPITAUX PROPRES</strong></td>
+                                </tr>
+                                {% for detail in bilan_data.1.details %}
+                                <tr>
+                                    <td>{{ detail.compte.numero }} - {{ detail.compte.intitule }}</td>
+                                    <td class="text-end">{{ detail.solde|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                                <tr class="table-active">
+                                    <td><strong>Total Classe 1</strong></td>
+                                    <td class="text-end"><strong>{{ bilan_data.1.total|floatformat:2 }}</strong></td>
+                                </tr>
+                                {% endif %}
+
+                                <!-- Classe 2 - Immobilisations -->
+                                {% if bilan_data.2.details %}
+                                <tr class="table-info">
+                                    <td colspan="2"><strong>CLASSE 2 - IMMOBILISATIONS</strong></td>
+                                </tr>
+                                {% for detail in bilan_data.2.details %}
+                                <tr>
+                                    <td>{{ detail.compte.numero }} - {{ detail.compte.intitule }}</td>
+                                    <td class="text-end">{{ detail.solde|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                                <tr class="table-active">
+                                    <td><strong>Total Classe 2</strong></td>
+                                    <td class="text-end"><strong>{{ bilan_data.2.total|floatformat:2 }}</strong></td>
+                                </tr>
+                                {% endif %}
+
+                                <!-- Classe 3 - Stocks -->
+                                {% if bilan_data.3.details %}
+                                <tr class="table-info">
+                                    <td colspan="2"><strong>CLASSE 3 - STOCKS</strong></td>
+                                </tr>
+                                {% for detail in bilan_data.3.details %}
+                                <tr>
+                                    <td>{{ detail.compte.numero }} - {{ detail.compte.intitule }}</td>
+                                    <td class="text-end">{{ detail.solde|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                                <tr class="table-active">
+                                    <td><strong>Total Classe 3</strong></td>
+                                    <td class="text-end"><strong>{{ bilan_data.3.total|floatformat:2 }}</strong></td>
+                                </tr>
+                                {% endif %}
+
+                                <!-- Classe 4 - Tiers -->
+                                {% if bilan_data.4.details %}
+                                <tr class="table-info">
+                                    <td colspan="2"><strong>CLASSE 4 - CRÉANCES</strong></td>
+                                </tr>
+                                {% for detail in bilan_data.4.details %}
+                                <tr>
+                                    <td>{{ detail.compte.numero }} - {{ detail.compte.intitule }}</td>
+                                    <td class="text-end">{{ detail.solde|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                                <tr class="table-active">
+                                    <td><strong>Total Classe 4</strong></td>
+                                    <td class="text-end"><strong>{{ bilan_data.4.total|floatformat:2 }}</strong></td>
+                                </tr>
+                                {% endif %}
+
+                                <!-- Classe 5 - Financiers -->
+                                {% if bilan_data.5.details %}
+                                <tr class="table-info">
+                                    <td colspan="2"><strong>CLASSE 5 - TRÉSORERIE</strong></td>
+                                </tr>
+                                {% for detail in bilan_data.5.details %}
+                                <tr>
+                                    <td>{{ detail.compte.numero }} - {{ detail.compte.intitule }}</td>
+                                    <td class="text-end">{{ detail.solde|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                                <tr class="table-active">
+                                    <td><strong>Total Classe 5</strong></td>
+                                    <td class="text-end"><strong>{{ bilan_data.5.total|floatformat:2 }}</strong></td>
+                                </tr>
+                                {% endif %}
+
+                                <!-- Total Actif -->
+                                <tr class="table-success">
+                                    <td><strong>TOTAL ACTIF</strong></td>
+                                    <td class="text-end"><strong>{{ total_actif|floatformat:2 }}</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PASSIF -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="card-title mb-0">
+                            <i class="fas fa-hand-holding-usd me-2"></i>PASSIF
+                        </h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-striped mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Comptes de passif</th>
+                                    <th class="text-end">Montant ({{ devise_principale_symbole }})</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Classe 1 - Capitaux (partie passif) -->
+                                {% if bilan_data.1.details %}
+                                <tr class="table-info">
+                                    <td colspan="2"><strong>CLASSE 1 - DETTES</strong></td>
+                                </tr>
+                                {% for detail in bilan_data.1.details %}
+                                {% if detail.solde < 0 %}
+                                <tr>
+                                    <td>{{ detail.compte.numero }} - {{ detail.compte.intitule }}</td>
+                                    <td class="text-end">{{ detail.solde|floatformat:2 }}</td>
+                                </tr>
+                                {% endif %}
+                                {% endfor %}
+                                {% endif %}
+
+                                <!-- Classe 6 - Charges -->
+                                {% if bilan_data.6.details %}
+                                <tr class="table-info">
+                                    <td colspan="2"><strong>CLASSE 6 - CHARGES (Résultat)</strong></td>
+                                </tr>
+                                {% for detail in bilan_data.6.details %}
+                                <tr>
+                                    <td>{{ detail.compte.numero }} - {{ detail.compte.intitule }}</td>
+                                    <td class="text-end">{{ detail.solde|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                                <tr class="table-active">
+                                    <td><strong>Total Charges</strong></td>
+                                    <td class="text-end"><strong>{{ bilan_data.6.total|floatformat:2 }}</strong></td>
+                                </tr>
+                                {% endif %}
+
+                                <!-- Classe 7 - Produits -->
+                                {% if bilan_data.7.details %}
+                                <tr class="table-info">
+                                    <td colspan="2"><strong>CLASSE 7 - PRODUITS (Résultat)</strong></td>
+                                </tr>
+                                {% for detail in bilan_data.7.details %}
+                                <tr>
+                                    <td>{{ detail.compte.numero }} - {{ detail.compte.intitule }}</td>
+                                    <td class="text-end">{{ detail.solde|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                                <tr class="table-active">
+                                    <td><strong>Total Produits</strong></td>
+                                    <td class="text-end"><strong>{{ bilan_data.7.total|floatformat:2 }}</strong></td>
+                                </tr>
+                                {% endif %}
+
+                                <!-- Résultat -->
+                                <tr class="table-warning">
+                                    <td><strong>RÉSULTAT DE L'EXERCICE</strong></td>
+                                    <td class="text-end"><strong>{{ resultat|floatformat:2 }}</strong></td>
+                                </tr>
+
+                                <!-- Total Passif -->
+                                <tr class="table-success">
+                                    <td><strong>TOTAL PASSIF</strong></td>
+                                    <td class="text-end"><strong>{{ total_passif|floatformat:2 }}</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Synthèse -->
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card bg-primary text-white">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ total_actif|floatformat:2 }} {{ devise_principale_symbole }}</h5>
+                        <p class="card-text">Total Actif</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ total_passif|floatformat:2 }} {{ devise_principale_symbole }}</h5>
+                        <p class="card-text">Total Passif</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Équilibre du bilan -->
+        <div class="alert {% if equilibre %}alert-success{% else %}alert-danger{% endif %} mt-4">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-{% if equilibre %}check-circle{% else %}exclamation-triangle{% endif %} me-2"></i>
+                        Équilibre du Bilan
+                    </h6>
+                    <p class="mb-0">
+                        {% if equilibre %}
+                            Le bilan est équilibré : Actif = Passif
+                        {% else %}
+                            Le bilan n'est pas équilibré : Différence de {{ difference|floatformat:2 }} {{ devise_principale_symbole }}
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="col-md-6 text-end">
+                    <strong>Total Actif:</strong> {{ total_actif|floatformat:2 }} {{ devise_principale_symbole }}<br>
+                    <strong>Total Passif:</strong> {{ total_passif|floatformat:2 }} {{ devise_principale_symbole }}<br>
+                    <strong>Différence:</strong> <span class="{% if equilibre %}text-success{% else %}text-danger{% endif %}">{{ difference|floatformat:2 }} {{ devise_principale_symbole }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'export -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Exporter le Bilan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Format d'export</label>
+                    <select class="form-select" id="export-format">
+                        <option value="pdf">PDF</option>
+                        <option value="excel">Excel</option>
+                        <option value="csv">CSV</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Date de clôture</label>
+                    <p class="form-control-static">{{ date_fin|date:"d/m/Y" }}</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" onclick="exporterBilan()">
+                    <i class="fas fa-download me-1"></i> Exporter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Appliquer les filtres
+        $('#filter-btn').click(function() {
+            const dateFin = $('#date-fin').val();
+            
+            let url = '{% url "comptabilite:bilan" %}?';
+            if (dateFin) url += `date_fin=${dateFin}`;
+            
+            window.location.href = url;
+        });
+
+        // Entrée dans le champ date déclenche le filtre
+        $('#date-fin').keypress(function(e) {
+            if (e.which === 13) {
+                $('#filter-btn').click();
+            }
+        });
+
+        // Initialiser la date si vide
+        if (!$('#date-fin').val()) {
+            $('#date-fin').val(new Date().toISOString().split('T')[0]);
+        }
+    });
+
+    function exporterBilan() {
+        const format = $('#export-format').val();
+        const dateFin = '{{ date_fin }}';
+        
+        // Simulation d'export
+        alert(`Export ${format} du bilan au ${dateFin} sera bientôt disponible.`);
+        $('#exportModal').modal('hide');
+    }
+</script>
+
+<style>
+    .table th {
+        background-color: #2c3e50;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .table-dark th {
+        background-color: #34495e;
+    }
+    
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .table-info {
+        background-color: #d1ecf1;
+    }
+    
+    .table-success {
+        background-color: #d4edda;
+    }
+    
+    .table-warning {
+        background-color: #fff3cd;
+    }
+    
+    .table-active {
+        background-color: #e9ecef;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}

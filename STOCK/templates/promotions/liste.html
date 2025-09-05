@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-lg animate__animated animate__fadeIn">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h2 class="mb-0">
+                <i class="bi bi-percent me-2"></i>Gestion des Promotions
+            </h2>
+            <a href="{% url 'creer_promotion' %}" class="btn btn-light">
+                <i class="bi bi-plus-circle me-1"></i> Nouvelle promotion
+            </a>
+        </div>
+        
+        <div class="card-body">
+            <!-- Filtres -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <form method="get" class="row g-2">
+                        <div class="col-md-5">
+                            <select name="statut" class="form-select">
+                                <option value="">Tous statuts</option>
+                                <option value="actives" {% if filtres.statut == 'actives' %}selected{% endif %}>Actives</option>
+                                <option value="inactives" {% if filtres.statut == 'inactives' %}selected{% endif %}>Inactives</option>
+                                <option value="futures" {% if filtres.statut == 'futures' %}selected{% endif %}>Futures</option>
+                                <option value="expirees" {% if filtres.statut == 'expirees' %}selected{% endif %}>Expirées</option>
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <select name="type_remise" class="form-select">
+                                <option value="">Tous types</option>
+                                <option value="pourcentage" {% if filtres.type_remise == 'pourcentage' %}selected{% endif %}>Pourcentage</option>
+                                <option value="montant_fixe" {% if filtres.type_remise == 'montant_fixe' %}selected{% endif %}>Montant fixe</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-funnel"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Tableau des promotions -->
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nom</th>
+                            <th>Type</th>
+                            <th>Valeur</th>
+                            <th>Applicable à</th>
+                            <th>Dates</th>
+                            <th>Code</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for promo in promotions %}
+                        <tr class="{% if not promo.est_valide %}table-secondary{% endif %}">
+                            <td>
+                                <strong>{{ promo.nom }}</strong>
+                                {% if promo.description %}
+                                <small class="text-muted d-block">{{ promo.description|truncatechars:50 }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ promo.get_type_remise_display }}</td>
+                            <td>
+                                {% if promo.type_remise == 'pourcentage' %}
+                                    {{ promo.valeur }}%
+                                {% else %}
+                                    {{ promo.valeur|floatformat:2 }} {{ request.session.devise }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ promo.get_appliquer_a_display }}
+                                {% if promo.produit %} 
+                                    <span class="badge bg-info">{{ promo.produit.nom }}</span>
+                                {% endif %}
+                                {% if promo.categorie %} 
+                                    <span class="badge bg-secondary">{{ promo.categorie.nom }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>
+                                    <i class="bi bi-calendar3"></i> {{ promo.date_debut|date:"d/m/Y" }}<br>
+                                    <i class="bi bi-calendar-x"></i> {{ promo.date_fin|date:"d/m/Y" }}
+                                </small>
+                            </td>
+                            <td>
+                                {% if promo.code_promo %}
+                                <span class="badge bg-success">{{ promo.code_promo }}</span>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if promo.est_valide %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="d-flex gap-2">
+                                    <a href="#" class="btn btn-sm btn-outline-primary" title="Détails">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <form method="post" action="{% url 'toggle_promotion' promo.id %}">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm {% if promo.actif %}btn-warning{% else %}btn-success{% endif %}" title="{% if promo.actif %}Désactiver{% else %}Activer{% endif %}">
+                                            <i class="bi {% if promo.actif %}bi-toggle-off{% else %}bi-toggle-on{% endif %}"></i>
+                                        </button>
+                                    </form>
+                                    <a href="{% url 'supprimer_promotion' promo.id %}" class="btn btn-sm btn-outline-danger" title="Supprimer">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4">
+                                <i class="bi bi-exclamation-circle fs-1 text-muted"></i>
+                                <p class="mt-2">Aucune promotion trouvée</p>
+                                <a href="{% url 'creer_promotion' %}" class="btn btn-primary mt-2">
+                                    <i class="bi bi-plus-circle me-1"></i> Créer une promotion
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="card-footer bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    {{ promotions.count }} promotion(s) trouvée(s)
+                </small>
+                <a href="{% url 'creer_promotion' %}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus-circle me-1"></i> Nouvelle promotion
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

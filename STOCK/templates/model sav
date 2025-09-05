@@ -1,0 +1,1208 @@
+from django.db import models
+from django.utils import timezone
+from django.contrib.auth.models import User
+from django.core.files.storage import default_storage
+import barcode
+from django.core.files.base import ContentFile
+from barcode.writer import ImageWriter
+from io import BytesIO
+from django.core.files import File
+from io import BytesIO
+from django.core.files.base import ContentFile
+from django.db.models import Avg, F
+from django.db.models import Sum
+from decimal import Decimal
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.core.mail import send_mail
+from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.db import models
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+
+
+
+
+#Notification 
+class Notification(models.Model):
+    destinataire = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    message = models.TextField()
+    est_lu = models.BooleanField(default=False)
+    type = models.CharField(max_length=50, choices=[
+        ('stock', 'Stock faible'),
+        ('commande', 'Nouvelle commande'),
+        ('facture', 'Facture impayée')
+    ])
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Notification ({self.type}) pour {self.destinataire.username}"
+
+
+
+# -------------------- PARAMÈTRES --------------------
+from django.contrib.auth.models import User
+
+class Parametre(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='parametre')
+    nom_societe = models.CharField(max_length=100)
+    adresse = models.TextField()
+    telephone = models.CharField(max_length=20)
+    email = models.EmailField()
+    logo = models.ImageField(upload_to='logos/', null=True, blank=True)
+    devise_principale = models.CharField(max_length=10, default="FC", verbose_name="Devise principale", blank=True)
+    taux_tva = models.DecimalField(max_digits=5, decimal_places=2, default=20.0)
+    
+    # Nouveaux champs pour la gestion des devises
+    devises_acceptees = models.JSONField(
+        default=list,
+        help_text="Liste des devises acceptées (ex: ['USD', 'EUR', 'CDF'])"
+    )
+    taux_change_auto = models.BooleanField(
+        default=False,
+        help_text="Mettre à jour automatiquement les taux de change"
+    )
+    
+    def __str__(self):
+        return self.nom_societe
+    # Dans votre modèle Parametre
+def format_devise(self, montant, devise=None):
+    devise = devise or self.devise_principale
+    symboles = {
+        'USD': '$',
+        'EUR': '€',
+        'CDF': 'FC'
+    }
+    return f"{symboles.get(devise, devise)} {montant:,.2f}"
+
+
+class TauxChange(models.Model):
+    devise_source = models.CharField(max_length=3)  # Ex: USD
+    devise_cible = models.CharField(max_length=3)   # Ex: CDF
+    taux = models.DecimalField(max_digits=12, decimal_places=6)
+    date_mise_a_jour = models.DateTimeField(auto_now=True)
+    est_manuel = models.BooleanField(default=True)
+    
+    class Meta:
+        unique_together = ('devise_source', 'devise_cible')
+        verbose_name = "Taux de change"
+        verbose_name_plural = "Taux de change"
+    
+    def __str__(self):
+        return f"1 {self.devise_source} = {self.taux} {self.devise_cible}"
+    @classmethod
+    def convertir(cls, montant, source, cible):
+        taux = cls.get_taux(source, cible)
+        if taux is None:
+            raise ValidationError(f"Aucun taux de change défini entre {source} et {cible}")
+        return montant * taux
+
+    
+    @classmethod
+    def get_taux(cls, source, cible):
+        try:
+            if source == cible:
+                return Decimal('1.0')
+            
+            # Chercher le taux direct
+            taux = cls.objects.get(devise_source=source, devise_cible=cible).taux
+            return taux
+        except cls.DoesNotExist:
+            # Essayer de trouver un taux inverse
+            try:
+                taux_inverse = cls.objects.get(devise_source=cible, devise_cible=source).taux
+                return Decimal('1.0') / taux_inverse
+            except (cls.DoesNotExist, ZeroDivisionError):
+                return None
+
+
+
+
+
+# -------------------- CATÉGORIE --------------------
+class Categorie(models.Model):
+    nom = models.CharField(max_length=100)
+    photo = models.ImageField(upload_to='media/', blank=True, null=True)
+
+    def __str__(self):
+        return self.nom
+
+
+
+# -------------------- PRODUIT --------------------
+class Produit(models.Model):
+    categorie = models.ForeignKey('Categorie', on_delete=models.SET_NULL, null=True, blank=True)
+    actif = models.BooleanField(default=True)
+    nom = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+    prix_achat = models.DecimalField(max_digits=10, decimal_places=2)
+    prix_vente = models.DecimalField(max_digits=10, decimal_places=2)
+    stock = models.IntegerField(default=0)
+    seuil_alerte = models.IntegerField(default=10)
+    photo = models.ImageField(upload_to='media/produits/', blank=True, null=True)
+    code_barre = models.ImageField(upload_to='media/barcodes/', blank=True, null=True)
+    code_barre_numero = models.CharField(max_length=13, blank=True, null=True, editable=False)
+    taux_tva = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+
+    def __str__(self):
+        return f"{self.nom} ({self.code_barre_numero})"
+
+    def save(self, *args, **kwargs):
+        # Enregistre le produit pour avoir un ID, si nouveau
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+
+        if is_new:
+            self.generate_barcode()
+            super().save(update_fields=['code_barre', 'code_barre_numero'])
+
+    def generate_barcode(self):
+        product_code = f"{self.id:012d}"[:12]
+        checksum = self.calculate_ean13_checksum(product_code)
+        ean13_code = f"{product_code}{checksum}"
+        self.code_barre_numero = ean13_code
+
+        ean = barcode.get_barcode_class('ean13')
+        barcode_data = ean(ean13_code, writer=ImageWriter())
+
+        buffer = BytesIO()
+        barcode_data.write(buffer)
+        filename = f"barcode_{self.id}.png"
+        self.code_barre.save(filename, ContentFile(buffer.getvalue()), save=False)
+        buffer.close()
+
+    @staticmethod
+    def calculate_ean13_checksum(code):
+        """
+        Calcule le chiffre de contrôle EAN13 à partir des 12 premiers chiffres
+        """
+        if len(code) != 12:
+            raise ValueError("Le code doit avoir 12 chiffres")
+        
+        sum_odd = sum(int(code[i]) for i in range(0, 12, 2))
+        sum_even = sum(int(code[i]) for i in range(1, 12, 2))
+        total = sum_odd + sum_even * 3
+        checksum = (10 - (total % 10)) % 10
+        return str(checksum)
+
+    def prix_vente_suggere(self):
+        """
+        Suggestion de prix basé sur la marge moyenne de la catégorie
+        ou un coefficient par défaut si aucune donnée.
+        """
+        if self.categorie:
+            produits_categorie = Produit.objects.filter(categorie=self.categorie).exclude(id=self.id)
+            moyenne_marge = produits_categorie.annotate(
+                marge=F('prix_vente') - F('prix_achat')
+            ).aggregate(marge_moy=Avg('marge'))['marge_moy']
+        else:
+            moyenne_marge = None
+
+        if moyenne_marge and moyenne_marge > 0:
+            return round(float(self.prix_achat) + float(moyenne_marge), 2)
+        else:
+            coefficient_par_defaut = 1.25  # 25% de marge par défaut
+            return round(float(self.prix_achat) * coefficient_par_defaut, 2)
+# -------------------- CLIENT --------------------
+class Client(models.Model):
+    nom = models.CharField(max_length=100)
+    email = models.EmailField(blank=True, null=True)
+    telephone = models.CharField(max_length=20)
+    adresse = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.nom
+
+# -------------------- COMMANDE --------------------
+# models.py
+class HistoriquePrevision(models.Model):
+    produit = models.ForeignKey('Produit', on_delete=models.CASCADE, related_name='previsions')
+    date_prevision = models.DateField()
+    date_generation = models.DateTimeField(auto_now_add=True)
+    quantite_predite = models.PositiveIntegerField()
+    quantite_reelle = models.PositiveIntegerField(null=True, blank=True)
+    ecart = models.IntegerField(null=True, blank=True)
+    modele_utilise = models.CharField(max_length=50)
+    parametres = models.JSONField(default=dict)
+
+    class Meta:
+        ordering = ['-date_generation']
+        verbose_name = "Historique de prévision"
+        verbose_name_plural = "Historiques de prévisions"
+
+    def save(self, *args, **kwargs):
+        if self.quantite_reelle is not None:
+            self.ecart = self.quantite_reelle - self.quantite_predite
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Prévision {self.produit.nom} du {self.date_prevision}"
+    
+    #Historique
+
+from django.db import models
+from django.utils import timezone
+from django.core.exceptions import ValidationError
+from decimal import Decimal
+from datetime import timedelta
+from django.db.models import Sum, F, ExpressionWrapper, DecimalField
+
+class Commande(models.Model):
+    STATUT_CHOICES = [
+        ("en_attente", "En attente"),
+        ("confirmee", "Confirmée"),
+        ("expediee", "Expédiée"),
+        ("livree", "Livrée"),
+        ("annulee", "Annulée"),
+    ]
+
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default="en_attente")
+    client = models.ForeignKey('Client', on_delete=models.CASCADE)
+    date_commande = models.DateTimeField(default=timezone.now)
+    expiration = models.DateField()
+    paiement = models.CharField(max_length=50, choices=[('cash', 'Cash'), ('30j', '30 jours')])
+    montant_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    montant_ht = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    montant_tva = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    montant_remise = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    vendeur = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
+    vente_confirmee = models.BooleanField(default=False)
+    vente_au_comptoir = models.BooleanField(default=False)
+    parametre = models.ForeignKey(Parametre, on_delete=models.SET_NULL, null=True)
+
+
+
+    class Meta:
+        ordering = ['-date_commande']
+        verbose_name = "Commande"
+        verbose_name_plural = "Commandes"
+
+    def __str__(self):
+        return f"Commande {self.id} - {self.client.nom}"
+
+    def calculer_totaux(self):
+        """Calcule tous les montants (HT, TVA, remise, total) et sauvegarde"""
+        result_ht = self.lignes.aggregate(
+            total_ht=Sum(
+                ExpressionWrapper(
+                    F('prix_unitaire') * F('quantite'),
+                    output_field=DecimalField()
+                )
+            )
+        )
+        self.montant_ht = result_ht['total_ht'] or Decimal('0')
+
+        tva_result = self.lignes.annotate(
+            tva_ligne=ExpressionWrapper(
+                F('prix_unitaire') * F('quantite') * F('produit__taux_tva') / Decimal('100'),
+                output_field=DecimalField()
+            )
+        ).aggregate(total_tva=Sum('tva_ligne'))
+
+        self.montant_tva = tva_result['total_tva'] or Decimal('0')
+
+        result_remise = self.remises.aggregate(
+            total_remise=Sum('montant_remise')
+        )
+        self.montant_remise = result_remise['total_remise'] or Decimal('0')
+
+        self.montant_total = max(Decimal('0'), 
+                                 (self.montant_ht + self.montant_tva) - self.montant_remise)
+
+        self.save()
+        return self.montant_total
+
+    def calculer_total(self):
+        """Alias pour compatibilité – redirige vers calculer_totaux"""
+        return self.calculer_totaux()
+
+    def total_ht(self):
+        return sum(ligne.total_ligne_ht() for ligne in self.lignes.all())
+
+    def total_tva(self):
+        return sum(ligne.tva_ligne() for ligne in self.lignes.all())
+
+    def total_remise(self):
+        return sum(remise.montant_remise for remise in self.remises.all())
+
+    def total_ttc(self):
+        return (self.total_ht() + self.total_tva()) - self.total_remise()
+
+   # models.py dans la classe Commande
+    def valider_commande(self):
+        """
+        Valide la commande en vérifiant les stocks et met à jour les prévisions
+        Retourne True si la validation réussit, False si échec
+        """
+        if self.vente_confirmee:
+            return True
+
+        # Vérification initiale du stock pour tous les produits
+        for ligne in self.lignes.select_related("produit").all():
+            if ligne.produit.stock < ligne.quantite:
+                return False
+
+        # Transaction atomique pour garantir l'intégrité des données
+        from django.db import transaction
+        try:
+            with transaction.atomic():
+                # Mise à jour des stocks et des prévisions
+                for ligne in self.lignes.select_related("produit").all():
+                    # Mise à jour du stock
+                    ligne.produit.stock -= ligne.quantite
+                    ligne.produit.save()
+
+                    # Mise à jour des prévisions (si le modèle existe)
+                    if hasattr(self, 'HistoriquePrevision'):  # Vérification sécurisée
+                        self.HistoriquePrevision.objects.filter(
+                            produit=ligne.produit,
+                            date_prevision=self.date_commande.date(),
+                            quantite_reelle__isnull=True
+                        ).update(quantite_reelle=ligne.quantite)
+
+                # Mise à jour du statut de la commande
+                self.vente_confirmee = True
+                self.statut = "confirmee"
+                self.calculer_totaux()
+                self.save()
+                
+                return True
+
+        except Exception as e:
+            # Gestion des erreurs et logging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erreur validation commande {self.id}: {str(e)}")
+            return False
+
+    @classmethod
+    def creer_vente_comptoir(cls, produits, vendeur):
+        from django.db import transaction
+
+        with transaction.atomic():
+            client_defaut, _ = Client.objects.get_or_create(
+                nom="Vente Comptoir",
+                defaults={'email': 'comptoir@example.com'}
+            )
+
+            commande = cls.objects.create(
+                client=client_defaut,
+                expiration=timezone.now().date() + timedelta(days=30),
+                paiement="cash",
+                vendeur=vendeur,
+                vente_au_comptoir=True
+            )
+
+            for item in produits:
+                LigneCommande.objects.create(
+                    commande=commande,
+                    produit=item["produit"],
+                    quantite=item["quantite"],
+                    prix_unitaire=item["prix_unitaire"]
+                )
+
+            commande.calculer_totaux()
+            commande.valider_commande()
+            return commande
+
+    def appliquer_remise(self, promotion):
+        if not promotion.est_valide():
+            raise ValidationError("Promotion invalide")
+
+        if promotion.appliquer_a != 'commande':
+            raise ValidationError("Cette promotion ne s'applique pas aux commandes entières")
+
+        self.calculer_totaux()
+        montant_initial = self.montant_ht + self.montant_tva
+        montant_remise = promotion.appliquer_remise(montant_initial)
+
+        RemiseCommande.objects.create(
+            commande=self,
+            promotion=promotion,
+            montant_remise=montant_remise
+        )
+
+        self.calculer_totaux()
+        promotion.incrementer_utilisation()
+        return montant_remise
+
+
+        
+
+# -------------------- LIGNE COMMANDE --------------------
+class LigneCommande(models.Model):
+    commande = models.ForeignKey(Commande, on_delete=models.CASCADE, related_name='lignes')
+    produit = models.ForeignKey('Produit', on_delete=models.CASCADE)
+    quantite = models.IntegerField()
+    prix_unitaire = models.DecimalField(max_digits=10, decimal_places=2)
+    quantite_livree = models.IntegerField(default=0)
+   
+ 
+
+    def total_ligne_ht(self):
+        return self.quantite * self.prix_unitaire
+
+    def tva_ligne(self):
+        param = Parametre.objects.first()
+        return (self.total_ligne_ht() * param.taux_tva / 100) if param else 0
+
+    def total_ligne_ttc(self):
+        return self.total_ligne_ht() + self.tva_ligne()
+    
+    def livree_completement(self):
+        return self.quantite_livree >= self.quantite
+
+    @property
+    def total(self):
+        """Alias pour total HT (utile si utilisé dans d'autres vues)"""
+        return self.total_ligne_ht()
+    
+
+
+
+
+class ClotureCaisse(models.Model):
+    vendeur = models.ForeignKey(User, on_delete=models.CASCADE)
+    date_cloture = models.DateTimeField(auto_now_add=True)
+    date_jour = models.DateField()
+    montant_total = models.DecimalField(max_digits=10, decimal_places=2)
+    nombre_ventes = models.PositiveIntegerField()
+    montant_espece = models.DecimalField(max_digits=10, decimal_places=2)
+    montant_carte = models.DecimalField(max_digits=10, decimal_places=2)
+    commentaire = models.TextField(blank=True)
+    validee = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-date_cloture']
+        verbose_name = "Clôture de caisse"
+        verbose_name_plural = "Clôtures de caisse"
+
+    def __str__(self):
+        return f"Clôture du {self.date_jour} par {self.vendeur.username}"
+
+class EcartCaisse(models.Model):
+    TYPES_ECART = [
+        ('manquant', 'Manquant'),
+        ('excedent', 'Excédent'),
+    ]
+
+    cloture = models.ForeignKey(ClotureCaisse, on_delete=models.CASCADE, related_name='ecarts')
+    montant = models.DecimalField(max_digits=10, decimal_places=2)
+    type_ecart = models.CharField(max_length=10, choices=TYPES_ECART)
+    date_decouverte = models.DateTimeField(auto_now_add=True)
+    commentaire = models.TextField(blank=True)
+    notifie_admin = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Écart de caisse"
+        verbose_name_plural = "Écarts de caisse"
+
+    def __str__(self):
+        return f"Écart {self.type_ecart} de {self.montant}€ (Clôture #{self.cloture.id})"
+
+
+# -------------------- FACTURE --------------------
+class Facture(models.Model):
+    STATUTS = (
+        ('payee', 'Payée'),
+        ('partielle', 'Partiellement payée'),
+        ('impayee', 'Impayée'),
+    )
+
+    numero = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    commande = models.OneToOneField('Commande', on_delete=models.PROTECT)
+    date = models.DateField(default=timezone.now)
+    montant_total = models.DecimalField(max_digits=10, decimal_places=2)
+    montant_paye = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    statut = models.CharField(max_length=20, choices=STATUTS, default='impayee')
+
+    def reste_a_payer(self):
+        return self.montant_total - self.montant_paye
+
+    def __str__(self):
+        return f"Facture {self.numero}"
+
+class Paiement(models.Model):
+    facture = models.ForeignKey(Facture, on_delete=models.CASCADE)
+    montant = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateTimeField(auto_now_add=True)
+    methode = models.CharField(max_length=50, choices=[
+        ('especes', 'Espèces'),
+        ('carte', 'Carte bancaire'),
+        ('cheque', 'Chèque'),
+    ])
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        self.facture.montant_paye += Decimal(str(self.montant))
+        self.facture.save()
+
+
+# -------------------- FOURNISSEUR --------------------
+class Fournisseur(models.Model):
+    TYPE_FOURNISSEUR = [
+        ('mat_prem', 'Matériaux premières'),
+        ('emballage', 'Emballages'),
+        ('equipement', 'Équipements'),
+        ('autre', 'Autre'),
+    ]
+
+    nom = models.CharField(max_length=100)
+    type = models.CharField(max_length=20, choices=TYPE_FOURNISSEUR)
+    telephone = models.CharField(max_length=20)
+    email = models.EmailField(blank=True, null=True)
+    adresse = models.TextField()
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name_plural = "Fournisseurs"
+
+    def __str__(self):
+        return f"{self.nom} ({self.get_type_display()})"
+
+#bon de commande 
+
+
+from django.conf import settings  # Assure d'avoir accès à User si paramétré ainsi
+
+class BonLivraison(models.Model):
+    parametre = models.ForeignKey(Parametre, on_delete=models.SET_NULL, null=True, blank=True)
+    commande = models.OneToOneField('Commande', on_delete=models.CASCADE, related_name='bon_livraison')
+    client = models.ForeignKey('Client', on_delete=models.CASCADE)
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_livraison = models.DateField(null=True, blank=True)
+    livre = models.BooleanField(default=False)
+    cree_par = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+    def __str__(self):
+        return f"BL-{self.id} pour Commande-{self.commande.id}"
+
+    def get_total_articles(self):
+        return sum(ligne.quantite for ligne in self.commande.lignes.all())
+
+
+class Achat(models.Model):
+    fournisseur = models.ForeignKey(Fournisseur, on_delete=models.PROTECT, related_name='achats')
+    produit = models.ForeignKey(Produit, on_delete=models.PROTECT)
+    quantite = models.PositiveIntegerField()
+    prix_unitaire = models.DecimalField(max_digits=10, decimal_places=2)  # <--- ce champ
+    date_achat = models.DateField(default=timezone.now)
+    numero_facture = models.CharField(max_length=50, blank=True)
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    devise = models.CharField(max_length=3, default="FC")
+    taux_change = models.DecimalField(max_digits=12, decimal_places=6, default=1.0)
+    montant_original = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2,
+        help_text="Montant dans la devise d'origine",blank=True
+    )
+    
+    def save(self, *args, **kwargs):
+        # Calcul automatique du taux de change si nécessaire
+        parametres = Parametre.objects.first()
+        if parametres and self.devise != parametres.devise_principale:
+            if not self.taux_change or self.taux_change == 1.0:
+                taux = TauxChange.get_taux(self.devise, parametres.devise_principale)
+                if taux:
+                    self.taux_change = taux
+                    self.prix_unitaire = self.montant_original * self.taux_change
+        
+        super().save(*args, **kwargs)
+    
+    @property
+    def prix_achat(self):
+        return self.prix_unitaire
+    
+    @property
+    def total_achat_devise_originale(self):
+        return self.quantite * self.montant_original
+    
+    @property
+    def total_achat_devise_principale(self):
+        return self.quantite * self.prix_unitaire
+
+    class Meta:
+        ordering = ['-date_achat']
+        verbose_name_plural = "Achats"
+
+    @property
+    def total_achat(self):
+        return self.quantite * self.prix_unitaire
+
+    def save(self, *args, **kwargs):
+        if self.pk is None:
+            self.produit.stock += self.quantite
+            self.produit.save()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Achat #{self.id} - {self.produit.nom}"
+    
+    
+    
+# Retour produit
+
+class RetourFournisseur(models.Model):
+    achat = models.ForeignKey(Achat, on_delete=models.CASCADE)
+    quantite_retournee = models.PositiveIntegerField()
+    date_retour = models.DateField(default=timezone.now)
+    motif = models.TextField(blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        ordering = ['-date_retour']
+        verbose_name = "Retour Fournisseur"
+        verbose_name_plural = "Retours Fournisseurs"
+
+    def save(self, *args, **kwargs):
+        if self.pk is None:
+            self.achat.produit.stock -= self.quantite_retournee
+            self.achat.produit.save()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Retour de {self.quantite_retournee} x {self.achat.produit.nom} (Achat #{self.achat.id})"
+
+# -------------------- RAPPORT --------------------
+class Rapport(models.Model):
+    titre = models.CharField(max_length=100)
+    date_generation = models.DateTimeField(auto_now_add=True)
+    type = models.CharField(max_length=50, choices=[
+        ('vente', 'Vente'),
+        ('achat', 'Achat'),
+        ('stock', 'Stock')
+    ])
+    contenu = models.TextField()
+
+    def __str__(self):
+        return f"{self.titre} ({self.type})"
+    
+class HistoriqueStatut(models.Model):
+    commande = models.ForeignKey(Commande, related_name='historiques', on_delete=models.CASCADE)
+    ancien_statut = models.CharField(max_length=20)
+    nouveau_statut = models.CharField(max_length=20)
+    modifie_par = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    date_modification = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.commande} - {self.ancien_statut} → {self.nouveau_statut} ({self.date_modification})"
+
+class MouvementStock(models.Model):
+    TYPE_CHOICES = [
+        ('entree', 'Entrée'),
+        ('sortie', 'Sortie'),
+        ('correction', 'Correction'),
+    ]
+    
+    produit = models.ForeignKey('Produit', on_delete=models.CASCADE)
+    type_mouvement = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    quantite = models.PositiveIntegerField()
+    date_mouvement = models.DateTimeField(auto_now_add=True)
+    utilisateur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    commentaire = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.type_mouvement} - {self.produit.nom} ({self.quantite})"
+
+
+#INVENTAIRE PHYSIQUE
+
+# models.py
+
+class InventairePhysique(models.Model):
+    produit = models.ForeignKey(Produit, on_delete=models.CASCADE)
+    stock_theorique = models.IntegerField()
+    stock_physique = models.IntegerField()
+    ecart = models.IntegerField()
+    utilisateur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    date = models.DateTimeField(auto_now_add=True)
+    valide = models.BooleanField(default=False)
+
+    def calculer_ecart(self):
+        return self.stock_physique - self.stock_theorique
+
+    def __str__(self):
+        return f"{self.produit.nom} - Ecart: {self.ecart}"
+    
+    
+ #Retour marchandises   
+class RetourProduit(models.Model):
+    MOTIF_RETOUR = [
+        ('defectueux', 'Produit défectueux'),
+        ('non_conforme', 'Non conforme à la description'),
+        ('erreur', 'Erreur de livraison'),
+        ('autre', 'Autre raison'),
+    ]
+    
+    STATUT_RETOUR = [
+        ('en_attente', 'En attente'),
+        ('recu', 'Reçu'),
+        ('traite', 'Traité'),
+        ('rembourse', 'Remboursé'),
+        ('annule', 'Annulé'),
+    ]
+    
+    commande = models.ForeignKey(Commande, on_delete=models.PROTECT)
+    date_creation = models.DateTimeField(default=timezone.now)
+    responsable = models.ForeignKey(User, on_delete=models.PROTECT)
+    motif = models.CharField(max_length=20, choices=MOTIF_RETOUR)
+    statut = models.CharField(max_length=20, choices=STATUT_RETOUR, default='en_attente')
+    notes = models.TextField(blank=True)
+    date_traitement = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-date_creation']
+        verbose_name = "Retour produit"
+        verbose_name_plural = "Retours produits"
+    
+    def __str__(self):
+        return f"Retour #{self.id} - Commande {self.commande.id}"
+    
+    @property
+    def total_ttc(self):
+        return self.lignes.aggregate(total=Sum('montant_ttc'))['total'] or 0
+    
+    def traiter(self, user):
+        """Traite le retour et met à jour les stocks"""
+        if self.statut != 'en_attente':
+            return False
+        
+        for ligne in self.lignes.all():
+            produit = ligne.produit
+            produit.stock += ligne.quantite
+            produit.save()
+            
+            MouvementStock.objects.create(
+                produit=produit,
+                type_mouvement='retour',
+                quantite=ligne.quantite,
+                utilisateur=user,
+                commentaire=f"Retour commande {self.commande.id}"
+            )
+        
+        self.statut = 'traite'
+        self.date_traitement = timezone.now()
+        self.save()
+        return True
+
+    def generer_avoir(self):
+        """Génère un avoir pour ce retour"""
+        # Implémentation à compléter selon votre logique métier
+        pass
+
+    def peut_etre_traite(self):
+        """Vérifie si le retour peut être traité"""
+        return self.statut == 'en_attente' and self.lignes.exists()
+
+
+class LigneRetour(models.Model):
+    retour = models.ForeignKey(RetourProduit, related_name='lignes', on_delete=models.CASCADE)
+    produit = models.ForeignKey(Produit, on_delete=models.PROTECT)
+    quantite = models.PositiveIntegerField()
+    prix_unitaire = models.DecimalField(max_digits=10, decimal_places=2)
+    montant_ttc = models.DecimalField(max_digits=10, decimal_places=2, editable=False)
+    
+    def save(self, *args, **kwargs):
+        self.montant_ttc = self.quantite * self.prix_unitaire
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.produit.nom} x{self.quantite}"
+    
+    
+    
+#remise et promotions
+from django.db import models
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from django.utils.crypto import get_random_string
+from decimal import Decimal
+from django.core.validators import MinValueValidator
+
+class Promotion(models.Model):
+    class TypeApplication(models.TextChoices):
+        COMMANDE = 'commande', 'Commande entière'
+        PRODUIT = 'produit', 'Produit spécifique'
+        CATEGORIE = 'categorie', 'Catégorie de produits'
+    
+    class TypeRemise(models.TextChoices):
+        POURCENTAGE = 'pourcentage', 'Pourcentage'
+        MONTANT_FIXE = 'montant_fixe', 'Montant fixe'
+
+    nom = models.CharField(max_length=100, verbose_name="Nom de la promotion")
+    description = models.TextField(blank=True, verbose_name="Description")
+    type_remise = models.CharField(
+        max_length=20, 
+        choices=TypeRemise.choices, 
+        verbose_name="Type de remise"
+    )
+    valeur = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0'))],
+        verbose_name="Valeur de la remise"
+    )
+    appliquer_a = models.CharField(
+        max_length=20, 
+        choices=TypeApplication.choices, 
+        verbose_name="Applicable à"
+    )
+    
+    produit = models.ForeignKey(
+        'Produit', 
+        null=True, 
+        blank=True, 
+        on_delete=models.SET_NULL,
+        verbose_name="Produit concerné",
+        related_name='promotions'
+    )
+    categorie = models.ForeignKey(
+        'Categorie', 
+        null=True, 
+        blank=True, 
+        on_delete=models.SET_NULL,
+        verbose_name="Catégorie concernée",
+        related_name='promotions'
+    )
+    
+    date_debut = models.DateTimeField(verbose_name="Date de début")
+    date_fin = models.DateTimeField(verbose_name="Date de fin")
+    actif = models.BooleanField(default=True, verbose_name="Active")
+    
+    code_promo = models.CharField(
+        max_length=20, 
+        unique=True, 
+        blank=True, 
+        null=True,
+        verbose_name="Code promotionnel",
+        help_text="Laissez vide pour générer automatiquement"
+    )
+    
+    usage_unique = models.BooleanField(default=False, verbose_name="Usage unique")
+    utilisations_max = models.PositiveIntegerField(
+        default=1,
+        validators=[MinValueValidator(1)],
+        verbose_name="Nombre maximum d'utilisations"
+    )
+    utilisations_actuelles = models.PositiveIntegerField(
+        default=0,
+        editable=False,
+        verbose_name="Utilisations actuelles"
+    )
+    
+    created_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL, 
+        null=True,
+        editable=False,
+        verbose_name="Créé par"
+    )
+    entreprise = models.ForeignKey(
+        'Parametre',
+        on_delete=models.SET_NULL,
+        null=True,
+        verbose_name="Entreprise associée"
+    )
+    date_creation = models.DateTimeField(auto_now_add=True, verbose_name="Date de création")
+
+    class Meta:
+        ordering = ['-date_creation']
+        verbose_name = "Promotion"
+        verbose_name_plural = "Promotions"
+        permissions = [
+            ("can_manage_promotions", "Peut gérer les promotions"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(date_fin__gt=models.F('date_debut')),
+                name='check_date_fin_after_debut'
+            ),
+            models.CheckConstraint(
+                check=models.Q(utilisations_max__gt=0),
+                name='check_utilisations_max_positive'
+            )
+        ]
+    
+    def __str__(self):
+        return f"{self.nom} ({self.get_type_remise_display()} - {self.valeur})"
+    
+    def save(self, *args, **kwargs):
+        """Surcharge de la méthode save pour validation et génération de code"""
+        if not self.code_promo:
+            self.code_promo = self._generate_promo_code()
+        
+        self._validate_promotion()
+        super().save(*args, **kwargs)
+    
+    def _generate_promo_code(self):
+        """Génère un code promo unique de 8 caractères"""
+        code = get_random_string(8, 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789')
+        while Promotion.objects.filter(code_promo=code).exists():
+            code = get_random_string(8, 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789')
+        return code
+    
+    def _validate_promotion(self):
+        """Valide les contraintes métier de la promotion"""
+        errors = {}
+        
+        if self.appliquer_a == self.TypeApplication.PRODUIT and not self.produit:
+            errors['produit'] = "Un produit doit être spécifié pour les promotions par produit"
+        
+        if self.appliquer_a == self.TypeApplication.CATEGORIE and not self.categorie:
+            errors['categorie'] = "Une catégorie doit être spécifiée pour les promotions par catégorie"
+        
+        if self.date_fin <= self.date_debut:
+            errors['date_fin'] = "La date de fin doit être postérieure à la date de début"
+        
+        if errors:
+            raise ValidationError(errors)
+    
+    def est_valide(self, check_date=True):
+        """Vérifie si la promotion est actuellement valide"""
+        now = timezone.now()
+        conditions = [
+            self.actif,
+            (not check_date) or (self.date_debut <= now <= self.date_fin),
+            (self.utilisations_actuelles < self.utilisations_max) or not self.usage_unique
+        ]
+        return all(conditions)
+    
+    def appliquer_remise(self, prix_original):
+        """
+        Applique la remise au prix donné et retourne le montant de la remise
+        Args:
+            prix_original (Decimal): Le prix original avant remise
+        Returns:
+            Decimal: Le montant de la remise à appliquer
+        Raises:
+            ValidationError: Si le type de remise est inconnu ou promotion invalide
+        """
+        if not self.est_valide():
+            raise ValidationError("Cette promotion n'est plus valide")
+        
+        try:
+            prix_original = Decimal(str(prix_original))
+            
+            if self.type_remise == self.TypeRemise.POURCENTAGE:
+                return (prix_original * self.valeur) / Decimal('100')
+            elif self.type_remise == self.TypeRemise.MONTANT_FIXE:
+                return min(self.valeur, prix_original)
+            else:
+                raise ValidationError(f"Type de remise inconnu: {self.type_remise}")
+                
+        except (TypeError, ValueError) as e:
+            raise ValidationError(f"Valeur incorrecte pour le calcul de remise: {str(e)}")
+    
+    def incrementer_utilisation(self):
+        """Incrémente le compteur d'utilisations et désactive si nécessaire"""
+        from django.db.models import F
+        
+        self.utilisations_actuelles = F('utilisations_actuelles') + 1
+        
+        if self.usage_unique:
+            self.actif = False
+        
+        self.save(update_fields=['utilisations_actuelles', 'actif'])
+
+class RemiseCommande(models.Model):
+    commande = models.ForeignKey('Commande', on_delete=models.CASCADE, related_name="remises")
+    promotion = models.ForeignKey('Promotion', on_delete=models.CASCADE)
+    montant_remise = models.DecimalField(max_digits=10, decimal_places=2)
+    date_application = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('commande', 'promotion')
+
+    def __str__(self):
+        return f"Remise {self.montant_remise} sur commande {self.commande.id}"
+
+    @classmethod
+    def appliquer_remise(cls, commande, promotion, request_user=None):
+        if cls.objects.filter(commande=commande, promotion=promotion).exists():
+            raise ValidationError("Cette promotion a déjà été appliquée à cette commande.")
+
+        if not promotion.est_valide():
+            raise ValidationError("Cette promotion n'est plus valide.")
+
+        total_ht = commande.lignes.aggregate(
+            total=Sum(F('quantite') * F('produit__prix_vente'))
+        )['total'] or Decimal('0.00')
+
+        if promotion.type_remise == 'montant':
+            montant_remise = min(promotion.valeur, total_ht)
+        elif promotion.type_remise == 'pourcentage':
+            montant_remise = (total_ht * promotion.valeur) / Decimal('100.00')
+        else:
+            raise ValidationError("Type de remise inconnu")
+
+        remise = cls.objects.create(
+            commande=commande,
+            promotion=promotion,
+            montant_remise=montant_remise
+        )
+
+        commande.calculer_totaux()
+        promotion.incrementer_utilisation()
+
+        return remise
+
+
+# BONUS : Méthode dans le modèle Commande pour simplifier l’appel
+
+
+#IA Et PREDICTION
+class SuggestionReapprovisionnement(models.Model):
+    produit = models.ForeignKey('Produit', on_delete=models.CASCADE)
+    date_suggestion = models.DateField(auto_now_add=True)
+    quantite_predite = models.PositiveIntegerField()
+    quantite_suggeree = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ['-date_suggestion']
+        verbose_name = "Suggestion de réapprovisionnement"
+        verbose_name_plural = "Suggestions de réapprovisionnement"
+
+    def __str__(self):
+        return f"{self.produit.nom} - {self.date_suggestion} : {self.quantite_suggeree}"
+    
+    
+# STOCK/models.py
+
+class ChatbotConversation(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    context = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+class ChatbotKnowledge(models.Model):
+    QUESTION_TYPE_CHOICES = [
+        ('stock', 'Stock'),
+        ('vente', 'Ventes'),
+        ('client', 'Clients'),
+        ('produit', 'Produits'),
+    ]
+    
+    question_pattern = models.CharField(max_length=255)
+    response_template = models.TextField()
+    query_type = models.CharField(max_length=20, choices=QUESTION_TYPE_CHOICES)
+    required_permissions = models.CharField(max_length=100, blank=True)
+    
+    
+    
+class BaseConnaissance(models.Model):
+    question = models.TextField(unique=True)
+    reponse = models.TextField()
+    
+    def __str__(self):
+        return self.question[:50]
+    
+    
+
+
+#comptabilite et tres
+
+class Compte(models.Model):
+    TYPES_COMPTE = [
+        ('ESP', 'Espèces'),
+        ('MM', 'Mobile Money'),
+        ('BQ', 'Banque'),
+        ('CR', 'Crédit'),
+    ]
+    
+    nom = models.CharField(max_length=100)
+    type_compte = models.CharField(max_length=3, choices=TYPES_COMPTE)
+    solde_initial = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    date_creation = models.DateTimeField(auto_now_add=True)
+    entreprise = models.ForeignKey(Parametre, on_delete=models.CASCADE, null=True)
+    
+    def solde_actuel(self):
+        entrees = Transaction.objects.filter(compte=self, type_transaction='ENTREE').aggregate(total=models.Sum('montant'))['total'] or 0
+        sorties = Transaction.objects.filter(compte=self, type_transaction='SORTIE').aggregate(total=models.Sum('montant'))['total'] or 0
+        return self.solde_initial + entrees - sorties
+    
+    def __str__(self):
+        return f"{self.nom} ({self.get_type_compte_display()})"
+
+class CategorieTransaction(models.Model):
+    TYPE_CATEGORIE = [
+        ('DEP', 'Dépense'),
+        ('REC', 'Recette'),
+    ]
+    
+    nom = models.CharField(max_length=100)
+    type_categorie = models.CharField(max_length=3, choices=TYPE_CATEGORIE)
+    description = models.TextField(blank=True)
+    entreprise = models.ForeignKey(Parametre, on_delete=models.CASCADE, null=True)
+    
+    def __str__(self):
+        return f"{self.nom} ({self.get_type_categorie_display()})"
+
+class Transaction(models.Model):
+    TYPE_TRANSACTION = [
+        ('ENTREE', 'Entrée'),
+        ('SORTIE', 'Sortie'),
+    ]
+    
+    MODE_PAIEMENT = [
+        ('ESP', 'Espèces'),
+        ('MM', 'Mobile Money'),
+        ('CHQ', 'Chèque'),
+        ('VIR', 'Virement'),
+        ('CRD', 'Carte'),
+    ]
+    
+    compte = models.ForeignKey(Compte, on_delete=models.CASCADE)
+    type_transaction = models.CharField(max_length=6, choices=TYPE_TRANSACTION)
+    categorie = models.ForeignKey(CategorieTransaction, on_delete=models.SET_NULL, null=True)
+    montant = models.DecimalField(max_digits=12, decimal_places=2)
+    mode_paiement = models.CharField(max_length=3, choices=MODE_PAIEMENT)
+    description = models.TextField(blank=True)
+    date_transaction = models.DateTimeField(auto_now_add=True)
+    utilisateur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    piece_jointe = models.FileField(upload_to='pieces_jointes/', blank=True, null=True)
+    commande = models.ForeignKey(Commande, on_delete=models.SET_NULL, null=True, blank=True)
+    achat = models.ForeignKey(Achat, on_delete=models.SET_NULL, null=True, blank=True)
+    devise = models.CharField(max_length=3, default="FC")
+    taux_change = models.DecimalField(
+        max_digits=12, 
+        decimal_places=6, 
+        default=1.0,
+        help_text="Taux de change par rapport à la devise principale"
+    )
+    montant_original = models.DecimalField(
+        max_digits=12, 
+        decimal_places=2,
+        help_text="Montant dans la devise d'origine"
+    )
+    
+    def save(self, *args, **kwargs):
+        # Si la devise est différente de la devise principale, calculer le taux
+        parametres = Parametre.objects.first()
+        if parametres and self.devise != parametres.devise_principale:
+            if not self.taux_change or self.taux_change == 1.0:
+                taux = TauxChange.get_taux(self.devise, parametres.devise_principale)
+                if taux:
+                    self.taux_change = taux
+                    self.montant = self.montant_original * self.taux_change
+        else:
+            self.taux_change = Decimal('1.0')
+            self.montant = self.montant_original
+        
+        super().save(*args, **kwargs)
+    
+    def get_montant_devise_originale(self):
+        return self.montant_original
+    
+    def get_montant_devise_principale(self):
+        return self.montant
+    
+    def __str__(self):
+        return f"{self.get_type_transaction_display()} - {self.montant} - {self.compte}"
+    
+    def save(self, *args, **kwargs):
+        if not self.utilisateur:
+            self.utilisateur = self.compte.entreprise.user
+        super().save(*args, **kwargs)

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Valider la Facture {{ facture.numero }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-warning">
+                <h5 class="card-title mb-0 text-white">
+                    <i class="fas fa-check-circle me-2"></i>Validation de Facture
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-info-circle me-2"></i>Confirmation requise
+                    </h6>
+                    <p class="mb-0">
+                        Vous êtes sur le point de valider la facture <strong>{{ facture.numero }}</strong>.
+                        Cette action créera automatiquement une écriture comptable.
+                    </p>
+                </div>
+
+                <div class="border rounded p-3 mb-4">
+                    <h6>Détails de la facture:</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <th width="30%">Numéro:</th>
+                            <td>{{ facture.numero }}</td>
+                        </tr>
+                        <tr>
+                            <th>Client:</th>
+                            <td>{{ facture.client }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date:</th>
+                            <td>{{ facture.date_facture|date:"d/m/Y" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Montant HT:</th>
+                            <td>{{ facture.total_ht|floatformat:2 }} {{ devise_principale_symbole }}</td>
+                        </tr>
+                        <tr>
+                            <th>TVA:</th>
+                            <td>{{ facture.total_tva|floatformat:2 }} {{ devise_principale_symbole }}</td>
+                        </tr>
+                        <tr>
+                            <th>Total TTC:</th>
+                            <td class="fw-bold">{{ facture.total_ttc|floatformat:2 }} {{ devise_principale_symbole }}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="alert alert-warning">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Attention
+                    </h6>
+                    <p class="mb-0">
+                        Cette action est irréversible. Une fois validée, la facture ne pourra plus être modifiée
+                        et une écriture comptable sera créée dans le système.
+                    </p>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'ventes:facture_detail' facture.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i> Annuler
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check-circle me-1"></i> Confirmer la validation
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

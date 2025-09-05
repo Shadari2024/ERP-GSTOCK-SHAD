@@ -1,0 +1,500 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% load custom_filters %}
+{% load fac %}
+
+{% block title %}Détails de la Facture {{ facture.numero }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
+                    <div>
+                        <h2 class="h4 mb-0">
+                            <i class="fas fa-file-invoice me-2"></i>
+                            Facture #{{ facture.numero }}
+                        </h2>
+                        <small class="text-white-50">Créée le {{ facture.created_at|date:"d/m/Y" }}</small>
+                    </div>
+                    <div class="d-flex gap-2">
+                        {% if facture.montant_restant > 0 %}
+                        <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#paiementModal">
+                            <i class="fas fa-money-bill-wave me-1"></i> Payer
+                        </button>
+                        {% endif %}
+                        <a href="{% url 'ventes:facture_update' pk=facture.pk %}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-edit me-1"></i> Modifier
+                        </a>
+                        <a href="{% url 'ventes:facture_print' pk=facture.pk %}" class="btn btn-info btn-sm" target="_blank">
+                            <i class="fas fa-print me-1"></i> Imprimer
+                        </a>
+                        {% if facture.client.email %}
+                        <form action="{% url 'ventes:facture_send_email' pk=facture.pk %}" method="post" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary btn-sm" onclick="return confirm('Envoyer la facture par email ?')">
+                                <i class="fas fa-envelope me-1"></i> Email
+                            </button>
+                        </form>
+                        {% endif %}
+                        {% if facture.statut == 'brouillon' %}
+                        <a href="{% url 'ventes:facture_delete' pk=facture.pk %}" class="btn btn-danger btn-sm" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cette facture ?')">
+                            <i class="fas fa-trash me-1"></i> Supprimer
+                        </a>
+                        {% endif %}
+                        {% if facture.statut == 'brouillon' and perms.ventes.change_facture %}
+                        <a href="{% url 'ventes:facture_validate' facture.pk %}" class="btn btn-success btn-sm" onclick="return confirm('Êtes-vous sûr de vouloir valider cette facture ? Cette action est irréversible.')">
+                            <i class="fas fa-check-circle me-1"></i> Valider
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    {% if messages %}
+                    <div class="mb-4">
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="fas fa-user me-2"></i>Informations Client</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p class="mb-1"><strong>Client:</strong> {{ facture.client.nom }}</p>
+                                    <p class="mb-1"><strong>Email:</strong> {{ facture.client.email|default:"Non renseigné" }}</p>
+                                    <p class="mb-1"><strong>Téléphone:</strong> {{ facture.client.telephone|default:"Non renseigné" }}</p>
+                                    <p class="mb-0"><strong>Adresse:</strong> {{ facture.client.adresse|default:"Non renseignée"|linebreaksbr }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informations Facture</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <p class="mb-1"><strong>Date:</strong> {{ facture.date_facture|date:"d/m/Y" }}</p>
+                                            <p class="mb-1"><strong>Échéance:</strong> {{ facture.date_echeance|date:"d/m/Y" }}</p>
+                                            <p class="mb-1"><strong>Statut:</strong> 
+                                                <span class="badge bg-{% if facture.statut == 'paye' %}success{% elif facture.statut == 'validee' %}info{% elif facture.statut == 'brouillon' %}warning{% else %}danger{% endif %}">
+                                                    {{ facture.get_statut_display }}
+                                                </span>
+                                            </p>
+                                        </div>
+                                        <div class="col-6">
+                                            <p class="mb-1"><strong>Créée par:</strong> {{ facture.created_by.get_full_name|default:facture.created_by.username }}</p>
+                                            {% if facture.validated_by %}
+                                            <p class="mb-1"><strong>Validée par:</strong> {{ facture.validated_by.get_full_name|default:facture.validated_by.username }}</p>
+                                            <p class="mb-0"><strong>Validée le:</strong> {{ facture.date_validation|date:"d/m/Y H:i" }}</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if ecriture_comptable %}
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="fas fa-calculator me-2"></i>Informations Comptables</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-success">
+                                        <i class="fas fa-check-circle me-2"></i>
+                                        <strong>Écriture comptable existante:</strong> {{ ecriture_comptable.numero }}
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="mb-2"><strong>Écriture comptable:</strong> 
+                                                <a href="{% url 'comptabilite:ecriture_detail' ecriture_comptable.pk %}" class="text-decoration-none">
+                                                    #{{ ecriture_comptable.numero }}
+                                                </a>
+                                            </p>
+                                            <p class="mb-2"><strong>Journal:</strong> {{ ecriture_comptable.journal }}</p>
+                                            <p class="mb-2"><strong>Date comptable:</strong> {{ ecriture_comptable.date_comptable|date:"d/m/Y" }}</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="mb-2"><strong>Libellé:</strong> {{ ecriture_comptable.libelle }}</p>
+                                            <p class="mb-2"><strong>Pièce justificative:</strong> {{ ecriture_comptable.piece_justificative }}</p>
+                                            <p class="mb-0"><strong>Montant:</strong> {{ ecriture_comptable.montant_devise|intcomma }} {{ devise_principale_symbole }}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-4">
+                                        <h6 class="mb-3">Détails de l'écriture:</h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-bordered">
+                                                <thead class="table-light">
+                                                    <tr>
+                                                        <th>Compte</th>
+                                                        <th>Libellé</th>
+                                                        <th class="text-end">Débit</th>
+                                                        <th class="text-end">Crédit</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for ligne in ecriture_comptable.lignes.all %}
+                                                    <tr>
+                                                        <td>{{ ligne.compte.numero }} - {{ ligne.compte.intitule }}</td>
+                                                        <td>{{ ligne.libelle }}</td>
+                                                        <td class="text-end">{% if ligne.debit %}{{ ligne.debit|intcomma }} {{ devise_principale_symbole }}{% endif %}</td>
+                                                        <td class="text-end">{% if ligne.credit %}{{ ligne.credit|intcomma }} {{ devise_principale_symbole }}{% endif %}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                                <tfoot class="table-group-divider">
+                                                    <tr class="fw-bold">
+                                                        <td colspan="2" class="text-end">Totaux:</td>
+                                                        <td class="text-end">{{ ecriture_comptable.lignes.all|sum_debit|intcomma }} {{ devise_principale_symbole }}</td>
+                                                        <td class="text-end">{{ ecriture_comptable.lignes.all|sum_credit|intcomma }} {{ devise_principale_symbole }}</td>
+                                                    </tr>
+                                                </tfoot>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% elif facture.statut == 'paye' or facture.statut == 'partiellement_paye' or facture.statut == 'paye' %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Aucune écriture comptable trouvée</strong> pour cette facture. 
+                        <form method="post" action="{% url 'ventes:facture_generate_ecriture' facture.pk %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-link alert-link p-0 border-0" 
+                                    onclick="return confirm('Êtes-vous sûr de vouloir générer une écriture comptable pour cette facture ?')">
+                                Générer une écriture comptable
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0"><i class="fas fa-list me-2"></i>Articles</h6>
+                                    <span class="badge bg-primary">{{ facture.items.count }} article(s)</span>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Produit</th>
+                                                    <th>Description</th>
+                                                    <th class="text-end">Quantité</th>
+                                                    <th class="text-end">Prix Unitaire</th>
+                                                    <th class="text-end">TVA</th>
+                                                    <th class="text-end">Montant HT</th>
+                                                    <th class="text-end">Montant TVA</th>
+                                                    <th class="text-end">Total TTC</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for item in facture.items.all %}
+                                                <tr>
+                                                    <td>{{ item.produit.nom }}</td>
+                                                    <td>{{ item.description }}</td>
+                                                    <td class="text-end">{{ item.quantite|intcomma }}</td>
+                                                    <td class="text-end">{{ item.prix_unitaire|intcomma }} {{ devise_principale_symbole }}</td>
+                                                    <td class="text-end">{{ item.taux_tva|intcomma }}%</td>
+                                                    <td class="text-end">{{ item.montant_ht|intcomma }} {{ devise_principale_symbole }}</td>
+                                                    <td class="text-end">{{ item.montant_tva|intcomma }} {{ devise_principale_symbole }}</td>
+                                                    <td class="text-end fw-bold">{{ item.montant_ttc|intcomma }} {{ devise_principale_symbole }}</td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="8" class="text-center py-4 text-muted">
+                                                        <i class="fas fa-inbox fa-2x mb-2"></i>
+                                                        <br>Aucun article dans cette facture
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                            <tfoot class="table-group-divider">
+                                                <tr>
+                                                    <th colspan="5" class="text-end">Total HT:</th>
+                                                    <th class="text-end">{{ facture.total_ht|intcomma }} {{ devise_principale_symbole }}</th>
+                                                    <th class="text-end">{{ facture.total_tva|intcomma }} {{ devise_principale_symbole }}</th>
+                                                    <th class="text-end">{{ facture.total_ttc|intcomma }} {{ devise_principale_symbole }}</th>
+                                                </tr>
+                                                <tr class="fw-bold">
+                                                    <th colspan="7" class="text-end">Total TTC:</th>
+                                                    <th class="text-end">{{ facture.total_ttc|intcomma }} {{ devise_principale_symbole }}</th>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i>Historique des Paiements</h6>
+                                    <span class="badge bg-primary">{{ facture.paiements.count }} paiement(s)</span>
+                                </div>
+                                <div class="card-body p-0">
+                                    {% if facture.paiements.exists %}
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Date</th>
+                                                    <th>Montant</th>
+                                                    <th>Mode</th>
+                                                    <th>Référence</th>
+                                                    <th>Enregistré par</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for paiement in facture.paiements.all %}
+                                                <tr>
+                                                    <td>{{ paiement.date|date:"d/m/Y" }}</td>
+                                                    <td class="fw-bold text-success">{{ paiement.montant|intcomma }} {{ devise_principale_symbole }}</td>
+                                                    <td><span class="badge bg-secondary">{{ paiement.get_mode_paiement_display }}</span></td>
+                                                    <td>{{ paiement.reference|default:"-" }}</td>
+                                                    <td>{{ paiement.created_by.get_full_name|default:paiement.created_by.username }}</td>
+                                                    <td>
+                                                        {% if perms.ventes.delete_paiement %}
+                                                       <form action="{% url 'ventes:paiement_delete' pk=paiement.pk %}" method="post" class="d-inline">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-sm btn-outline-danger" 
+            onclick="return confirm('Êtes-vous sûr de vouloir supprimer ce paiement ? Les écritures comptables associées seront également supprimées.')">
+        <i class="fas fa-trash"></i>
+    </button>
+</form>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    {% else %}
+                                    <div class="text-center py-4 text-muted">
+                                        <i class="fas fa-money-bill-wave fa-2x mb-2"></i>
+                                        <br>Aucun paiement enregistré
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Résumé Financier</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <span>Total Facture:</span>
+                                        <strong>{{ facture.total_ttc|intcomma }} {{ devise_principale_symbole }}</strong>
+                                    </div>
+                                    <div class="d-flex justify-content-between align-items-center mb-3 text-success">
+                                        <span>Déjà Payé:</span>
+                                        <strong>{{ facture.montant_paye|intcomma }} {{ devise_principale_symbole }}</strong>
+                                    </div>
+                                    <hr>
+                                    <div class="d-flex justify-content-between align-items-center mb-3 fs-5 
+                                             {% if facture.montant_restant > 0 %}text-danger{% else %}text-success{% endif %}">
+                                        <span>Reste à Payer:</span>
+                                        <strong>{{ facture.montant_restant|intcomma }} {{ devise_principale_symbole }}</strong>
+                                    </div>
+                                    
+                                    {% if facture.montant_restant > 0 %}
+                                    <div class="progress mb-3" style="height: 10px;">
+                                        <div class="progress-bar bg-{% if facture.montant_restant > 0 %}warning{% else %}success{% endif %}" 
+                                             style="width: {{ facture.pourcentage_paye }}%">
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">{{ facture.pourcentage_paye|floatformat:0 }}% payé</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'ventes:facture_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Retour à la liste
+                        </a>
+                        
+                        {% if facture.montant_restant > 0 and perms.ventes.add_paiement %}
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#paiementModal">
+                            <i class="fas fa-money-bill-wave me-2"></i>Enregistrer un Paiement
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if facture.montant_restant > 0 and perms.ventes.add_paiement %}
+<div class="modal fade" id="paiementModal" tabindex="-1" aria-labelledby="paiementModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="paiementModalLabel">
+                    <i class="fas fa-money-bill-wave me-2"></i>Enregistrer un Paiement
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'ventes:paiement_create' facture_pk=facture.pk %}" id="paiementForm">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Montant à payer</label>
+                                <input type="number" class="form-control" name="montant" 
+                                       value="{{ facture.montant_restant|floatformat:2 }}" 
+                                       min="0.01" max="{{ facture.montant_restant|floatformat:2 }}" 
+                                       step="0.01" required id="id_montant">
+                                <div class="form-text">Maximum: {{ facture.montant_restant|intcomma }} {{ devise_principale_symbole }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Date du paiement</label>
+                                <input type="date" class="form-control" name="date" 
+                                       value="{% now 'Y-m-d' %}" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Mode de paiement</label>
+                                <select class="form-select" name="mode_paiement" required>
+                                    <option value="">Sélectionner...</option>
+                                    <option value="espece">Espèce</option>
+                                    <option value="cheque">Chèque</option>
+                                    <option value="virement">Virement</option>
+                                    <option value="carte">Carte bancaire</option>
+                                    <option value="mobile">Paiement mobile</option>
+                                    <option value="autre">Autre</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Référence</label>
+                                <input type="text" class="form-control" name="reference" 
+                                       placeholder="N° chèque, référence virement...">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" name="notes" rows="3" 
+                                  placeholder="Informations complémentaires sur le paiement..."></textarea>
+                    </div>
+
+                    <div class="card mt-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">
+                                <i class="fas fa-calculator me-2"></i>
+                                Options Comptables
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="create_ecriture" name="create_ecriture" checked>
+                                <label class="form-check-label" for="create_ecriture">
+                                    Créer automatiquement l'écriture comptable
+                                </label>
+                            </div>
+                            <small class="text-muted">
+                                Une écriture sera créée dans le journal de trésorerie correspondant au mode de paiement.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success" id="submitBtn">
+                        <i class="fas fa-check me-2"></i>Enregistrer le Paiement
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion du formulaire de paiement
+    const paiementForm = document.getElementById('paiementForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const montantInput = document.getElementById('id_montant');
+    
+    if (paiementForm && submitBtn) {
+        paiementForm.addEventListener('submit', function(e) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enregistrement...';
+        });
+    }
+    
+    // Validation du montant
+    if (montantInput) {
+        const maxMontant = parseFloat('{{ facture.montant_restant }}');
+        
+        montantInput.addEventListener('change', function() {
+            const enteredMontant = parseFloat(this.value);
+            
+            if (enteredMontant > maxMontant) {
+                alert('Le montant ne peut pas dépasser le reste à payer de ' + maxMontant.toFixed(2));
+                this.value = maxMontant.toFixed(2);
+            }
+            
+            if (enteredMontant <= 0) {
+                alert('Le montant doit être supérieur à zéro');
+                this.value = maxMontant.toFixed(2);
+            }
+        });
+    }
+    
+    // Mise à jour automatique du montant quand le modal s'ouvre
+    const paiementModal = document.getElementById('paiementModal');
+    if (paiementModal && montantInput) {
+        paiementModal.addEventListener('show.bs.modal', function () {
+            montantInput.value = parseFloat('{{ facture.montant_restant }}').toFixed(2);
+            montantInput.setAttribute('max', parseFloat('{{ facture.montant_restant }}'));
+        });
+    }
+});
+</script>
+{% endblock %}

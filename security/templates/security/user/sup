@@ -1,0 +1,16 @@
+<!-- Dans security/templates/security/user/list.html -->
+{% for utilisateur in utilisateurs %}
+<tr>
+    <!-- ... autres colonnes ... -->
+    <td>
+        <a href="{% url 'security:editer_utilisateur' utilisateur.pk %}" class="btn btn-sm btn-primary">Éditer</a>
+        <form method="post" action="{% url 'security:supprimer_utilisateur' utilisateur.pk %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-danger" 
+                    onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur?');">
+                Supprimer
+            </button>
+        </form>
+    </td>
+</tr>
+{% endfor %}

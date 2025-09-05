@@ -1,0 +1,395 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>{% trans "Détails de l'employé" %}</h2>
+        </div>
+        <div class="col text-end">
+            <a href="{% url 'grh:employe_update' employe.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit me-1"></i> {% trans "Modifier" %}
+            </a>
+            <a href="{% url 'grh:employe_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i> {% trans "Retour" %}
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Colonne de gauche - Informations personnelles et Coordonnées -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Informations personnelles" %}</h5>
+                </div>
+                <div class="card-body text-center">
+                    {% if employe.photo %}
+                    <img src="{{ employe.photo.url }}" alt="{{ employe.nom_complet }}" 
+                          class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                    {% else %}
+                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mb-3 mx-auto" 
+                          style="width: 150px; height: 150px;">
+                        <i class="fas fa-user fa-3x text-muted"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <h4>{{ employe.nom_complet }}</h4>
+                    <p class="text-muted">Matricule: {{ employe.matricule }}</p>
+                    
+                    <span class="badge bg-{% if employe.statut == 'ACTIF' %}success{% elif employe.statut == 'INACTIF' %}danger{% else %}warning{% endif %} mb-3">
+                        {{ employe.get_statut_display }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Coordonnées" %}</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">{% trans "Email" %}:</dt>
+                        <dd class="col-sm-8">{{ employe.email }}</dd>
+                        
+                        <dt class="col-sm-4">{% trans "Téléphone" %}:</dt>
+                        <dd class="col-sm-8">{{ employe.telephone|default:"-" }}</dd>
+                        
+                        <dt class="col-sm-4">{% trans "Adresse" %}:</dt>
+                        <dd class="col-sm-8">{{ employe.adresse }}</dd>
+                        
+                        <dt class="col-sm-4">{% trans "Ville" %}:</dt>
+                        <dd class="col-sm-8">{{ employe.ville }}</dd>
+                        
+                        <dt class="col-sm-4">{% trans "CP" %}:</dt>
+                        <dd class="col-sm-8">{{ employe.code_postal }}</dd>
+                        
+                        <dt class="col-sm-4">{% trans "Pays" %}:</dt>
+                        <dd class="col-sm-8">{{ employe.pays }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne centrale - Informations professionnelles et Documents -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Informations professionnelles" %}</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-5">{% trans "Poste" %}:</dt>
+                        <dd class="col-sm-7">{{ employe.poste.intitule }}</dd>
+                        
+                        <dt class="col-sm-5">{% trans "Département" %}:</dt>
+                        <dd class="col-sm-7">{{ employe.poste.departement.nom }}</dd>
+                        
+                        <dt class="col-sm-5">{% trans "Date d'embauche" %}:</dt>
+                        <dd class="col-sm-7">{{ employe.date_embauche|date:"d/m/Y" }}</dd>
+                        
+                        <dt class="col-sm-5">{% trans "Ancienneté" %}:</dt>
+                        <dd class="col-sm-7">{{ employe.anciennete }} {% trans "ans" %}</dd>
+                        
+                        <dt class="col-sm-5">{% trans "Genre" %}:</dt>
+                        <dd class="col-sm-7">{{ employe.get_genre_display }}</dd>
+                        
+                        <dt class="col-sm-5">{% trans "Date de naissance" %}:</dt>
+                        <dd class="col-sm-7">{{ employe.date_naissance|date:"d/m/Y" }}</dd>
+                        
+                        <dt class="col-sm-5">{% trans "Âge" %}:</dt>
+                        <dd class="col-sm-7">
+                            {% now "Y" as current_year %}
+                            {% with birth_year=employe.date_naissance.year %}
+                                {{ current_year|add:"-1"|add:birth_year }} {% trans "ans" %}
+                            {% endwith %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Documents" %}</h5>
+                </div>
+                <div class="card-body">
+                    {% if employe.cv %}
+                    <a href="{{ employe.cv.url }}" target="_blank" class="btn btn-outline-primary btn-sm mb-2">
+                        <i class="fas fa-file-pdf me-1"></i> {% trans "Télécharger le CV" %}
+                    </a>
+                    {% else %}
+                    <p class="text-muted">{% trans "Aucun CV disponible" %}</p>
+                    {% endif %}
+                    
+                    {% if employe.photo %}
+                    <a href="{{ employe.photo.url }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-image me-1"></i> {% trans "Voir la photo" %}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne de droite - Contrat, Carte, Stats et Actions -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">{% trans "Contrat actuel" %}</h5>
+                    <a href="{% url 'grh:contrat_create' %}?employe={{ employe.pk }}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i> {% trans "Nouveau" %}
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if contrat_actuel %}
+                    <div class="alert alert-info">
+                        <h6>{{ contrat_actuel.reference }}</h6>
+                        <p class="mb-1">
+                            <strong>{% trans "Type" %}:</strong> {{ contrat_actuel.get_type_contrat_display }}
+                        </p>
+                        <p class="mb-1">
+                            <strong>{% trans "Du" %}:</strong> {{ contrat_actuel.date_debut|date:"d/m/Y" }}
+                            {% if contrat_actuel.date_fin %}
+                            <strong>{% trans "au" %}:</strong> {{ contrat_actuel.date_fin|date:"d/m/Y" }}
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        {% trans "Aucun contrat en cours." %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Carte d'employé" %}</h5>
+                </div>
+                <div class="card-body text-center">
+                    {% if employe.carte_employe %}
+                    <img src="{{ employe.carte_employe.url }}" alt="Carte employé" class="img-fluid mb-3" style="max-height: 200px;">
+                    {% else %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-id-card me-2"></i>
+                        {% trans "Carte d'employé non générée" %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="btn-group">
+                        <a href="{% url 'grh:generer_carte_employe' employe.pk %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-sync-alt me-1"></i> {% trans "Générer" %}
+                        </a>
+                        {% if employe.carte_employe %}
+                        <a href="{% url 'grh:apercu_carte_employe' employe.pk %}" target="_blank" class="btn btn-info btn-sm">
+                            <i class="fas fa-eye me-1"></i> {% trans "Voir" %}
+                        </a>
+                        <a href="{% url 'grh:telecharger_carte_employe' employe.pk %}" class="btn btn-success btn-sm">
+                            <i class="fas fa-download me-1"></i> {% trans "Télécharger" %}
+                        </a>
+                        {% endif %}
+                    </div>
+                    
+                    <small class="text-muted d-block mt-2">
+                        {% trans "Contient un QR code avec les informations de l'employé" %}
+                    </small>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Statistiques" %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="border rounded p-2">
+                                <h4 class="text-primary mb-0">{{ employe.contrat_set.count }}</h4>
+                                <small class="text-muted">{% trans "Contrats" %}</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-2">
+                                <h4 class="text-success mb-0">{{ employe.conge_set.count }}</h4>
+                                <small class="text-muted">{% trans "Congés" %}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Actions rapides" %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'grh:contrat_create' %}?employe={{ employe.pk }}" class="btn btn-outline-primary">
+                            <i class="fas fa-file-contract me-1"></i> {% trans "Nouveau contrat" %}
+                        </a>
+                        <a href="{% url 'grh:conge_create' %}?employe={{ employe.pk }}" class="btn btn-outline-success">
+                            <i class="fas fa-calendar-plus me-1"></i> {% trans "Nouveau congé" %}
+                        </a>
+                        <a href="{% url 'grh:bulletin_create' %}?employe={{ employe.pk }}" class="btn btn-outline-info">
+                            <i class="fas fa-file-invoice me-1"></i> {% trans "Nouveau bulletin" %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onglets pour informations supplémentaires -->
+    <div class="row">
+        <div class="col-12">
+            <ul class="nav nav-tabs" id="employeTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="contrats-tab" data-bs-toggle="tab" data-bs-target="#contrats" type="button" role="tab">
+                        <i class="fas fa-file-contract me-1"></i> {% trans "Historique des contrats" %}
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="conges-tab" data-bs-toggle="tab" data-bs-target="#conges" type="button" role="tab">
+                        <i class="fas fa-umbrella-beach me-1"></i> {% trans "Historique des congés" %}
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="bulletins-tab" data-bs-toggle="tab" data-bs-target="#bulletins" type="button" role="tab">
+                        <i class="fas fa-file-invoice-dollar me-1"></i> {% trans "Bulletins de paie" %}
+                    </button>
+                </li>
+            </ul>
+            
+            <div class="tab-content p-3 border border-top-0 rounded-bottom" id="employeTabsContent">
+                <div class="tab-pane fade show active" id="contrats" role="tabpanel">
+                    <h5>{% trans "Contrats de" %} {{ employe.nom_complet }}</h5>
+                    {% if employe.contrat_set.all %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Référence" %}</th>
+                                    <th>{% trans "Type" %}</th>
+                                    <th>{% trans "Début" %}</th>
+                                    <th>{% trans "Fin" %}</th>
+                                    <th>{% trans "Salaire" %}</th>
+                                    <th>{% trans "Statut" %}</th>
+                                    <th>{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for contrat in employe.contrat_set.all %}
+                                <tr>
+                                    <td>{{ contrat.reference }}</td>
+                                    <td>{{ contrat.get_type_contrat_display }}</td>
+                                    <td>{{ contrat.date_debut|date:"d/m/Y" }}</td>
+                                    <td>{{ contrat.date_fin|date:"d/m/Y"|default:"-" }}</td>
+                                    <td>{{ contrat.salaire_base }} {{ devise_principale_symbole }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if contrat.statut == 'EN_COURS' %}success{% elif contrat.statut == 'TERMINE' %}secondary{% else %}danger{% endif %}">
+                                            {{ contrat.get_statut_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'grh:contrat_detail' contrat.pk %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">{% trans "Aucun contrat trouvé" %}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="tab-pane fade" id="conges" role="tabpanel">
+                    <h5>{% trans "Congés de" %} {{ employe.nom_complet }}</h5>
+                    {% if employe.conge_set.all %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Type" %}</th>
+                                    <th>{% trans "Début" %}</th>
+                                    <th>{% trans "Fin" %}</th>
+                                    <th>{% trans "Jours" %}</th>
+                                    <th>{% trans "Statut" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for conge in employe.conge_set.all %}
+                                <tr>
+                                    <td>{{ conge.get_type_conge_display }}</td>
+                                    <td>{{ conge.date_debut|date:"d/m/Y" }}</td>
+                                    <td>{{ conge.date_fin|date:"d/m/Y" }}</td>
+                                    <td>{{ conge.nombre_jours }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if conge.statut == 'VALIDE' %}success{% elif conge.statut == 'DEMANDE' %}warning{% else %}danger{% endif %}">
+                                            {{ conge.get_statut_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">{% trans "Aucun congé trouvé" %}</p>
+                    {% endif %}
+                </div>
+                
+                <div class="tab-pane fade" id="bulletins" role="tabpanel">
+                    <h5>{% trans "Bulletins de paie de" %} {{ employe.nom_complet }}</h5>
+                    {% if employe.bulletinpaie_set.all %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Période" %}</th>
+                                    <th>{% trans "Salaire brut" %}</th>
+                                    <th>{% trans "Salaire net" %}</th>
+                                    <th>{% trans "Net à payer" %}</th>
+                                    <th>{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bulletin in employe.bulletinpaie_set.all %}
+                                <tr>
+                                    <td>{{ bulletin.periode }}</td>
+                                    <td>{{ bulletin.salaire_brut }} {{ devise_principale_symbole }}</td>
+                                    <td>{{ bulletin.salaire_net }} {{ devise_principale_symbole }}</td>
+                                    <td>{{ bulletin.net_a_payer }} {{ devise_principal_symbole }}</td>
+                                    <td>
+                                        <a href="{% url 'grh:bulletin_detail' bulletin.pk %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">{% trans "Aucun bulletin de paie trouvé" %}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Activation des onglets Bootstrap
+    const triggerTabList = [].slice.call(document.querySelectorAll('#employeTabs button'))
+    triggerTabList.forEach(function (triggerEl) {
+        new bootstrap.Tab(triggerEl)
+    });
+});
+</script>
+{% endblock %}

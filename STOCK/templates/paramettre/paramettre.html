@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4 dashboard-app">
+    <!-- En-tête style pro -->
+    <div class="d-flex justify-content-between align-items-center mb-5 header-app">
+        <div class="d-flex align-items-center">
+            <div class="app-main-icon bg-primary">
+                <i class="bi bi-gear-fill"></i>
+            </div>
+            <div class="ms-3">
+                <h1 class="mb-0 fw-bold">Configuration Système</h1>
+                <p class="text-muted mb-0">Paramètres et administration</p>
+            </div>
+        </div>
+        <div class="d-flex flex-column align-items-end">
+            <div class="live-clock">
+                <span id="live-time">{{ now|time:"H:i" }}</span>
+            </div>
+            <div class="live-date">
+                <span id="live-date">{{ now|date:"d F Y" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grille d'applications style pro -->
+    <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 row-cols-xl-6 g-4 app-grid">
+        <!-- Utilisateurs -->
+        <div class="col">
+            <a href="{% url 'liste_utilisateurs' %}" class="app-card" data-aos="zoom-in" data-aos-delay="50">
+                <div class="app-icon bg-primary-light">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div class="app-name">Utilisateurs</div>
+                <div class="app-badge">Gestion des accès</div>
+                <div class="app-hover-effect"></div>
+            </a>
+        </div>
+
+        <!-- Devises -->
+        <div class="col">
+            <a href="{% url 'liste_devises' %}" class="app-card" data-aos="zoom-in" data-aos-delay="100">
+                <div class="app-icon bg-success-light">
+                    <i class="bi bi-currency-exchange"></i>
+                </div>
+                <div class="app-name">Devises</div>
+                <div class="app-badge">Configuration</div>
+                <div class="app-hover-effect"></div>
+            </a>
+        </div>
+
+        <!-- Paramètres -->
+        <div class="col">
+            <a href="{% url 'afficher_parametres' %}" class="app-card" data-aos="zoom-in" data-aos-delay="150">
+                <div class="app-icon bg-secondary-light">
+                    <i class="bi bi-sliders"></i>
+                </div>
+                <div class="app-name">Paramètres</div>
+                <div class="app-badge">Système</div>
+                <div class="app-hover-effect"></div>
+            </a>
+        </div>
+
+        <!-- Sauvegarde (Admin) -->
+        {% if request.user.is_superuser %}
+        <div class="col">
+            <a href="{% url 'backup_management' %}" class="app-card" data-aos="zoom-in" data-aos-delay="200">
+                <div class="app-icon bg-danger-light">
+                    <i class="bi bi-database"></i>
+                </div>
+                <div class="app-name">Sauvegarde</div>
+                <div class="app-badge">Base de données</div>
+                <div class="app-hover-effect"></div>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Styles personnalisés -->
+<style>
+    .dashboard-app {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    
+    .header-app {
+        padding: 1.5rem;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .app-main-icon {
+        width: 70px;
+        height: 70px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: white;
+        box-shadow: 0 8px 20px rgba(13, 110, 253, 0.3);
+    }
+    
+    .app-grid {
+        margin-top: 2rem;
+    }
+    
+    .app-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 1.5rem 1rem;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.8);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        text-decoration: none;
+        color: inherit;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+    }
+    
+    .app-card:hover {
+        transform: translateY(-10px) scale(1.03);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+        z-index: 10;
+    }
+    
+    .app-hover-effect {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 60%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .app-card:hover .app-hover-effect {
+        opacity: 1;
+    }
+    
+    .app-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        margin-bottom: 1.2rem;
+        transition: all 0.4s ease;
+        box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    }
+    
+    .app-card:hover .app-icon {
+        transform: scale(1.15) rotate(8deg);
+    }
+    
+    .app-name {
+        font-weight: 700;
+        font-size: 1.2rem;
+        margin-bottom: 0.4rem;
+        color: #2c3e50;
+    }
+    
+    .app-badge {
+        font-size: 0.85rem;
+        color: #7f8c8d;
+        font-weight: 500;
+        padding: 0.2rem 0.6rem;
+        background: rgba(236, 240, 241, 0.5);
+        border-radius: 12px;
+        display: inline-block;
+    }
+    
+    .live-clock {
+        font-family: 'Roboto Mono', monospace;
+        font-weight: 700;
+        font-size: 1.8rem;
+        color: #2c3e50;
+        line-height: 1;
+    }
+    
+    .live-date {
+        font-size: 1rem;
+        color: #7f8c8d;
+        font-weight: 500;
+    }
+    
+    /* Couleurs claires pour les icônes */
+    .bg-primary-light { background-color: rgba(13, 110, 253, 0.2); color: #0d6efd; }
+    .bg-success-light { background-color: rgba(25, 135, 84, 0.2); color: #198754; }
+    .bg-secondary-light { background-color: rgba(108, 117, 125, 0.2); color: #6c757d; }
+    .bg-danger-light { background-color: rgba(220, 53, 69, 0.2); color: #dc3545; }
+    .bg-dark-light { background-color: rgba(33, 37, 41, 0.2); color: #212529; }
+    
+    /* Animation AOS */
+    [data-aos] {
+        transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    
+    [data-aos="zoom-in"] {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    
+    [data-aos="zoom-in"].aos-animate {
+        transform: scale(1);
+        opacity: 1;
+    }
+    
+    @media (max-width: 768px) {
+        .app-icon {
+            width: 70px;
+            height: 70px;
+            font-size: 1.8rem;
+        }
+        
+        .app-name {
+            font-size: 1.1rem;
+        }
+        
+        .live-clock {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+
+<!-- Bibliothèque AOS pour les animations -->
+<link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script>
+    // Initialisation des animations
+    AOS.init({
+        duration: 800,
+        once: true,
+        easing: 'ease-out-quart'
+    });
+    
+    // Mise à jour dynamique de l'heure
+    function updateClock() {
+        const now = new Date();
+        const timeElement = document.getElementById('live-time');
+        const dateElement = document.getElementById('live-date');
+        
+        // Formatage de l'heure
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        timeElement.textContent = `${hours}:${minutes}`;
+        
+        // Formatage de la date (si nécessaire)
+        if (!dateElement.textContent) {
+            const options = { day: 'numeric', month: 'long', year: 'numeric' };
+            dateElement.textContent = now.toLocaleDateString('fr-FR', options);
+        }
+    }
+    
+    // Mettre à jour l'heure immédiatement puis toutes les minutes
+    updateClock();
+    setInterval(updateClock, 60000);
+    
+    // Animation au survol améliorée
+    document.querySelectorAll('.app-card').forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.zIndex = '100';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.zIndex = '1';
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Ticket de Vente {{ vente.numero }}</title>
+    <style>
+        @page {
+            size: 80mm auto; /* 80mm de largeur, hauteur automatique */
+            margin: 5mm;
+        }
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.2;
+        }
+        .ticket {
+            width: 70mm; /* Largeur du contenu pour une imprimante 80mm */
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 1px dashed #000;
+            padding-bottom: 5px;
+            margin-bottom: 5px;
+        }
+        .entreprise-nom {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        .vente-info {
+            margin: 5px 0;
+        }
+        .lignes-vente {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 5px 0;
+        }
+        .lignes-vente th {
+            border-bottom: 1px dashed #000;
+            text-align: left;
+            padding: 2px 0;
+        }
+        .lignes-vente td {
+            padding: 2px 0;
+        }
+        .ligne-produit {
+            border-bottom: 1px dotted #ccc;
+        }
+        .total-section {
+            width: 100%;
+            margin-top: 10px;
+        }
+        .total-section .label {
+            text-align: right;
+            padding-right: 5px;
+        }
+        .total-section .value {
+            text-align: right;
+            font-weight: bold;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 10px;
+            border-top: 1px dashed #000;
+            padding-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="ticket">
+        <div class="header">
+            <div class="entreprise-nom">{{ entreprise.nom }}</div>
+            <div>{{ entreprise.adresse }}</div>
+            <div>Tél: {{ entreprise.telephone }}</div>
+        </div>
+        
+        <div class="vente-info">
+            <div>Ticket: {{ vente.numero }}</div>
+            <div>Date: {{ vente.date|date:"d/m/Y H:i" }}</div>
+            <div>Client: {% if vente.client %}{{ nom_client }}{% else %}Non renseigné{% endif %}</div>
+        </div>
+        
+        <table class="lignes-vente">
+            <thead>
+                <tr>
+                    <th style="width: 50%;">Produit</th>
+                    <th style="width: 15%; text-align: center;">Qty</th>
+                    <th style="width: 15%; text-align: right;">Prix</th>
+                    <th style="width: 20%; text-align: right;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ligne in lignes_vente %}
+                <tr class="ligne-produit">
+                    <td>{{ ligne.produit.nom }}</td>
+                    <td style="text-align: center;">{{ ligne.quantite|floatformat:2 }}</td>
+                    <td style="text-align: right;">{{ ligne.prix_unitaire|floatformat:2 }}</td>
+                    <td style="text-align: right;">{{ ligne.total_ligne|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <table class="total-section">
+            <tr>
+                <td class="label">Total à Payer:</td>
+                <td class="value">{{ vente.total_ht|floatformat:2 }} {{ devise_symbole }}</td>
+            </tr>
+            <tr>
+                <td class="label">Montant Payé:</td>
+                <td class="value">{{ montant_paye|floatformat:2 }} {{ devise_symbole }}</td>
+            </tr>
+            <tr>
+                <td class="label">Monnaie Rendue:</td>
+                <td class="value">{{ monnaie_rendue|floatformat:2 }} {{ devise_symbole }}</td>
+            </tr>
+        </table>
+        
+        <div class="footer">
+            Merci de votre visite !<br>
+            A bientôt.
+        </div>
+    </div>
+</body>
+</html>

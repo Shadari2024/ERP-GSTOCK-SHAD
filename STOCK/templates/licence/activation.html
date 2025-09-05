@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="alert alert-info">
+    <h2>Activation de la Licence</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="cle_activation">Clé d'activation :</label>
+            <input type="text" id="cle_activation" name="cle_activation" 
+                   class="form-control" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Activer</button>
+    </form>
+</div>
+{% endblock %}

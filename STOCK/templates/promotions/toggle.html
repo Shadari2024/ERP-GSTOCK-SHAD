@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-header bg-{% if promotion.actif %}warning{% else %}success{% endif %} text-white">
+            <h3 class="mb-0">
+                <i class="bi bi-{% if promotion.actif %}toggle-off{% else %}toggle-on{% endif %} me-2"></i>
+                Confirmation requise
+            </h3>
+        </div>
+        
+        <div class="card-body text-center">
+            <p class="lead">
+                Voulez-vous vraiment {% if promotion.actif %}désactiver{% else %}activer{% endif %} la promotion :
+                <br>
+                <strong>"{{ promotion.nom }}"</strong> ?
+            </p>
+            
+            <div class="d-flex justify-content-center gap-3 mt-4">
+                <a href="{% url 'liste_promotions' %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle me-1"></i> Annuler
+                </a>
+                <form method="post" action="{% url 'toggle_promotion' promotion.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-{% if promotion.actif %}warning{% else %}success{% endif %}">
+                        <i class="bi bi-{% if promotion.actif %}toggle-off{% else %}toggle-on{% endif %} me-1"></i>
+                        Confirmer
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

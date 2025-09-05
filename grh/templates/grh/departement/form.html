@@ -1,0 +1,95 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block page_title %}
+    {% if object %}
+        {% trans "Modifier le département" %}
+    {% else %}
+        {% trans "Nouveau département" %}
+    {% endif %}
+{% endblock %}
+
+{% block page_description %}
+    {% if object %}
+        {% trans "Mettez à jour les informations du département" %} **{{ object.nom }}**.
+    {% else %}
+        {% trans "Créez un nouveau département au sein de votre entreprise." %}
+    {% endif %}
+{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'grh:departement_list' %}">{% trans "Départements" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">
+        {% if object %}
+            {% trans "Modifier" %}
+        {% else %}
+            {% trans "Créer" %}
+        {% endif %}
+    </li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-lg p-4">
+            <div class="card-header border-bottom mb-4">
+                <h5 class="card-title mb-0">
+                    {% if object %}
+                        <i class="bi bi-pencil-square me-2 text-warning"></i>{% trans "Modifier un département existant" %}
+                    {% else %}
+                        <i class="bi bi-plus-circle-fill me-2 text-primary"></i>{% trans "Créer un nouveau département" %}
+                    {% endif %}
+                </h5>
+            </div>
+            
+            <div class="card-body">
+                <form method="post" class="row g-3">
+                    {% csrf_token %}
+                    
+                    <div class="col-md-6">
+                        {{ form.code|as_crispy_field }}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.nom|as_crispy_field }}
+                    </div>
+                    <div class="col-12">
+                        {{ form.description|as_crispy_field }}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        {% if form.responsable.field.widget.input_type == 'hidden' %}
+                            <div class="alert alert-info border-info-subtle bg-opacity-10 py-2">
+                                <i class="bi bi-info-circle-fill me-2"></i>
+                                <span class="text-white-50">{{ form.responsable.help_text }}</span>
+                                <a href="{% url 'grh:employe_create' %}" class="alert-link ms-2">{% trans "Créer un employé" %}</a>
+                            </div>
+                            {{ form.responsable }}
+                        {% else %}
+                            {{ form.responsable|as_crispy_field }}
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        {{ form.compte_comptable|as_crispy_field }}
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch p-0">
+                           {{ form.actif|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <div class="col-12 mt-4 text-end">
+                        <button type="submit" class="btn btn-primary me-2" data-bs-toggle="tooltip" data-bs-placement="top" title="Enregistrer les modifications">
+                            <i class="bi bi-check-circle-fill me-2"></i>
+                            {% if object %}{% trans "Modifier" %}{% else %}{% trans "Créer" %}{% endif %}
+                        </button>
+                        <a href="{% url 'grh:departement_list' %}" class="btn btn-secondary" data-bs-toggle="tooltip" data-bs-placement="top" title="Annuler et retourner à la liste">
+                            <i class="bi bi-x-circle me-2"></i>{% trans "Annuler" %}
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

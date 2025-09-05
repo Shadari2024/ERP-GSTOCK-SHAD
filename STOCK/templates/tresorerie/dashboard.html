@@ -1,0 +1,325 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-xl-8">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Évolution des Flux Trésorerie</h6>
+                    <div class="dropdown no-arrow">
+                        <select class="form-control form-control-sm" id="periode-select">
+                            <option value="7">7 jours</option>
+                            <option value="30" selected>30 jours</option>
+                            <option value="90">3 mois</option>
+                            <option value="365">1 an</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area">
+                        <canvas id="fluxChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Répartition des Dépenses</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie pt-4 pb-2">
+                        <canvas id="depensesChart"></canvas>
+                    </div>
+                    <div class="mt-4 text-center small">
+                        {% for categorie in categories_depenses %}
+                        <span class="mr-2">
+                            <i class="fas fa-circle" style="color: {{ categorie.color }}"></i> {{ categorie.nom }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Soldes des Comptes</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-bar">
+                        <canvas id="comptesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Moyens de Paiement</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-pie pt-4 pb-2">
+                        <canvas id="paiementsChart"></canvas>
+                    </div>
+                    <div class="mt-4 text-center small">
+                        {% for mode in modes_paiement %}
+                        <span class="mr-2">
+                            <i class="fas fa-circle" style="color: {{ mode.color }}"></i> {{ mode.mode }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+<script>
+// Couleurs standards
+const colors = {
+    primary: '#4e73df',
+    success: '#1cc88a',
+    info: '#36b9cc',
+    warning: '#f6c23e',
+    danger: '#e74a3b',
+    secondary: '#858796',
+    dark: '#5a5c69',
+};
+
+// Graphique Flux de Trésorerie
+const fluxCtx = document.getElementById('fluxChart');
+const fluxChart = new Chart(fluxCtx, {
+    type: 'line',
+    data: {
+        labels: {{ dates_flux|safe }},
+        datasets: [
+            {
+                label: "Entrées",
+                backgroundColor: colors.success.replace(')', ', 0.2)').replace('rgb', 'rgba'),
+                borderColor: colors.success,
+                pointBackgroundColor: colors.success,
+                pointBorderColor: "#fff",
+                pointHoverBackgroundColor: "#fff",
+                pointHoverBorderColor: colors.success,
+                data: {{ entieres_flux|safe }}
+            },
+            {
+                label: "Sorties",
+                backgroundColor: colors.danger.replace(')', ', 0.2)').replace('rgb', 'rgba'),
+                borderColor: colors.danger,
+                pointBackgroundColor: colors.danger,
+                pointBorderColor: "#fff",
+                pointHoverBackgroundColor: "#fff",
+                pointHoverBorderColor: colors.danger,
+                data: {{ sorties_flux|safe }}
+            }
+        ]
+    },
+    options: {
+        maintainAspectRatio: false,
+        responsive: true,
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.dataset.label + ': ' + context.parsed.y.toLocaleString() + ' {{ request.user.parametre.devise }}';
+                    }
+                }
+            },
+            datalabels: {
+                display: false
+            }
+        },
+        scales: {
+            x: {
+                grid: {
+                    display: false
+                }
+            },
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return value.toLocaleString() + ' {{ request.user.parametre.devise }}';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Graphique Répartition des Dépenses
+const depensesCtx = document.getElementById('depensesChart');
+const depensesChart = new Chart(depensesCtx, {
+    type: 'doughnut',
+    data: {
+        labels: {{ labels_depenses|safe }},
+        datasets: [{
+            data: {{ data_depenses|safe }},
+            backgroundColor: {{ colors_depenses|safe }},
+            hoverBorderColor: "rgba(234, 236, 244, 1)",
+        }],
+    },
+    options: {
+        maintainAspectRatio: false,
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const label = context.label || '';
+                        const value = context.raw || 0;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = Math.round((value / total) * 100);
+                        return `${label}: ${value.toLocaleString()} {{ request.user.parametre.devise }} (${percentage}%)`;
+                    }
+                }
+            },
+            legend: {
+                display: false
+            },
+            datalabels: {
+                formatter: (value, ctx) => {
+                    const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                    const percentage = Math.round((value / total) * 100);
+                    return percentage > 5 ? `${percentage}%` : '';
+                },
+                color: '#fff',
+                font: {
+                    weight: 'bold'
+                }
+            }
+        },
+        cutout: '70%',
+    },
+    plugins: [ChartDataLabels]
+});
+
+// Graphique Soldes des Comptes
+const comptesCtx = document.getElementById('comptesChart');
+const comptesChart = new Chart(comptesCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ labels_comptes|safe }},
+        datasets: [{
+            label: "Soldes",
+            backgroundColor: colors.primary,
+            hoverBackgroundColor: colors.info,
+            data: {{ data_comptes|safe }}
+        }]
+    },
+    options: {
+        maintainAspectRatio: false,
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.parsed.y.toLocaleString() + ' {{ request.user.parametre.devise }}';
+                    }
+                }
+            },
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            x: {
+                grid: {
+                    display: false
+                }
+            },
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return value.toLocaleString() + ' {{ request.user.parametre.devise }}';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// Graphique Moyens de Paiement
+const paiementsCtx = document.getElementById('paiementsChart');
+const paiementsChart = new Chart(paiementsCtx, {
+    type: 'pie',
+    data: {
+        labels: {{ labels_paiements|safe }},
+        datasets: [{
+            data: {{ data_paiements|safe }},
+            backgroundColor: {{ colors_paiements|safe }},
+            hoverBorderColor: "rgba(234, 236, 244, 1)",
+        }],
+    },
+    options: {
+        maintainAspectRatio: false,
+        plugins: {
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const label = context.label || '';
+                        const value = context.raw || 0;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = Math.round((value / total) * 100);
+                        return `${label}: ${value.toLocaleString()} {{ request.user.parametre.devise }} (${percentage}%)`;
+                    }
+                }
+            },
+            legend: {
+                display: false
+            },
+            datalabels: {
+                formatter: (value, ctx) => {
+                    const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                    const percentage = Math.round((value / total) * 100);
+                    return percentage > 5 ? `${percentage}%` : '';
+                },
+                color: '#fff',
+                font: {
+                    weight: 'bold'
+                }
+            }
+        },
+    },
+    plugins: [ChartDataLabels]
+});
+
+// Gestion du changement de période
+document.getElementById('periode-select').addEventListener('change', function() {
+    const jours = this.value;
+    // Ici vous pourriez faire un appel AJAX pour recharger les données
+    // ou recharger la page avec le paramètre ?jours=XX
+    window.location.href = window.location.pathname + '?jours=' + jours;
+});
+</script>
+
+<style>
+.chart-area {
+    position: relative;
+    height: 20rem;
+    width: 100%;
+}
+.chart-bar {
+    position: relative;
+    height: 20rem;
+    width: 100%;
+}
+.chart-pie {
+    position: relative;
+    height: 15rem;
+    width: 100%;
+}
+</style>
+{% endblock %}

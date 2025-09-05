@@ -1,0 +1,23 @@
+{% extends 'security/base.html' %}
+{% load custom_filters %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>{% if utilisateur %}Modifier{% else %}Créer{% endif %} un utilisateur</h2>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div class="card">
+            <div class="card-body">
+                {{ form.as_p }}
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary">
+                    {% if utilisateur %}Mettre à jour{% else %}Créer{% endif %}
+                </button>
+                <a href="{% url 'liste_utilisateurs' %}" class="btn btn-secondary">Annuler</a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

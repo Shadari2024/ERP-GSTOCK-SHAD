@@ -1,0 +1,132 @@
+<!-- ventes/pos/ajuster_stock.html -->
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "Ajuster le stock" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-edit me-2"></i>
+                    {% trans "Ajuster le stock" %}
+                </h1>
+                <div>
+                    <a href="{% url 'ventes:inventaire_pos' pk=point_de_vente.id %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        {% trans "Retour" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        {% trans "Informations du produit" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            {% if produit.photo %}
+                            <img src="{{ produit.photo.url }}" alt="{{ produit.nom }}" class="img-fluid rounded" style="max-height: 200px;">
+                            {% else %}
+                            <div class="bg-secondary rounded d-flex align-items-center justify-content-center" style="height: 200px; width: 200px;">
+                                <i class="fas fa-box fa-3x text-white"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-8">
+                            <h4>{{ produit.nom }}</h4>
+                            <p class="text-muted">{{ produit.description|default:"Aucune description" }}</p>
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>{% trans "Code:" %}</strong><br>
+                                    {{ produit.code|default:"-" }}
+                                </div>
+                                <div class="col-6">
+                                    <strong>{% trans "Catégorie:" %}</strong><br>
+                                    {{ produit.categorie.nom|default:"-" }}
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>{% trans "Stock actuel:" %}</strong><br>
+                                    <span class="h4 {% if produit.stock == 0 %}text-danger{% elif produit.stock <= produit.stock_alerte %}text-warning{% else %}text-success{% endif %}">
+                                        {{ produit.stock }} {{ produit.unite_mesure.nom|default:"" }}
+                                    </span>
+                                </div>
+                                <div class="col-6">
+                                    <strong>{% trans "Stock d'alerte:" %}</strong><br>
+                                    {{ produit.stock_alerte }} {{ produit.unite_mesure.nom|default:"" }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-exchange-alt me-2"></i>
+                        {% trans "Ajustement du stock" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">{% trans "Type d'ajustement" %}</label>
+                            <div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="type_ajustement" id="entree" value="entree" checked>
+                                    <label class="form-check-label" for="entree">
+                                        <i class="fas fa-plus-circle text-success me-1"></i>
+                                        {% trans "Entrée de stock" %}
+                                    </label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="type_ajustement" id="sortie" value="sortie">
+                                    <label class="form-check-label" for="sortie">
+                                        <i class="fas fa-minus-circle text-danger me-1"></i>
+                                        {% trans "Sortie de stock" %}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="quantite" class="form-label">{% trans "Quantité" %}</label>
+                            <input type="number" class="form-control" id="quantite" name="quantite" min="1" step="0.01" required>
+                            <div class="form-text">{% trans "La quantité doit être positive" %}</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="motif" class="form-label">{% trans "Motif" %}</label>
+                            <textarea class="form-control" id="motif" name="motif" rows="3" placeholder="{% trans 'Raison de l\'ajustement...' %}"></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-save me-2"></i>
+                            {% trans "Enregistrer l'ajustement" %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

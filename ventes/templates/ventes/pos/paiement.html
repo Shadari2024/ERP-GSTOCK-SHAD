@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "Paiement de la vente" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-credit-card me-2"></i>
+                    {% trans "Paiement de la vente" %} {{ vente.numero }}
+                </h1>
+                <div>
+                    <span class="badge bg-info fs-6">
+                        {% trans "Client" %}: {% if vente.client %}{{ nom_client }}{% else %}{% trans "Non renseigné" %}{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-receipt me-2"></i>
+                        {% trans "Détails de la vente" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>{% trans "Total de la vente:" %}</span>
+                        <span class="fw-bold">{{ vente.total_ht }} {{ devise_symbole }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>{% trans "Déjà payé:" %}</span>
+                        <span>{{ montant_deja_paye }} {{ devise_symbole }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 fw-bold text-primary">
+                        <span>{% trans "Reste à payer:" %}</span>
+                        <span>{{ montant_restant }} {{ devise_symbole }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-credit-card me-2"></i>
+                        {% trans "Nouveau paiement" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form.non_field_errors }}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.montant.id_for_label }}" class="form-label">
+                                {{ form.montant.label }} ({{ devise_symbole }})
+                            </label>
+                            {{ form.montant }}
+                            {% if form.montant.errors %}
+                            <div class="text-danger">
+                                {{ form.montant.errors }}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">
+                                {% trans "Montant maximum:" %} {{ montant_restant }} {{ devise_symbole }}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.mode_paiement.id_for_label }}" class="form-label">
+                                {{ form.mode_paiement.label }}
+                            </label>
+                            {{ form.mode_paiement }}
+                            {% if form.mode_paiement.errors %}
+                            <div class="text-danger">
+                                {{ form.mode_paiement.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.reference.id_for_label }}" class="form-label">
+                                {{ form.reference.label }}
+                            </label>
+                            {{ form.reference }}
+                            {% if form.reference.errors %}
+                            <div class="text-danger">
+                                {{ form.reference.errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="imprimer_ticket" id="imprimer_ticket" checked>
+                            <label class="form-check-label" for="imprimer_ticket">
+                                {% trans "Imprimer le ticket après paiement" %}
+                            </label>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="fas fa-check me-2"></i>
+                            {% trans "Enregistrer le paiement" %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        {% trans "Historique des paiements" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if vente.paiementpos_set.all %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Date" %}</th>
+                                    <th>{% trans "Montant" %}</th>
+                                    <th>{% trans "Mode" %}</th>
+                                    <th>{% trans "Référence" %}</th>
+                                    <th>{% trans "Enregistré par" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for paiement in vente.paiementpos_set.all %}
+                                <tr>
+                                    <td>{{ paiement.date|date:"d/m/Y H:i" }}</td>
+                                    <td>{{ paiement.montant }} {{ devise_symbole }}</td>
+                                    <td>{{ paiement.get_mode_paiement_display }}</td>
+                                    <td>{{ paiement.reference|default:"-" }}</td>
+                                    <td>{{ paiement.created_by.username }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-primary">
+                                    <th colspan="1">{% trans "Total payé:" %}</th>
+                                    <th colspan="4">{{ montant_deja_paye }} {{ devise_symbole }}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">{% trans "Aucun paiement enregistré pour cette vente." %}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validation du montant maximum
+    const montantInput = document.querySelector('input[name="montant"]');
+    const maxMontant = parseFloat('{{ montant_restant }}');
+    
+    if (montantInput) {
+        montantInput.addEventListener('change', function() {
+            const enteredMontant = parseFloat(this.value);
+            
+            if (enteredMontant > maxMontant) {
+                alert('{% trans "Le montant ne peut pas dépasser le reste à payer de" %} ' + maxMontant.toFixed(2) + ' {{ devise_symbole }}');
+                this.value = maxMontant.toFixed(2);
+            }
+            
+            if (enteredMontant <= 0) {
+                alert('{% trans "Le montant doit être supérieur à zéro" %}');
+                this.value = maxMontant.toFixed(2);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+{% load static %}
+{% load stock_filters %}
+{% block title %}Détail du Produit - {{ produit.nom }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Colonne principale -->
+        <div class="col-lg-8">
+            <!-- En-tête -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h1 class="h3 mb-0 text-primary">
+                                <i class="fas fa-cube me-2"></i>{{ produit.nom }}
+                            </h1>
+                            <p class="text-muted mb-0">{{ produit.description|default:"Aucune description" }}</p>
+                        </div>
+                        <div class="btn-group">
+                            {% if can_edit %}
+                            <a href="{% url 'modifier_produit' produit.id %}" class="btn btn-outline-primary">
+                                <i class="fas fa-edit me-1"></i> Modifier
+                            </a>
+                            {% endif %}
+                            {% if can_delete %}
+                            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                                <i class="fas fa-trash me-1"></i> Supprimer
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations principales -->
+            <div class="row">
+                <!-- Image du produit -->
+                <div class="col-md-4 mb-4">
+                    <div class="card">
+                        {% if produit.photo %}
+                        <img src="{{ produit.photo.url }}" class="card-img-top" alt="{{ produit.nom }}" 
+                             style="height: 250px; object-fit: cover;">
+                        {% else %}
+                        <div class="text-center py-5 bg-light">
+                            <i class="fas fa-cube fa-3x text-muted"></i>
+                            <p class="mt-2 text-muted">Aucune image</p>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Code-barres -->
+                        {% if produit.code_barre %}
+                        <div class="card-footer">
+                            <div class="text-center">
+                                <img src="{{ produit.code_barre.url }}" alt="Code-barres" style="height: 50px;">
+                                <p class="small text-muted mt-1">{{ produit.code_barre_numero }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Détails du produit -->
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-info-circle me-2"></i>Informations du produit
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-muted">Catégorie</label>
+                                        <p class="mb-0">{{ produit.categorie.nom|default:"Non catégorisé" }}</p>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-muted">Statut</label>
+                                        <p class="mb-0">
+                                            <span class="badge bg-{% if produit.actif %}success{% else %}danger{% endif %}">
+                                                {% if produit.actif %}Actif{% else %}Inactif{% endif %}
+                                            </span>
+                                        </p>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-muted">Stock actuel</label>
+                                        <p class="mb-0 fs-4 fw-bold {% if produit.stock <= produit.seuil_alerte %}text-danger{% else %}text-success{% endif %}">
+                                            {{ produit.stock }} unités
+                                        </p>
+                                        {% if produit.stock <= produit.seuil_alerte %}
+                                        <small class="text-danger">
+                                            <i class="fas fa-exclamation-triangle"></i> 
+                                            Seuil d'alerte: {{ produit.seuil_alerte }} unités
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    {% if can_view_price %}
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-muted">Prix de vente</label>
+                                        <p class="mb-0 fs-5 fw-bold text-success">
+                                            {% if taux_change %}
+                                                {{ produit.prix_vente_converti|floatformat:2 }} {{ taux_change.symbole }}
+                                                <small class="text-muted d-block">
+                                                    ({{ produit.prix_vente }} {{ devise_principale.symbole }})
+                                                </small>
+                                            {% else %}
+                                                {{ produit.prix_vente }} {{ devise_principale.symbole }}
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if show_prix_achat %}
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-muted">Prix d'achat</label>
+                                        <p class="mb-0 fs-5 fw-bold text-primary">
+                                            {% if taux_change and produit.prix_achat_converti %}
+                                                {{ produit.prix_achat_converti|floatformat:2 }} {{ taux_change.symbole }}
+                                                <small class="text-muted d-block">
+                                                    ({{ produit.prix_achat }} {{ devise_principale.symbole }})
+                                                </small>
+                                            {% else %}
+                                                {{ produit.prix_achat }} {{ devise_principale.symbole }}
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-muted">Taux de TVA</label>
+                                        <p class="mb-0">{{ produit.taux_tva }}%</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Conversion de devise -->
+                            {% if can_convert_devise and devises_disponibles %}
+                            <div class="mt-4 p-3 bg-light rounded">
+                                <h6 class="mb-3">
+                                    <i class="fas fa-exchange-alt me-2"></i>Conversion de devise
+                                </h6>
+                                <form method="get" class="row g-2">
+                                    <div class="col-md-6">
+                                        <select name="devise" class="form-select" onchange="this.form.submit()">
+                                            <option value="{{ devise_principale.code }}">
+                                                {{ devise_principale.code }} - {{ devise_principale.symbole }}
+                                            </option>
+                                            {% for devise in devises_disponibles %}
+                                                {% if devise.code != devise_principale.code %}
+                                                <option value="{{ devise.code }}" {% if taux_change and taux_change.code == devise.code %}selected{% endif %}>
+                                                    {{ devise.code }} - {{ devise.symbole }}
+                                                </option>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    {% if taux_change %}
+                                    <div class="col-md-6">
+                                        <div class="alert alert-info py-2 mb-0">
+                                            <small>
+                                                <i class="fas fa-info-circle"></i>
+                                                Taux: 1 {{ devise_principale.code }} = {{ taux_change.taux }} {{ taux_change.code }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </form>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Informations supplémentaires -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-database me-2"></i>Informations complémentaires
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-muted">Référence</label>
+                                        <p class="mb-0">{{ produit.code_barre_numero|default:"N/A" }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-muted">Libellé</label>
+                                        <p class="mb-0">{{ produit.libelle|default:"N/A" }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-muted">Créé par</label>
+                                        <p class="mb-0">{{ produit.cree_par.username|default:"Système" }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-muted">Date de création</label>
+                                        <p class="mb-0">{{ produit.date_creation|date:"d/m/Y H:i" }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-muted">Entreprise</label>
+                                        <p class="mb-0">{{ current_entreprise.nom }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-muted">Seuil d'alerte</label>
+                                        <p class="mb-0">{{ produit.seuil_alerte }} unités</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar - Statistiques et actions -->
+        <div class="col-lg-4">
+            <!-- Carte de statut -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Statistiques
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted">Niveau de stock</span>
+                        <div class="progress" style="width: 60%; height: 20px;">
+                            {% with max_stock=100 %}
+                            {% with percent=produit.stock|add:0|floatformat:0 %}
+                            <div class="progress-bar {% if produit.stock <= produit.seuil_alerte %}bg-danger{% elif produit.stock <= produit.seuil_alerte|add:10 %}bg-warning{% else %}bg-success{% endif %}" 
+                                 role="progressbar" style="width: {{ percent }}%;" 
+                                 aria-valuenow="{{ produit.stock }}" aria-valuemin="0" aria-valuemax="{{ max_stock }}">
+                                {{ produit.stock }}%
+                            </div>
+                            {% endwith %}
+                            {% endwith %}
+                        </div>
+                    </div>
+                    
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="border-end">
+                                <div class="h4 mb-0 text-primary">{{ produit.stock }}</div>
+                                <small class="text-muted">En stock</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border-end">
+                                <div class="h4 mb-0 text-warning">{{ produit.seuil_alerte }}</div>
+                                <small class="text-muted">Seuil alerte</small>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div>
+                                <div class="h4 mb-0 text-success">
+                                    {% if produit.prix_vente and produit.prix_achat %}
+                                    {{ produit.prix_vente|subtract:produit.prix_achat }}
+                                    {% else %}0{% endif %}
+                                </div>
+                                <small class="text-muted">Marge</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions rapides -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-bolt me-2"></i>Actions rapides
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'ajouter_mouvement_stock' %}?produit={{ produit.id }}" class="btn btn-outline-primary">
+                            <i class="fas fa-exchange-alt me-1"></i> Mouvement de stock
+                        </a>
+                        <a href="#" class="btn btn-outline-success">
+                            <i class="fas fa-shopping-cart me-1"></i> Vendre ce produit
+                        </a>
+                        <a href="#" class="btn btn-outline-info">
+                            <i class="fas fa-history me-1"></i> Historique des mouvements
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Derniers mouvements -->
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-history me-2"></i>Derniers mouvements
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for mouvement in produit.mouvementstock_set.all|slice:":5" %}
+                        <div class="list-group-item border-0 px-0 py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="badge bg-{% if mouvement.type_mouvement == 'entree' %}success{% else %}danger{% endif %} me-2">
+                                        {{ mouvement.get_type_mouvement_display }}
+                                    </span>
+                                    <small>{{ mouvement.quantite }} unités</small>
+                                </div>
+                                <small class="text-muted">{{ mouvement.date_mouvement|date:"d/m/Y" }}</small>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted text-center mb-0">Aucun mouvement récent</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de suppression -->
+{% if can_delete %}
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirmer la suppression</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer le produit <strong>{{ produit.nom }}</strong> ?</p>
+                <p class="text-danger">Cette action est irréversible.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form method="post" action="{% url 'supprimer_produit' produit.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i> Supprimer
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+.card {
+    border: none;
+    border-radius: 12px;
+}
+.card-header {
+    border-bottom: 1px solid #f0f0f0;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+}
+.progress {
+    border-radius: 10px;
+    overflow: hidden;
+}
+.badge {
+    font-size: 0.75em;
+}
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid #f0f0f0;
+}
+.list-group-item:last-child {
+    border-bottom: none;
+}
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+}
+.form-label {
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
+}
+</style>
+
+{% endblock %}

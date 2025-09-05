@@ -1,0 +1,1419 @@
+{% extends "achats/base_achats.html" %}
+{% load achats_tags %}
+
+{% block achats_content %}
+<div class="erp-2025-container">
+    <!-- Floating Action Button -->
+    <div class="erp-fab">
+        {% if perms.achats.add_commandeachat %}
+        <button class="erp-fab-main" id="fab-main">
+            <i class="ph ph-plus"></i>
+        </button>
+        <div class="erp-fab-actions">
+            <a href="{% url 'achats:creer_commande' %}" class="erp-fab-action" data-tooltip="Nouvelle commande">
+                <i class="ph ph-file-text"></i>
+            </a>
+            <a href="#" class="erp-fab-action" data-tooltip="Nouveau fournisseur">
+                <i class="ph ph-truck"></i>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Dashboard Header -->
+    <div class="erp-dashboard-header">
+        <div class="erp-header-content">
+            <h1 class="erp-main-title">
+                <span class="erp-title-highlight">Module</span> Achats
+            </h1>
+            <p class="erp-subtitle">Gestion intelligente des approvisionnements</p>
+            
+            <div class="erp-ai-assistant-trigger">
+                <button class="erp-ai-btn">
+                    <i class="ph ph-robot"></i> Assistant IA Achats
+                </button>
+            </div>
+        </div>
+        
+        <div class="erp-period-selector">
+            <div class="erp-period-tabs">
+                <button class="erp-period-tab active">Aujourd'hui</button>
+                <button class="erp-period-tab">Cette semaine</button>
+                <button class="erp-period-tab">Ce mois</button>
+                <button class="erp-period-tab">Personnalisé</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="erp-stats-grid">
+        <!-- Fournisseurs Card -->
+        <div class="erp-stat-card">
+            <div class="erp-stat-content">
+                <div class="erp-stat-value">{{ total_fournisseurs }}</div>
+                <div class="erp-stat-label">Fournisseurs actifs</div>
+                <div class="erp-stat-trend positive">
+                    <i class="ph ph-trend-up"></i> 12%
+                </div>
+            </div>
+            <div class="erp-stat-icon">
+                <i class="ph ph-buildings"></i>
+            </div>
+        </div>
+        
+        <!-- Commandes Card -->
+        <div class="erp-stat-card">
+            <div class="erp-stat-content">
+                <div class="erp-stat-value">{{ commandes_en_cours }}</div>
+                <div class="erp-stat-label">Commandes en cours</div>
+                <div class="erp-stat-trend negative">
+                    <i class="ph ph-trend-down"></i> 5%
+                </div>
+            </div>
+            <div class="erp-stat-icon">
+                <i class="ph ph-shopping-cart"></i>
+            </div>
+        </div>
+        
+        <!-- Réceptions Card -->
+        <div class="erp-stat-card">
+            <div class="erp-stat-content">
+                <div class="erp-stat-value">{{ bons_reception }}</div>
+                <div class="erp-stat-label">Bons de réception</div>
+                <div class="erp-stat-trend positive">
+                    <i class="ph ph-trend-up"></i> 8%
+                </div>
+            </div>
+            <div class="erp-stat-icon">
+                <i class="ph ph-clipboard-text"></i>
+            </div>
+        </div>
+        
+        <!-- Budget Card -->
+        <div class="erp-stat-card">
+            <div class="erp-stat-content">
+                <div class="erp-stat-value">245K</div>
+                <div class="erp-stat-label">Budget consommé</div>
+                <div class="erp-stat-progress">
+                    <div class="erp-progress-bar" style="width: 65%"></div>
+                </div>
+            </div>
+            <div class="erp-stat-icon">
+                <i class="ph ph-currency-circle-dollar"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="erp-content-grid">
+        <!-- Commandes Chart -->
+        <div class="erp-card erp-card-wide">
+            <div class="erp-card-header">
+                <h3>Évolution des commandes</h3>
+                <div class="erp-card-actions">
+                    <button class="erp-card-action"><i class="ph ph-arrows-clockwise"></i></button>
+                    <button class="erp-card-action"><i class="ph ph-dots-three-outline"></i></button>
+                </div>
+            </div>
+            <div class="erp-card-body">
+                <div class="erp-chart-container">
+                    <canvas id="commandesChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dernières commandes -->
+        <div class="erp-card">
+            <div class="erp-card-header">
+                <h3>Dernières commandes</h3>
+                <a href="{% url 'achats:liste_commandes' %}" class="erp-link">Voir tout</a>
+            </div>
+            <div class="erp-card-body">
+                <div class="erp-commandes-list">
+                    {% for commande in dernieres_commandes %}
+                    <div class="erp-commande-item">
+                        <div class="erp-commande-info">
+                            <div class="erp-commande-ref">#{{ commande.numero_commande }}</div>
+                            <div class="erp-commande-supplier">{{ commande.fournisseur.nom }}</div>
+                        </div>
+                        <div class="erp-commande-meta">
+                            <span class="erp-commande-date">{{ commande.date_commande|date:"d/m/Y" }}</span>
+                            <span class="erp-status-badge {{ commande.statut }}">{{ commande.get_statut_display }}</span>
+                        </div>
+                        <a href="{% url 'achats:detail_commande' commande.pk %}" class="erp-commande-link">
+                            <i class="ph ph-arrow-right"></i>
+                        </a>
+                    </div>
+                    {% empty %}
+                    <div class="erp-empty-state">
+                        <i class="ph ph-package"></i>
+                        <p>Aucune commande récente</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Répartition par statut -->
+        <div class="erp-card">
+            <div class="erp-card-header">
+                <h3>Répartition par statut</h3>
+                <div class="erp-card-actions">
+                    <button class="erp-card-action active">%</button>
+                    <button class="erp-card-action">Nb</button>
+                </div>
+            </div>
+            <div class="erp-card-body">
+                <div class="erp-chart-container">
+                    <canvas id="statutChart"></canvas>
+                </div>
+                <div class="erp-legend">
+                    {% for stat in stats_statut %}
+                    <div class="erp-legend-item">
+                        <span class="erp-legend-color" style="background-color: {{ stat.statut|get_statut_color_hex }}"></span>
+                        <span class="erp-legend-label">{{ stat.statut|get_statut_display }}</span>
+                        <span class="erp-legend-value">{{ stat.total }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Fournisseurs principaux -->
+        <div class="erp-card">
+            <div class="erp-card-header">
+                <h3>Fournisseurs principaux</h3>
+                <a href="{% url 'achats:liste_fournisseurs' %}" class="erp-link">Voir tout</a>
+            </div>
+            <div class="erp-card-body">
+                <div class="erp-suppliers-list">
+                    {% for fournisseur in top_fournisseurs %}
+                    <div class="erp-supplier-item">
+                        <div class="erp-supplier-avatar">
+                            {{ fournisseur.nom|first|upper }}
+                        </div>
+                        <div class="erp-supplier-info">
+                            <div class="erp-supplier-name">{{ fournisseur.nom }}</div>
+                            <div class="erp-supplier-stats">
+                                <span>{{ fournisseur.commandes_count }} commandes</span>
+                                <span>{{ fournisseur.montant_total|floatformat:2 }} €</span>
+                            </div>
+                        </div>
+                        <div class="erp-supplier-rating">
+                            <div class="erp-rating-stars">
+                                {% for i in "12345" %}
+                                <i class="ph ph-star{% if forloop.counter <= fournisseur.rating %} fill{% endif %}"></i>
+                                {% endfor %}
+                            </div>
+                            <span class="erp-rating-value">{{ fournisseur.rating|floatformat:1 }}</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="erp-empty-state">
+                        <i class="ph ph-truck"></i>
+                        <p>Aucun fournisseur enregistré</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alertes et actions -->
+        <div class="erp-card">
+            <div class="erp-card-header">
+                <h3>Alertes et actions</h3>
+                <span class="erp-badge">{{ alerts_count }}</span>
+            </div>
+            <div class="erp-card-body">
+                <div class="erp-alerts-list">
+                    <div class="erp-alert-item urgent">
+                        <div class="erp-alert-icon">
+                            <i class="ph ph-warning-circle"></i>
+                        </div>
+                        <div class="erp-alert-content">
+                            <div class="erp-alert-title">Commande #4587 en retard</div>
+                            <div class="erp-alert-desc">Livraison prévue le 15/06 non reçue</div>
+                        </div>
+                        <button class="erp-alert-action">
+                            <i class="ph ph-arrow-right"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="erp-alert-item warning">
+                        <div class="erp-alert-icon">
+                            <i class="ph ph-clock"></i>
+                        </div>
+                        <div class="erp-alert-content">
+                            <div class="erp-alert-title">3 commandes à valider</div>
+                            <div class="erp-alert-desc">En attente de validation</div>
+                        </div>
+                        <button class="erp-alert-action">
+                            <i class="ph ph-arrow-right"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="erp-alert-item info">
+                        <div class="erp-alert-icon">
+                            <i class="ph ph-check-circle"></i>
+                        </div>
+                        <div class="erp-alert-content">
+                            <div class="erp-alert-title">2 bons à réceptionner</div>
+                            <div class="erp-alert-desc">En attente au magasin</div>
+                        </div>
+                        <button class="erp-alert-action">
+                            <i class="ph ph-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- AI Assistant Panel -->
+    <div class="erp-ai-panel" id="ai-panel">
+        <div class="erp-ai-header">
+            <div class="erp-ai-title">
+                <i class="ph ph-robot"></i>
+                <h4>Assistant Achats IA</h4>
+            </div>
+            <button class="erp-ai-close" id="close-ai-panel">
+                <i class="ph ph-x"></i>
+            </button>
+        </div>
+        <div class="erp-ai-chat">
+            <div class="erp-ai-message ai">
+                <div class="erp-ai-avatar">
+                    <i class="ph ph-robot"></i>
+                </div>
+                <div class="erp-ai-content">
+                    <div class="erp-ai-text">
+                        Bonjour, je suis votre assistant IA pour le module Achats. 
+                        Comment puis-je vous aider aujourd'hui ?
+                    </div>
+                    <div class="erp-ai-quick-actions">
+                        <button class="erp-ai-quick-btn">Afficher les commandes en retard</button>
+                        <button class="erp-ai-quick-btn">Analyser les dépenses mensuelles</button>
+                        <button class="erp-ai-quick-btn">Créer une commande rapide</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="erp-ai-input">
+            <input type="text" placeholder="Posez votre question...">
+            <button class="erp-ai-send">
+                <i class="ph ph-paper-plane-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* ERP 2025 Design System */
+    :root {
+        /* Colors */
+        --primary: #5E56F7;
+        --primary-light: #F0F0FF;
+        --primary-dark: #4A42D4;
+        
+        --secondary: #00C4CC;
+        --secondary-light: #E6F9FA;
+        --secondary-dark: #00A2A8;
+        
+        --success: #2AC769;
+        --success-light: #E8F9EF;
+        --success-dark: #1FA955;
+        
+        --warning: #FFB82E;
+        --warning-light: #FFF5E5;
+        --warning-dark: #E6A629;
+        
+        --danger: #FF5E5E;
+        --danger-light: #FFEEEE;
+        --danger-dark: #E64F4F;
+        
+        --info: #3B82F6;
+        --info-light: #EBF2FF;
+        --info-dark: #2563EB;
+        
+        --text-primary: #1A1A2E;
+        --text-secondary: #4A4A6A;
+        --text-tertiary: #8A8AA8;
+        
+        --bg-light: #F8F9FF;
+        --bg-card: #FFFFFF;
+        --bg-hover: #F5F6FA;
+        
+        --border-light: #E6E6F0;
+        --border-medium: #D6D6E5;
+        
+        /* Shadows */
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+        --shadow-md: 0 4px 12px rgba(94, 86, 247, 0.1);
+        --shadow-lg: 0 10px 25px rgba(94, 86, 247, 0.15);
+        
+        /* Transitions */
+        --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    /* Base Styles */
+    .erp-2025-container {
+        padding: 2rem;
+        background-color: var(--bg-light);
+        min-height: 100vh;
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    
+    /* Typography */
+    .erp-main-title {
+        font-size: 2.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+        line-height: 1.2;
+    }
+    
+    .erp-title-highlight {
+        color: var(--primary);
+    }
+    
+    .erp-subtitle {
+        font-size: 1rem;
+        color: var(--text-secondary);
+        margin: 0.5rem 0 0;
+    }
+    
+    h2, h3, h4 {
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    /* Dashboard Header */
+    .erp-dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 2.5rem;
+    }
+    
+    .erp-header-content {
+        max-width: 60%;
+    }
+    
+    .erp-period-selector {
+        background: var(--bg-card);
+        border-radius: 1rem;
+        padding: 0.5rem;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .erp-period-tabs {
+        display: flex;
+        gap: 0.25rem;
+    }
+    
+    .erp-period-tab {
+        padding: 0.5rem 1rem;
+        border-radius: 0.75rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    
+    .erp-period-tab.active {
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+    
+    .erp-period-tab:hover:not(.active) {
+        background: var(--bg-hover);
+    }
+    
+    /* Stats Grid */
+    .erp-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2.5rem;
+    }
+    
+    .erp-stat-card {
+        background: var(--bg-card);
+        border-radius: 1.25rem;
+        padding: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        box-shadow: var(--shadow-sm);
+        transition: var(--transition);
+    }
+    
+    .erp-stat-card:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+    }
+    
+    .erp-stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1;
+        margin-bottom: 0.5rem;
+    }
+    
+    .erp-stat-label {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-bottom: 0.75rem;
+    }
+    
+    .erp-stat-trend {
+        font-size: 0.75rem;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.5rem;
+    }
+    
+    .erp-stat-trend.positive {
+        background: var(--success-light);
+        color: var(--success-dark);
+    }
+    
+    .erp-stat-trend.negative {
+        background: var(--danger-light);
+        color: var(--danger-dark);
+    }
+    
+    .erp-stat-icon {
+        font-size: 1.75rem;
+        color: var(--primary);
+        opacity: 0.8;
+    }
+    
+    .erp-stat-progress {
+        height: 6px;
+        background: var(--border-light);
+        border-radius: 3px;
+        margin-top: 0.75rem;
+    }
+    
+    .erp-progress-bar {
+        height: 100%;
+        border-radius: 3px;
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+    }
+    
+    /* Content Grid */
+    .erp-content-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 1.5rem;
+    }
+    
+    .erp-card {
+        grid-column: span 4;
+        background: var(--bg-card);
+        border-radius: 1.25rem;
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+        transition: var(--transition);
+    }
+    
+    .erp-card:hover {
+        box-shadow: var(--shadow-md);
+    }
+    
+    .erp-card-wide {
+        grid-column: span 8;
+    }
+    
+    .erp-card-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--border-light);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .erp-card-header h3 {
+        font-size: 1.125rem;
+        margin: 0;
+    }
+    
+    .erp-card-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .erp-card-action {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: none;
+        color: var(--text-tertiary);
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    
+    .erp-card-action:hover {
+        background: var(--bg-hover);
+        color: var(--text-secondary);
+    }
+    
+    .erp-card-action.active {
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+    
+    .erp-card-body {
+        padding: 1.5rem;
+    }
+    
+    .erp-link {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--primary);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    .erp-link:hover {
+        text-decoration: underline;
+    }
+    
+    /* Charts */
+    .erp-chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+    }
+    
+    /* Commandes List */
+    .erp-commandes-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .erp-commande-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        border-radius: 0.75rem;
+        transition: var(--transition);
+        position: relative;
+    }
+    
+    .erp-commande-item:hover {
+        background: var(--bg-hover);
+    }
+    
+    .erp-commande-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .erp-commande-ref {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .erp-commande-supplier {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .erp-commande-meta {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        margin-left: 1rem;
+    }
+    
+    .erp-commande-date {
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+    }
+    
+    .erp-status-badge {
+        font-size: 0.6875rem;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.5rem;
+        display: inline-block;
+        margin-top: 0.25rem;
+    }
+    
+    .erp-status-badge.brouillon {
+        background: var(--warning-light);
+        color: var(--warning-dark);
+    }
+    
+    .erp-status-badge.validee {
+        background: var(--info-light);
+        color: var(--info-dark);
+    }
+    
+    .erp-status-badge.livree {
+        background: var(--success-light);
+        color: var(--success-dark);
+    }
+    
+    .erp-status-badge.annulee {
+        background: var(--danger-light);
+        color: var(--danger-dark);
+    }
+    
+    .erp-commande-link {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 0.5rem;
+        color: var(--text-tertiary);
+        transition: var(--transition);
+    }
+    
+    .erp-commande-link:hover {
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+    
+    /* Legend */
+    .erp-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    
+    .erp-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .erp-legend-color {
+        width: 0.75rem;
+        height: 0.75rem;
+        border-radius: 50%;
+    }
+    
+    .erp-legend-label {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+    
+    .erp-legend-value {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    /* Suppliers List */
+    .erp-suppliers-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .erp-supplier-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        border-radius: 0.75rem;
+        transition: var(--transition);
+    }
+    
+    .erp-supplier-item:hover {
+        background: var(--bg-hover);
+    }
+    
+    .erp-supplier-avatar {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 50%;
+        background: var(--primary-light);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+    
+    .erp-supplier-info {
+        flex: 1;
+        min-width: 0;
+        margin-left: 1rem;
+    }
+    
+    .erp-supplier-name {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .erp-supplier-stats {
+        display: flex;
+        gap: 1rem;
+    }
+    
+    .erp-supplier-stats span {
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+    }
+    
+    .erp-supplier-rating {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        margin-left: 1rem;
+    }
+    
+    .erp-rating-stars {
+        display: flex;
+        gap: 0.125rem;
+    }
+    
+    .erp-rating-stars i {
+        font-size: 0.875rem;
+        color: var(--border-medium);
+    }
+    
+    .erp-rating-stars i.fill {
+        color: var(--warning);
+    }
+    
+    .erp-rating-value {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        margin-top: 0.25rem;
+    }
+    
+    /* Alerts List */
+    .erp-alerts-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .erp-alert-item {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem;
+        border-radius: 0.75rem;
+        transition: var(--transition);
+    }
+    
+    .erp-alert-item.urgent {
+        background: var(--danger-light);
+    }
+    
+    .erp-alert-item.warning {
+        background: var(--warning-light);
+    }
+    
+    .erp-alert-item.info {
+        background: var(--info-light);
+    }
+    
+    .erp-alert-icon {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    
+    .erp-alert-item.urgent .erp-alert-icon {
+        background: var(--danger);
+        color: white;
+    }
+    
+    .erp-alert-item.warning .erp-alert-icon {
+        background: var(--warning);
+        color: white;
+    }
+    
+    .erp-alert-item.info .erp-alert-icon {
+        background: var(--info);
+        color: white;
+    }
+    
+    .erp-alert-content {
+        flex: 1;
+        min-width: 0;
+        margin-left: 1rem;
+    }
+    
+    .erp-alert-title {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.125rem;
+    }
+    
+    .erp-alert-desc {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+    }
+    
+    .erp-alert-action {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 0.5rem;
+        background: transparent;
+        border: none;
+        color: var(--text-tertiary);
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    
+    .erp-alert-item.urgent .erp-alert-action:hover {
+        background: rgba(255, 94, 94, 0.1);
+        color: var(--danger);
+    }
+    
+    .erp-alert-item.warning .erp-alert-action:hover {
+        background: rgba(255, 184, 46, 0.1);
+        color: var(--warning-dark);
+    }
+    
+    .erp-alert-item.info .erp-alert-action:hover {
+        background: rgba(59, 130, 246, 0.1);
+        color: var(--info);
+    }
+    
+    /* Empty State */
+    .erp-empty-state {
+        padding: 2rem 1rem;
+        text-align: center;
+    }
+    
+    .erp-empty-state i {
+        font-size: 2.5rem;
+        color: var(--border-medium);
+        margin-bottom: 1rem;
+    }
+    
+    .erp-empty-state p {
+        color: var(--text-tertiary);
+        margin: 0;
+    }
+    
+    /* Badges */
+    .erp-badge {
+        font-size: 0.6875rem;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.5rem;
+        background: var(--primary-light);
+        color: var(--primary);
+    }
+    
+    /* AI Assistant */
+    .erp-ai-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.625rem 1rem;
+        border-radius: 0.75rem;
+        background: var(--primary);
+        color: white;
+        border: none;
+        font-weight: 500;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    
+    .erp-ai-btn:hover {
+        background: var(--primary-dark);
+        transform: translateY(-1px);
+    }
+    
+    .erp-ai-panel {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        width: 380px;
+        background: white;
+        border-radius: 1.25rem;
+        box-shadow: var(--shadow-lg);
+        overflow: hidden;
+        transform: translateY(20px);
+        opacity: 0;
+        visibility: hidden;
+        transition: var(--transition);
+        z-index: 100;
+    }
+    
+    .erp-ai-panel.active {
+        transform: translateY(0);
+        opacity: 1;
+        visibility: visible;
+    }
+    
+    .erp-ai-header {
+        padding: 1rem 1.5rem;
+        background: var(--primary);
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .erp-ai-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .erp-ai-title h4 {
+        color: white;
+        margin: 0;
+    }
+    
+    .erp-ai-close {
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        font-size: 1.25rem;
+    }
+    
+    .erp-ai-chat {
+        height: 400px;
+        padding: 1.5rem;
+        overflow-y: auto;
+        background: white;
+    }
+    
+    .erp-ai-message {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+    
+    .erp-ai-message.ai {
+        align-items: flex-start;
+    }
+    
+    .erp-ai-avatar {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 0.75rem;
+        background: var(--primary-light);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    
+    .erp-ai-content {
+        flex: 1;
+    }
+    
+    .erp-ai-text {
+        background: var(--bg-hover);
+        padding: 0.75rem 1rem;
+        border-radius: 0 0.75rem 0.75rem 0.75rem;
+        font-size: 0.875rem;
+        color: var(--text-primary);
+    }
+    
+    .erp-ai-quick-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+    }
+    
+    .erp-ai-quick-btn {
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.75rem;
+        background: var(--primary-light);
+        color: var(--primary);
+        border: none;
+        font-size: 0.75rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    
+    .erp-ai-quick-btn:hover {
+        background: var(--primary);
+        color: white;
+    }
+    
+    .erp-ai-input {
+        display: flex;
+        padding: 1rem;
+        border-top: 1px solid var(--border-light);
+        background: #f9f9f9;
+    }
+    
+    .erp-ai-input input {
+        flex: 1;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--border-light);
+        border-radius: 0.75rem;
+        outline: none;
+        transition: var(--transition);
+    }
+    
+    .erp-ai-input input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(94, 86, 247, 0.1);
+    }
+    
+    .erp-ai-send {
+        margin-left: 0.5rem;
+        padding: 0 1.25rem;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 0.75rem;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    
+    .erp-ai-send:hover {
+        background: var(--primary-dark);
+    }
+    
+    /* Floating Action Button */
+    .erp-fab {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 90;
+    }
+    
+    .erp-fab-main {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: white;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        cursor: pointer;
+        box-shadow: var(--shadow-lg);
+        transition: var(--transition);
+        z-index: 2;
+    }
+    
+    .erp-fab-main:hover {
+        background: var(--primary-dark);
+        transform: scale(1.1);
+    }
+    
+    .erp-fab-actions {
+        position: absolute;
+        bottom: 100%;
+        right: 0;
+        margin-bottom: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(20px);
+        transition: var(--transition);
+    }
+    
+    .erp-fab.active .erp-fab-actions {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+    
+    .erp-fab-action {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: white;
+        color: var(--primary);
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        cursor: pointer;
+        box-shadow: var(--shadow-md);
+        transition: var(--transition);
+        position: relative;
+    }
+    
+    .erp-fab-action:hover {
+        background: var(--primary-light);
+        transform: translateY(-2px);
+    }
+    
+    .erp-fab-action[data-tooltip]::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        right: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        margin-right: 1rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.5rem;
+        background: var(--text-primary);
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 500;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: var(--transition);
+    }
+    
+    .erp-fab-action:hover::after {
+        opacity: 1;
+        visibility: visible;
+    }
+    
+    /* Responsive */
+    @media (max-width: 1440px) {
+        .erp-content-grid {
+            grid-template-columns: repeat(6, 1fr);
+        }
+        
+        .erp-card-wide {
+            grid-column: span 6;
+        }
+        
+        .erp-card {
+            grid-column: span 3;
+        }
+    }
+    
+    @media (max-width: 1024px) {
+        .erp-dashboard-header {
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .erp-header-content {
+            max-width: 100%;
+        }
+        
+        .erp-period-selector {
+            width: 100%;
+        }
+        
+        .erp-period-tabs {
+            justify-content: space-between;
+            width: 100%;
+        }
+        
+        .erp-period-tab {
+            flex: 1;
+            text-align: center;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .erp-2025-container {
+            padding: 1.5rem;
+        }
+        
+        .erp-stats-grid {
+            grid-template-columns: 1fr 1fr;
+        }
+        
+        .erp-content-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .erp-card-wide, .erp-card {
+            grid-column: span 1;
+        }
+        
+        .erp-ai-panel {
+            width: calc(100% - 3rem);
+            right: 1.5rem;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .erp-stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .erp-main-title {
+            font-size: 1.75rem;
+        }
+    }
+</style>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    // Initialize FAB
+    document.getElementById('fab-main').addEventListener('click', function() {
+        document.querySelector('.erp-fab').classList.toggle('active');
+    });
+    
+    // Initialize AI Panel
+    document.querySelector('.erp-ai-btn').addEventListener('click', function() {
+        document.getElementById('ai-panel').classList.add('active');
+    });
+    
+    document.getElementById('close-ai-panel').addEventListener('click', function() {
+        document.getElementById('ai-panel').classList.remove('active');
+    });
+    
+    // Commandes Chart
+    const commandesCtx = document.getElementById('commandesChart').getContext('2d');
+    const commandesChart = new Chart(commandesCtx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            datasets: [{
+                label: 'Commandes',
+                data: [12, 19, 15, 22, 18, 25, 20, 23, 28, 30, 26, 32],
+                borderColor: '#5E56F7',
+                backgroundColor: 'rgba(94, 86, 247, 0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true
+            }, {
+                label: 'Livraisons',
+                data: [8, 12, 10, 15, 14, 18, 16, 19, 22, 25, 20, 28],
+                borderColor: '#00C4CC',
+                backgroundColor: 'rgba(0, 196, 204, 0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(26, 26, 46, 0.9)',
+                    titleFont: {
+                        size: 14,
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 12
+                    },
+                    padding: 12,
+                    cornerRadius: 8
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(230, 230, 240, 0.5)'
+                    }
+                }
+            },
+            elements: {
+                point: {
+                    radius: 0,
+                    hoverRadius: 6
+                }
+            }
+        }
+    });
+    
+    // Statut Chart
+    const statutCtx = document.getElementById('statutChart').getContext('2d');
+    const statutChart = new Chart(statutCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [
+                {% for stat in stats_statut %}
+                    '{{ stat.statut|get_statut_display }}',
+                {% endfor %}
+            ],
+            datasets: [{
+                data: [
+                    {% for stat in stats_statut %}
+                        {{ stat.total }},
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    {% for stat in stats_statut %}
+                        '{{ stat.statut|get_statut_color_hex }}',
+                    {% endfor %}
+                ],
+                borderWidth: 0,
+                cutout: '75%'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(26, 26, 46, 0.9)',
+                    bodyFont: {
+                        size: 12
+                    },
+                    padding: 12,
+                    cornerRadius: 8
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

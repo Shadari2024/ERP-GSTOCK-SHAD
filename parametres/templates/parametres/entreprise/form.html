@@ -1,0 +1,154 @@
+{% extends 'parametres/base.html' %}
+{% load i18n crispy_forms_tags %}
+
+{% block title %}
+    {% if object %}{% trans "Modifier entreprise" %}{% else %}{% trans "Créer entreprise" %}{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="bg-white p-4 rounded shadow-sm">
+                <div class="d-flex justify-content-between border-bottom pb-3 mb-4">
+                    <h2 class="mb-0">
+                        {% if object %}
+                            <i class="bi bi-pencil-square text-primary me-2"></i> {% trans "Modifier l'entreprise" %}
+                        {% else %}
+                            <i class="bi bi-plus-circle text-primary me-2"></i> {% trans "Nouvelle entreprise" %}
+                        {% endif %}
+                    </h2>
+                    <div class="btn-group" role="group">
+                        <a href="{% if object %}{% url 'parametres:entreprise_detail' object.slug %}{% else %}{% url 'parametres:entreprise_list' %}{% endif %}" 
+                           class="btn btn-light border">
+                            <i class="bi bi-arrow-left me-1"></i> {% trans "Annuler" %}
+                        </a>
+                        <button type="submit" form="entrepriseForm" class="btn btn-primary">
+                            <i class="bi bi-save me-1"></i> {% trans "Enregistrer" %}
+                        </button>
+                    </div>
+                </div>
+
+                <form method="post" enctype="multipart/form-data" id="entrepriseForm">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <div class="card mb-4">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="bi bi-building me-2"></i> {% trans "Informations générales" %}</h6>
+                                </div>
+                                <div class="card-body">
+                                    {{ form.nom|as_crispy_field }}
+                                    {{ form.slogan|as_crispy_field }}
+                                    {{ form.domaine|as_crispy_field }}
+                                    
+                                    <div class="mb-3">
+                                        {{ form.logo|as_crispy_field }}
+                                        {% if form.instance.logo %}
+                                        <div class="mt-2">
+                                            <img src="{{ form.instance.logo.url }}" class="img-thumbnail" width="150">
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card mb-4">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="bi bi-geo-alt me-2"></i> {% trans "Adresse" %}</h6>
+                                </div>
+                                <div class="card-body">
+                                    {{ form.adresse|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-6">
+                            <div class="card mb-4">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="bi bi-file-text me-2"></i> {% trans "Informations administratives" %}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            {{ form.statut|as_crispy_field }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            {{ form.plan_tarification|as_crispy_field }}
+                                        </div>
+                                    </div>
+                                    {{ form.numero_fiscal|as_crispy_field }}
+                                    
+                                    {# ADDED: Default VAT Rate field #}
+                                    {{ form.taux_tva_defaut|as_crispy_field }} 
+                                    
+                                </div>
+                            </div>
+                            
+                            <div class="card mb-4">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="bi bi-telephone me-2"></i> {% trans "Coordonnées" %}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            {{ form.telephone|as_crispy_field }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            {{ form.email|as_crispy_field }}
+                                        </div>
+                                    </div>
+                                    {{ form.site_web|as_crispy_field }}
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="bi bi-calendar me-2"></i> {% trans "Abonnement" %}</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            {{ form.date_debut_abonnement|as_crispy_field }}
+                                        </div>
+                                        <div class="col-md-6">
+                                            {{ form.date_fin_abonnement|as_crispy_field }}
+                                        </div>
+                                    </div>
+                                    {{ form.active|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+    }
+    .card-header {
+        padding: 0.75rem 1.25rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    }
+    .form-control, .form-select {
+        border-radius: 0.2rem;
+    }
+    .btn {
+        border-radius: 0.2rem;
+    }
+    .bg-light {
+        background-color: #f8f9fa!important;
+    }
+    .shadow-sm {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075)!important;
+    }
+</style>
+{% endblock %}

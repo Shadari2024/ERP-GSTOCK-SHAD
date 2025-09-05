@@ -1,0 +1,416 @@
+{# ventes/devis/detail.html #}
+{% extends 'base.html' %}
+{% load humanize %}
+{% load static %}
+
+{% block title %}Détail du Devis #{{ devis.numero }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #6c5ce7;
+        --secondary-color: #a29bfe;
+        --dark-bg: #1a1a2e;
+        --darker-bg: #16213e;
+        --card-bg: #0f3460;
+        --text-light: #e6e6e6;
+        --text-lighter: #ffffff;
+        --success-color: #00b894;
+        --warning-color: #fdcb6e;
+        --danger-color: #ff7675;
+        --info-color: #0984e3;
+    }
+
+    body {
+        background-color: var(--dark-bg);
+        color: var(--text-light);
+    }
+
+    .card {
+        background-color: var(--card-bg);
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .card-header {
+        background-color: var(--darker-bg);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .table {
+        color: var(--text-light);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .table-striped tbody tr:nth-of-type(odd) {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .badge {
+        font-weight: 500;
+        padding: 5px 10px;
+        border-radius: 20px;
+    }
+
+    .bg-primary {
+        background-color: var(--primary-color) !important;
+    }
+
+    .bg-success {
+        background-color: var(--success-color) !important;
+    }
+
+    .bg-warning {
+        background-color: var(--warning-color) !important;
+        color: #333;
+    }
+
+    .bg-danger {
+        background-color: var(--danger-color) !important;
+    }
+
+    .bg-info {
+        background-color: var(--info-color) !important;
+    }
+
+    .bg-secondary {
+        background-color: #636e72 !important;
+    }
+
+    hr {
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .btn-primary:hover {
+        background-color: #5649d1;
+        border-color: #5649d1;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-card {
+        animation: fadeIn 0.5s ease forwards;
+    }
+
+    /* Status indicators */
+    .status-indicator {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        margin-right: 5px;
+    }
+
+    .status-brouillon { background-color: var(--secondary-color); }
+    .status-envoye { background-color: var(--info-color); }
+    .status-accepte { background-color: var(--success-color); }
+    .status-refuse { background-color: var(--danger-color); }
+    .status-converti { background-color: var(--primary-color); }
+    .status-annule { background-color: var(--warning-color); }
+
+    /* Timeline styles */
+    .timeline {
+        position: relative;
+        padding-left: 1.5rem;
+    }
+
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 0.5rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .timeline-item {
+        position: relative;
+        padding-bottom: 1.5rem;
+    }
+
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -1.5rem;
+        top: 0;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 50%;
+        background: var(--secondary-color);
+    }
+
+    .timeline-item-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+    }
+
+    .timeline-item-date {
+        font-size: 0.875rem;
+        color: var(--secondary-color);
+    }
+
+    .timeline-item-user {
+        font-weight: 500;
+        color: var(--text-lighter);
+    }
+
+    .timeline-item-content {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 0.75rem;
+        border-radius: 0.25rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .timeline-item-comment {
+        font-size: 0.875rem;
+        color: var(--secondary-color);
+        margin-top: 0.25rem;
+    }
+
+    .status-change {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.875rem;
+    }
+
+    .status-old {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text-light);
+    }
+
+    .status-new {
+        background: var(--primary-color);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show animate-card" role="alert" style="animation-delay: 0.1s">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="card shadow-lg mb-4 animate-card" style="animation-delay: 0.2s">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0 text-gradient">
+                        <i class="fas fa-file-invoice me-2"></i>Détail du Devis #{{ devis.numero }}
+                    </h4>
+                    <div class="btn-group" role="group">
+                        {% if devis.statut == 'envoye' %}
+                            <form method="post" action="{% url 'ventes:devis_accept' devis.pk %}" class="d-inline me-2">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-sm rounded-pill">
+                                    <i class="fas fa-check-circle me-1"></i> Accepter
+                                </button>
+                            </form>
+                        {% endif %}
+
+                        {% if devis.statut != 'CON' and devis.statut != 'REF' and devis.statut != 'ANN' %}
+                            <form action="{% url 'ventes:devis_convert_to_commande' devis.pk %}" method="post" class="d-inline me-2">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-info btn-sm rounded-pill" onclick="return confirm('Êtes-vous sûr de vouloir convertir ce devis en bon de commande ?');">
+                                    <i class="fas fa-exchange-alt me-1"></i> Convertir
+                                </button>
+                            </form>
+                        {% endif %}
+
+                        {% if devis.statut != 'ANN' and devis.statut != 'CON' %}
+                            <a href="{% url 'ventes:devis_update' devis.pk %}" class="btn btn-warning btn-sm me-2 rounded-pill">
+                                <i class="fas fa-edit me-1"></i> Modifier
+                            </a>
+                        {% endif %}
+
+                        <a href="{% url 'ventes:devis_print' devis.pk %}" class="btn btn-secondary btn-sm me-2 rounded-pill" target="_blank" title="Imprimer le devis">
+                            <i class="fas fa-print me-1"></i> Imprimer
+                        </a>
+                        
+                        {% if devis.commande_convertie %}
+                            <a href="{% url 'ventes:commande_detail' devis.commande_convertie.pk %}" class="btn btn-primary btn-sm rounded-pill" title="Voir la commande associée">
+                                <i class="fas fa-eye me-1"></i> Commande #{{ devis.commande_convertie.numero }}
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="status-{{ devis.statut|lower }} status-indicator"></span>
+                                <h5 class="mb-0">{{ devis.client.nom }}</h5>
+                            </div>
+                            <p><i class="fas fa-calendar-alt me-2"></i><strong>Date du Devis :</strong> {{ devis.date|date:"d/m/Y" }}</p>
+                            <p><i class="fas fa-clock me-2"></i><strong>Validité :</strong> {{ devis.echeance|date:"d/m/Y" }}</p>
+                            <p><i class="fas fa-info-circle me-2"></i><strong>Statut :</strong> 
+                                <span class="badge bg-{% if devis.statut == 'brouillon' %}secondary{% elif devis.statut == 'envoye' %}primary{% elif devis.statut == 'accepte' %}success{% elif devis.statut == 'refuse' %}danger{% elif devis.statut == 'facture' %}info{% endif %}">
+                                    {{ devis.get_statut_display }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card bg-dark p-3">
+                                <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                                    <span>Total HT :</span>
+                                    <span class="fw-bold">{{ devis.total_ht|intcomma }} {{ devise_principale_symbole }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                                    <span>Total TVA :</span>
+                                    <span class="fw-bold">{{ devis.total_tva|intcomma }} {{ devise_principale_symbole }}</span>
+                                </div>
+                                {% if devis.remise > 0 %}
+                                <div class="d-flex justify-content-between border-bottom pb-2 mb-2">
+                                    <span>Remise ({{ devis.remise }}%) :</span>
+                                    <span class="fw-bold text-danger">-{{ devis.montant_remise_calcule|intcomma }} {{ devise_principale_symbole }}</span>
+                                </div>
+                                {% endif %}
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-success">Total TTC :</span>
+                                    <span class="fw-bold text-success">{{ devis.total_ttc|intcomma }} {{ devise_principale_symbole }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <h5 class="mb-3"><i class="fas fa-boxes me-2"></i>Articles</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="thead-dark">
+                                <tr>
+                                    <th>Produit</th>
+                                    <th class="text-end">Qté</th>
+                                    <th class="text-end">Prix Unitaire HT</th>
+                                    <th class="text-end">TVA</th>
+                                    <th class="text-end">Montant HT</th>
+                                    <th class="text-end">Montant TVA</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in devis.items.all %}
+                                    <tr class="animate-card" style="animation-delay: calc({{ forloop.counter }} * 0.05s)">
+                                        <td>{{ item.produit.nom }}</td>
+                                        <td class="text-end">{{ item.quantite|intcomma }}</td>
+                                        <td class="text-end">{{ item.prix_unitaire|intcomma }} {{ devise_principale_symbole }}</td>
+                                        <td class="text-end">{{ item.taux_tva|intcomma }}%</td>
+                                        <td class="text-end">{{ item.montant_ht|intcomma }} {{ devise_principale_symbole }}</td>
+                                        <td class="text-end">{{ item.montant_tva|intcomma }} {{ devise_principale_symbole }}</td>
+                                    </tr>
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="6" class="text-center py-4">Aucun article pour ce devis.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {% if devis.notes %}
+                    <div class="mt-4">
+                        <h5><i class="fas fa-sticky-note me-2"></i>Notes</h5>
+                        <div class="card bg-dark p-3">
+                            {{ devis.notes|linebreaks }}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Historique des statuts -->
+            <div class="card shadow-lg mb-4 animate-card" style="animation-delay: 0.3s">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Historique des statuts</h5>
+                </div>
+                <div class="card-body">
+                    {% if devis.status_history.all %}
+                    <div class="timeline">
+                        {% for history in devis.status_history.all %}
+                        <div class="timeline-item">
+                            <div class="timeline-item-header">
+                                <span class="timeline-item-date">{{ history.changed_at|date:"d/m/Y H:i" }}</span>
+                                <span class="timeline-item-user">{{ history.changed_by.get_full_name|default:history.changed_by.username }}</span>
+                            </div>
+                            <div class="timeline-item-content">
+                                <span class="status-change status-old">{{ history.ancien_statut|default:"-"|title }}</span>
+                                <i class="fas fa-arrow-right mx-2 text-muted"></i>
+                                <span class="status-change status-new">{{ history.nouveau_statut|title }}</span>
+                                {% if history.commentaire %}
+                                <div class="timeline-item-comment">
+                                    <i class="fas fa-comment-alt me-1"></i>{{ history.commentaire }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3 text-muted">
+                        <i class="fas fa-info-circle me-2"></i>Aucun historique de statut disponible
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <a href="{% url 'ventes:devis_list' %}" class="btn btn-secondary rounded-pill">
+                <i class="fas fa-arrow-left me-2"></i>Retour à la liste
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animate elements on scroll
+        const animateOnScroll = function() {
+            const elements = document.querySelectorAll('.animate-card');
+            elements.forEach(element => {
+                const elementPosition = element.getBoundingClientRect().top;
+                const screenPosition = window.innerHeight / 1.2;
+                
+                if (elementPosition < screenPosition) {
+                    element.style.animationPlayState = 'running';
+                }
+            });
+        };
+        
+        window.addEventListener('scroll', animateOnScroll);
+        animateOnScroll(); // Run once on load
+
+        // Confirmation for accept action
+        const acceptForm = document.querySelector('form[action*="devis_accept"]');
+        if (acceptForm) {
+            acceptForm.addEventListener('submit', function(e) {
+                if (!confirm('Êtes-vous sûr de vouloir marquer ce devis comme accepté ? Cette action est irréversible.')) {
+                    e.preventDefault();
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

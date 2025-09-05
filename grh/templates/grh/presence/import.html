@@ -1,0 +1,44 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">
+                        <i class="fas fa-upload me-2"></i>{% trans "Importer des présences" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        
+                        <div class="alert alert-info">
+                            <h6>{% trans "Format du fichier CSV attendu" %}:</h6>
+                            <pre>matricule,date,heure_arrivee,heure_depart,statut,notes
+EMP001,2025-09-01,08:00,17:00,PRESENT,
+EMP002,2025-09-01,08:30,16:30,PRESENT,Réunion matinale</pre>
+                            <p class="mb-0">
+                                <strong>{% trans "Statuts possibles" %}:</strong> PRESENT, ABSENT, CONGE, MALADIE, AUTRE
+                            </p>
+                        </div>
+                        
+                        <div class="form-actions mt-4">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-upload me-2"></i>{% trans "Importer" %}
+                            </button>
+                            <a href="{% url 'grh:presence_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>{% trans "Annuler" %}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

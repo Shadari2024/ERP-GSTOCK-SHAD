@@ -1,0 +1,310 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load ad_tags %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card shadow mb-4">
+        <!-- En-tête avec filtres -->
+        <div class="card-header py-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center bg-primary text-white">
+            <h6 class="m-0 font-weight-bold mb-3 mb-md-0">
+                <i class="fas fa-shopping-cart mr-2"></i>Liste des Achats
+            </h6>
+            
+            <div class="d-flex flex-column flex-md-row align-items-center">
+                <!-- Filtre par date -->
+                <div class="input-group input-group-sm mr-0 mr-md-3 mb-2 mb-md-0" style="width: 220px;">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text bg-white"><i class="fas fa-calendar-alt text-primary"></i></span>
+                    </div>
+                    <input type="date" class="form-control" id="date-filter" placeholder="Filtrer par date">
+                </div>
+                
+                <!-- Filtre par devise -->
+                <div class="input-group input-group-sm mr-0 mr-md-3 mb-2 mb-md-0" style="width: 150px;">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text bg-white"><i class="fas fa-coins text-primary"></i></span>
+                    </div>
+                    <select id="select-devise" class="form-control">
+                        {% for devise in devises_disponibles %}
+                            <option value="{{ devise }}" {% if devise == devise_affichee %}selected{% endif %}>
+                                {{ devise }} ({{ devise_symbols|get_item:devise }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <!-- Bouton nouvel achat -->
+                <a href="{% url 'ajouter_achat' %}" class="btn btn-light btn-sm">
+                    <i class="fas fa-plus mr-1"></i> Nouvel Achat
+                </a>
+            </div>
+        </div>
+
+        <!-- Corps du tableau -->
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" width="100%" cellspacing="0">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Produit</th>
+                            <th>Fournisseur</th>
+                            <th class="text-right">Montant Converti</th>
+                            <th class="text-right">Montant Original</th>
+                            <th class="text-center">Taux Appliqué</th>
+                            <th>Date</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for achat in achats %}
+                        <tr>
+                            <td><a href="{% url 'detail_achat' achat.id %}" class="text-primary font-weight-bold">{{ achat.produit.nom }}</a></td>
+                            <td>{{ achat.fournisseur.nom }}</td>
+                            <td class="text-right font-weight-bold text-danger">
+                                -{{ achat.montant_converti|floatformat:2 }} {{ devise_symbols|get_item:devise_affichee }}
+                            </td>
+                            <td class="text-right text-muted small">
+                                -{{ achat.total_achat|floatformat:2 }} {{ devise_symbols|get_item:achat.devise }}
+                            </td>
+                            <td class="text-center small">
+                                {% if achat.devise != devise_affichee and achat.taux_applique %}
+                                    1 {{ achat.devise }} = 
+                                    {% if achat.devise == 'USD' and devise_affichee == 'CDF' %}
+                                        {{ achat.taux_applique|floatformat:0 }} {{ devise_affichee }}
+                                    {% elif achat.devise == 'CDF' and devise_affichee == 'USD' %}
+                                        {{ achat.taux_applique|floatformat:6 }} {{ devise_affichee }}
+                                    {% else %}
+                                        {{ achat.taux_applique|floatformat:4 }} {{ devise_affichee }}
+                                    {% endif %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>{{ achat.date_achat|date:"d/m/Y" }}</td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'detail_achat' achat.id %}" class="btn btn-info" title="Détails">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if not achat.transaction %}
+                                    <button class="btn btn-warning" title="Créer transaction"
+                                            onclick="creerTransaction({{ achat.id }})">
+                                        <i class="fas fa-link"></i>
+                                    </button>
+                                    {% else %}
+                                    <a href="{% url 'detail_transaction' achat.transaction.id %}" 
+                                       class="btn btn-secondary" title="Voir transaction">
+                                        <i class="fas fa-exchange-alt"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fas fa-exclamation-circle fa-2x mb-3"></i><br>
+                                Aucun achat trouvé. <a href="{% url 'ajouter_achat' %}">Ajouter un achat</a>.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="bg-light">
+                            <th colspan="2">Total</th>
+                            <th class="text-right text-danger">
+                                -{{ total_general|floatformat:2 }} {{ devise_symbols|get_item:devise_affichee }}
+                            </th>
+                            <th colspan="4"></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Conteneur pour les notifications toast -->
+<div id="toast-container" class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100"></div>
+
+<script>
+// Fonction globale pour créer une transaction
+window.creerTransaction = function(achatId) {
+    const url = `/achats/${achatId}/creer-transaction/`;
+    
+    if (confirm("Voulez-vous créer une transaction pour cet achat ?")) {
+        // Afficher un indicateur de chargement
+        const buttons = document.querySelectorAll(`button[onclick="creerTransaction(${achatId})"]`);
+        buttons.forEach(btn => {
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Erreur réseau');
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    showToast('success', 'Transaction créée avec succès');
+                    // Rafraîchir après 1 seconde
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    throw new Error(data.message || 'Erreur inconnue');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                showToast('error', error.message);
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            });
+        });
+    }
+};
+
+// Fonction pour récupérer le cookie CSRF
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Fonction pour afficher les notifications toast
+function showToast(type, message) {
+    const toastContainer = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast show align-items-center text-white bg-${type === 'error' ? 'danger' : 'success'}`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    toastContainer.appendChild(toast);
+    
+    setTimeout(() => toast.remove(), 5000);
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    // Gestion du changement de devise
+    const selectDevise = document.getElementById("select-devise");
+    
+    selectDevise.addEventListener("change", function () {
+        const deviseCible = this.value;
+        const formData = new FormData();
+        formData.append('devise', deviseCible);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        
+        fetch("{% url 'set_devise' %}", {
+            method: "POST",
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                window.location.reload();
+            } else {
+                throw new Error('Erreur serveur');
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            selectDevise.value = '{{ devise_affichee }}';
+            alert("Impossible de changer la devise. Veuillez réessayer.");
+        });
+    });
+
+    // Gestion du filtre par date
+    const dateFilter = document.getElementById("date-filter");
+    dateFilter.addEventListener("change", function() {
+        // Implémentez la logique de filtrage par date ici
+        console.log("Filtrer par date:", this.value);
+    });
+});
+</script>
+
+<style>
+.card-header {
+    border-radius: 0.35rem 0.35rem 0 0 !important;
+}
+
+.table thead th {
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.btn-group-sm > .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.input-group-sm > .form-control,
+.input-group-sm > .input-group-prepend > .input-group-text {
+    height: calc(1.5em + 0.5rem + 2px);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.input-group-text {
+    background-color: #fff;
+    border-right: none;
+}
+
+.input-group .form-control {
+    border-left: none;
+}
+
+.toast {
+    backdrop-filter: blur(10px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    margin-bottom: 1rem;
+    overflow: hidden;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+}
+
+.toast.show {
+    display: block;
+    opacity: 1;
+}
+
+.bg-success {
+    background-color: #28a745 !important;
+}
+
+.bg-danger {
+    background-color: #dc3545 !important;
+}
+</style>
+{% endblock %}

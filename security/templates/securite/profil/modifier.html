@@ -1,0 +1,20 @@
+{% extends 'security/base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Modifier mon profil</h2>
+    
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="card">
+            <div class="card-body">
+                {{ form.as_p }}
+            </div>
+            <div class="card-footer">
+                <button type="submit" class="btn btn-primary">Enregistrer</button>
+                <a href="{% url 'tableau_de_bord' %}" class="btn btn-secondary">Annuler</a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

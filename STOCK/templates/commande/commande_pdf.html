@@ -1,0 +1,298 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Bon de commande #{{ commande.id }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 13px;
+            color: #333;
+            background-color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #0d6efd;
+        }
+
+        .logo {
+            max-height: 70px;
+        }
+
+        .document-title {
+            text-align: center;
+            flex-grow: 1;
+        }
+
+        .document-title h1 {
+            color: #0d6efd;
+            font-size: 20px;
+            margin: 0;
+        }
+
+        .document-title .number {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .info-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .info-block {
+            width: 48%;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .company-info {
+            background-color: #f8f9fa;
+        }
+
+        .client-info {
+            background-color: #e9f7fe;
+        }
+
+        .info-block h3 {
+            margin-top: 0;
+            color: #0d6efd;
+            font-size: 14px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 5px;
+        }
+
+        .info-label {
+            font-weight: bold;
+            min-width: 100px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th {
+            background-color: #0d6efd;
+            color: white;
+            padding: 10px;
+            text-align: left;
+        }
+
+        td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .totals {
+            float: right;
+            width: 300px;
+            margin-top: 20px;
+        }
+
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 13px;
+        }
+
+        .total-row:last-child {
+            font-weight: bold;
+            border-top: 2px solid #0d6efd;
+            padding-top: 10px;
+            font-size: 15px;
+        }
+
+        .signature-section {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .signature-block {
+            width: 45%;
+            text-align: center;
+        }
+
+        .signature-line {
+            border-top: 1px solid #333;
+            width: 60%;
+            margin: 0 auto;
+            padding-top: 5px;
+        }
+
+        .signature-image {
+            max-width: 150px;
+            max-height: 80px;
+            display: block;
+            margin: 0 auto 5px auto;
+        }
+
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+
+        .footer strong {
+            color: #0d6efd;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- En-tête -->
+    <div class="header">
+        {% if entreprise.logo_url %}
+            <img src="{{ entreprise.logo_url }}" alt="Logo {{ entreprise.nom }}" class="logo">
+        {% else %}
+            <strong>{{ entreprise.nom }}</strong>
+        {% endif %}
+
+        <div class="document-title">
+            <h1>BON DE COMMANDE</h1>
+            <div class="number">N° {{ commande.id }}</div>
+        </div>
+
+        {% if not entreprise.logo_url %}
+            <div style="width: 70px;"></div>
+        {% endif %}
+    </div>
+
+    <!-- Blocs info -->
+    <div class="info-container">
+        <div class="info-block company-info">
+            <h3>Émetteur</h3>
+            <div class="info-row"><span class="info-label">Société :</span><span>{{ entreprise.nom }}</span></div>
+            <div class="info-row"><span class="info-label">Adresse :</span><span>{{ entreprise.adresse }}</span></div>
+            <div class="info-row"><span class="info-label">Téléphone :</span><span>{{ entreprise.telephone }}</span></div>
+            <div class="info-row"><span class="info-label">Email :</span><span>{{ entreprise.email }}</span></div>
+            {% if entreprise.registre_commerce %}
+                <div class="info-row"><span class="info-label">RC :</span><span>{{ entreprise.registre_commerce }}</span></div>
+            {% endif %}
+            {% if entreprise.nif %}
+                <div class="info-row"><span class="info-label">NIF :</span><span>{{ entreprise.nif }}</span></div>
+            {% endif %}
+        </div>
+
+        <div class="info-block client-info">
+            <h3>Client</h3>
+            <div class="info-row"><span class="info-label">Nom :</span><span>{{ commande.client.nom }}</span></div>
+            <div class="info-row"><span class="info-label">Adresse :</span><span>{{ commande.client.adresse|default:"Non spécifié" }}</span></div>
+            <div class="info-row"><span class="info-label">Téléphone :</span><span>{{ commande.client.telephone|default:"Non spécifié" }}</span></div>
+            <div class="info-row"><span class="info-label">Email :</span><span>{{ commande.client.email|default:"Non spécifié" }}</span></div>
+        </div>
+    </div>
+
+    <!-- Détails commande -->
+    <div style="margin-bottom: 20px;">
+        <div><strong>Date de commande:</strong> {{ commande.date_commande|date:"d/m/Y H:i" }}</div>
+        <div><strong>Vendeur:</strong> {{ seller_name }}</div>
+        <div><strong>Devise:</strong> {{ devise_principale_obj.code }} ({{ devise_principale_obj.symbole }})</div>
+    </div>
+
+    <!-- Tableau produits -->
+    <table>
+        <thead>
+            <tr>
+                <th>Produit</th>
+                <th>Qté</th>
+                <th>Prix U.</th>
+                <th>Total HT</th>
+                <th>TVA</th>
+                <th>Total TTC</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in lignes %}
+            <tr>
+                <td>{{ ligne.produit.nom }}</td>
+                <td>{{ ligne.quantite }}</td>
+                <td>{{ ligne.prix_unitaire_formatted }}</td>
+                <td>{{ ligne.total_ligne_ht_formatted }}</td>
+                <td>{{ ligne.tva_ligne_formatted }}</td>
+                <td>{{ ligne.montant_total_ligne_formatted }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" style="text-align:center;">Aucun produit dans cette commande</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Montants totaux -->
+    <div class="totals">
+        <div class="total-row">
+            <span>Total HT :</span>
+            <span>{{ total_ht_formatted }}</span>
+        </div>
+        <div class="total-row">
+            <span>TVA ({{ entreprise.taux_tva }}%) :</span>
+            <span>{{ total_tva_formatted }}</span>
+        </div>
+        <div class="total-row">
+            <span>Total TTC :</span>
+            <span>{{ total_ttc_formatted }}</span>
+        </div>
+    </div>
+
+    <!-- Signature -->
+    <div class="signature-section">
+        <div class="signature-block">
+            <p>Signature Client</p>
+            <div class="signature-line"></div>
+        </div>
+        <div class="signature-block">
+            <p>Signature Vendeur</p>
+            {% if seller_signature_url %}
+                <img src="{{ seller_signature_url }}" alt="Signature vendeur" class="signature-image">
+            {% else %}
+                <div class="signature-line"></div>
+            {% endif %}
+            <p>Fait le {{ date_impression }}</p>
+        </div>
+    </div>
+
+    <!-- Pied de page -->
+    <div class="footer">
+        {{ entreprise.nom }} - {{ entreprise.adresse }}<br>
+        Tél: {{ entreprise.telephone }} | Email: {{ entreprise.email }}<br>
+        Merci pour votre confiance !
+    </div>
+
+</div>
+
+</body>
+</html>

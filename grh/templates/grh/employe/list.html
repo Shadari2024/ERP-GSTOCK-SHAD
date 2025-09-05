@@ -1,0 +1,89 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+
+{% block page_title %}{% trans "Gestion des employés" %}{% endblock %}
+{% block page_description %}{% trans "Gérez l'ensemble de votre personnel, de la création de fiches à la mise à jour des informations." %}{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item active" aria-current="page">{% trans "Employés" %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm p-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="card-title mb-0">{% trans "Liste des employés" %}</h5>
+        <a href="{% url 'grh:employe_create' %}" class="btn btn-primary btn-sm" data-bs-toggle="tooltip" data-bs-placement="top" title="Créer la fiche d'un nouvel employé">
+            <i class="bi bi-plus-circle-fill me-1"></i> {% trans "Nouvel employé" %}
+        </a>
+    </div>
+
+    <div class="mb-4">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-5">
+                <input type="text" name="q" class="form-control form-control-sm" placeholder="{% trans 'Rechercher par matricule ou nom...' %}" value="{{ request.GET.q }}">
+            </div>
+            <div class="col-md-4">
+                <select name="statut" class="form-select form-select-sm">
+                    <option value="">{% trans "Tous les statuts" %}</option>
+                    {% for value, label in statuts %}
+                        <option value="{{ value }}" {% if request.GET.statut == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="tooltip" data-bs-placement="top" title="Appliquer les filtres de recherche">
+                    <i class="bi bi-funnel-fill me-1"></i> {% trans "Filtrer les résultats" %}
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle">
+            <thead>
+                <tr>
+                    <th scope="col" class="text-secondary">{% trans "Matricule" %}</th>
+                    <th scope="col" class="text-secondary">{% trans "Nom complet" %}</th>
+                    <th scope="col" class="text-secondary">{% trans "Poste" %}</th>
+                    <th scope="col" class="text-secondary">{% trans "Date embauche" %}</th>
+                    <th scope="col" class="text-secondary">{% trans "Statut" %}</th>
+                    <th scope="col" class="text-secondary text-end">{% trans "Actions" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for employe in employes %}
+                <tr>
+                    <td><span class="text-muted">{{ employe.matricule }}</span></td>
+                    <td><a href="{% url 'grh:employe_detail' employe.pk %}" class="text-decoration-none text-white">{{ employe.nom_complet }}</a></td>
+                    <td><span class="text-primary">{{ employe.poste.intitule }}</span></td>
+                    <td>{{ employe.date_embauche|date:"d/m/Y" }}</td>
+                    <td>
+                        <span class="badge rounded-pill py-2 px-3 bg-{% if employe.statut == 'ACTIF' %}success{% elif employe.statut == 'INACTIF' %}danger{% else %}warning{% endif %}">
+                            {{ employe.get_statut_display }}
+                        </span>
+                    </td>
+                    <td class="text-end">
+                        <a href="{% url 'grh:employe_detail' employe.pk %}" class="btn btn-sm btn-outline-info me-1" data-bs-toggle="tooltip" data-bs-placement="top" title="Voir la fiche détaillée de l'employé">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="{% url 'grh:employe_update' employe.pk %}" class="btn btn-sm btn-outline-warning me-1" data-bs-toggle="tooltip" data-bs-placement="top" title="Modifier les informations de l'employé">
+                            <i class="bi bi-pencil-square"></i>
+                        </a>
+                        <a href="{% url 'grh:employe_delete' employe.pk %}" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" data-bs-placement="top" title="Supprimer l'employé">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-secondary py-4">
+                        <i class="bi bi-emoji-frown d-block mb-2 fs-4"></i>
+                        {% trans "Aucun employé trouvé." %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,850 @@
+{% extends "achats/base_achats.html" %}
+{% load static %}
+
+{% block page_title %}
+    {% if object %}Modifier{% else %}Créer{% endif %} Commande d'Achat
+{% endblock page_title %}
+
+{% block extra_head %}
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        :root {
+            /* Odoo-like Dark Mode Variables */
+            --odoo-dark-bg: #2C3E50; /* Dark blue-gray for main background */
+            --odoo-dark-card-bg: #34495E; /* Slightly lighter dark blue-gray for cards */
+            --odoo-dark-text: #ECF0F1; /* Light gray for general text */
+            --odoo-dark-text-muted: #BDC3C7; /* Muted light gray */
+            --odoo-dark-border: #4A627A; /* Darker border color */
+            --odoo-dark-input-bg: #3B536B; /* Darker input background */
+            --odoo-dark-input-border: #526B85; /* Input border */
+            --odoo-dark-hover-bg: #40576E; /* Hover background for interactive elements */
+            --odoo-dark-primary: #875A7B; /* Odoo's primary purple */
+            --odoo-dark-secondary: #2196F3; /* A vibrant blue for secondary actions */
+            --odoo-dark-danger: #E74C3C; /* Red for errors/danger */
+            --odoo-dark-success: #2ECC71; /* Green for success */
+            --odoo-dark-info: #3498DB; /* Blue for info */
+            --odoo-dark-table-header-bg: #2B3B4C; /* Table header background */
+            --odoo-dark-table-border: #4A627A; /* Table border */
+            --odoo-dark-form-control-focus-border: #875A7B; /* Focus border color */
+            --odoo-dark-form-control-focus-shadow: rgba(135, 90, 123, 0.25); /* Focus shadow color */
+        }
+
+        body {
+            background-color: var(--odoo-dark-bg);
+            color: var(--odoo-dark-text);
+        }
+
+        .erp-detail-container {
+            padding: 20px;
+        }
+
+        .erp-card {
+            background-color: var(--odoo-dark-card-bg);
+            border: 1px solid var(--odoo-dark-border);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+
+        .erp-card-header {
+            background-color: var(--odoo-dark-table-header-bg);
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--odoo-dark-border);
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
+
+        .erp-card-title {
+            color: var(--odoo-dark-text);
+            margin-bottom: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .erp-card-body {
+            padding: 20px;
+        }
+
+        .erp-info-box {
+            background-color: var(--odoo-dark-table-header-bg); /* Slightly lighter than card */
+            border: 1px solid var(--odoo-dark-border);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .erp-section-title {
+            color: var(--odoo-dark-text);
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        .erp-section-title i {
+            margin-right: 8px;
+            color: var(--odoo-dark-primary); /* Icon color */
+        }
+
+        /* Form Control Styling */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-control {
+            background-color: var(--odoo-dark-input-bg);
+            color: var(--odoo-dark-text);
+            border: 1px solid var(--odoo-dark-input-border);
+            border-radius: 4px;
+            padding: 0.375rem 0.75rem;
+            height: calc(1.5em + .75rem + 2px); /* Standard Bootstrap height */
+        }
+
+        .form-control:focus {
+            background-color: var(--odoo-dark-input-bg);
+            color: var(--odoo-dark-text);
+            border-color: var(--odoo-dark-form-control-focus-border);
+            box-shadow: 0 0 0 0.2rem var(--odoo-dark-form-control-focus-shadow);
+        }
+
+        .form-control::placeholder {
+            color: var(--odoo-dark-text-muted);
+            opacity: 1; /* Firefox default is lower */
+        }
+
+        /* Labels */
+        label {
+            color: var(--odoo-dark-text);
+            margin-bottom: 0.5rem;
+            display: inline-block;
+        }
+
+        /* Select2 overrides for dark theme */
+        .select2-container--default .select2-selection--single {
+            background-color: var(--odoo-dark-input-bg);
+            border: 1px solid var(--odoo-dark-input-border);
+            color: var(--odoo-dark-text);
+            height: calc(1.5em + .75rem + 2px); /* Align Select2 height with Bootstrap inputs */
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: var(--odoo-dark-text);
+            line-height: calc(1.5em + .75rem + 2px); /* Vertically align text */
+            padding-left: 0.75rem; /* Match input padding */
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow b {
+            border-color: var(--odoo-dark-text-muted) transparent transparent transparent;
+        }
+        .select2-container--default .select2-results__option--highlighted.select2-results__option--selectable {
+            background-color: var(--odoo-dark-hover-bg);
+            color: var(--odoo-dark-text);
+        }
+        .select2-container--default .select2-results__option {
+            background-color: var(--odoo-dark-card-bg);
+            color: var(--odoo-dark-text);
+        }
+        .select2-dropdown {
+            background-color: var(--odoo-dark-card-bg);
+            border: 1px solid var(--odoo-dark-border);
+        }
+        .select2-search__field {
+            background-color: var(--odoo-dark-input-bg) !important;
+            color: var(--odoo-dark-text) !important;
+            border: 1px solid var(--odoo-dark-input-border) !important;
+        }
+
+
+        /* Table Styling */
+        .erp-table-responsive {
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+
+        .erp-line-table {
+            width: 100%;
+            border-collapse: separate; /* Allows border-radius on cells if needed */
+            border-spacing: 0;
+            margin-bottom: 0; /* Remove default table margin */
+        }
+
+        .erp-line-table th,
+        .erp-line-table td {
+            padding: 8px 12px;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--odoo-dark-table-border);
+            border-right: 1px solid var(--odoo-dark-table-border); /* Add right border for column separation */
+        }
+        .erp-line-table th:last-child,
+        .erp-line-table td:last-child {
+            border-right: none; /* No right border for the last column */
+        }
+        .erp-line-table tr:last-child td {
+            border-bottom: none; /* No bottom border for the last row */
+        }
+
+
+        .erp-thead th {
+            background-color: var(--odoo-dark-table-header-bg);
+            color: var(--odoo-dark-text);
+            font-weight: 600;
+            white-space: nowrap; /* Prevent wrapping in headers */
+            border-top: 1px solid var(--odoo-dark-table-border);
+            border-bottom: 2px solid var(--odoo-dark-border); /* Stronger bottom border for header */
+        }
+        .erp-thead th:first-child {
+            border-top-left-radius: 6px;
+        }
+        .erp-thead th:last-child {
+            border-top-right-radius: 6px;
+        }
+
+
+        /* Error Styling */
+        .erp-row-error {
+            background-color: rgba(231, 76, 60, 0.1) !important; /* Lighter red for error rows */
+            border-left: 3px solid var(--odoo-dark-danger);
+        }
+        .erp-row-error input,
+        .erp-row-error select,
+        .erp-row-error .select2-container--default .select2-selection--single {
+            border-color: var(--odoo-dark-danger) !important;
+        }
+
+        .form-group.has-error .form-control {
+            border-color: var(--odoo-dark-danger);
+        }
+
+        .text-danger {
+            color: var(--odoo-dark-danger) !important;
+        }
+        .text-danger.small {
+            font-size: 0.875em;
+            margin-top: 0.25rem;
+            display: block;
+        }
+
+        .alert-danger {
+            background-color: rgba(231, 76, 60, 0.2);
+            color: var(--odoo-dark-danger);
+            border-color: var(--odoo-dark-danger);
+            padding: 1rem;
+            border-radius: 6px;
+        }
+        .alert-danger h5 {
+            color: var(--odoo-dark-danger);
+            margin-bottom: 0.5rem;
+        }
+        .alert-danger ul {
+            margin-bottom: 0;
+            padding-left: 20px;
+        }
+
+        /* Buttons */
+        .erp-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.6em 1.2em;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            text-decoration: none;
+        }
+
+        .erp-btn-primary {
+            background-color: var(--odoo-dark-primary);
+            color: #FFFFFF;
+            border: 1px solid var(--odoo-dark-primary);
+        }
+        .erp-btn-primary:hover {
+            background-color: #6B455F; /* Slightly darker primary */
+            color: #FFFFFF;
+            border-color: #6B455F;
+        }
+
+        .erp-btn-secondary {
+            background-color: var(--odoo-dark-hover-bg);
+            color: var(--odoo-dark-text);
+            border: 1px solid var(--odoo-dark-border);
+        }
+        .erp-btn-secondary:hover {
+            background-color: #526B85; /* Slightly darker hover bg */
+            color: var(--odoo-dark-text);
+            border-color: #526B85;
+        }
+
+        .erp-btn-outline-secondary {
+            background-color: transparent;
+            color: var(--odoo-dark-text-muted);
+            border: 1px solid var(--odoo-dark-border);
+        }
+        .erp-btn-outline-secondary:hover {
+            background-color: var(--odoo-dark-hover-bg);
+            color: var(--odoo-dark-text);
+            border-color: var(--odoo-dark-border);
+        }
+
+        .erp-action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+
+        /* Totals Table */
+        .table-borderless td, .table-borderless th {
+            border: none;
+        }
+        .table-sm td, .table-sm th {
+            padding: 0.3rem;
+        }
+        .table strong {
+            color: var(--odoo-dark-primary);
+            font-size: 1.1em;
+        }
+
+        /* Tooltip Style (Bootstrap default, but ensure visibility in dark mode) */
+        .tooltip-inner {
+            background-color: #4A627A; /* Darker tooltip background */
+            color: #ECF0F1;
+        }
+        .tooltip.bs-tooltip-auto[x-placement^=top] .arrow::before, 
+        .tooltip.bs-tooltip-top .arrow::before {
+            border-top-color: #4A627A;
+        }
+        .tooltip.bs-tooltip-auto[x-placement^=right] .arrow::before, 
+        .tooltip.bs-tooltip-right .arrow::before {
+            border-right-color: #4A627A;
+        }
+        .tooltip.bs-tooltip-auto[x-placement^=bottom] .arrow::before, 
+        .tooltip.bs-tooltip-bottom .arrow::before {
+            border-bottom-color: #4A627A;
+        }
+        .tooltip.bs-tooltip-auto[x-placement^=left] .arrow::before, 
+        .tooltip.bs-tooltip-left .arrow::before {
+            border-left-color: #4A627A;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+{% endblock extra_head %}
+
+{% block achats_content %}
+<div class="erp-detail-container">
+    <div class="erp-card">
+        <div class="erp-card-header">
+            <h2 class="erp-card-title">
+                {% if object %}Modifier{% else %}Créer{% endif %} Commande d'Achat
+            </h2>
+        </div>
+
+        <div class="erp-card-body">
+            {% if form.non_field_errors or formset.non_form_errors %}
+            <div class="alert alert-danger mb-4">
+                <h5>Erreurs à corriger :</h5>
+                <ul>
+                    {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                    {% for error in formset.non_form_errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <form method="post" id="commande-form" novalidate>
+                {% csrf_token %}
+                
+                <div class="erp-info-box mb-4">
+                    <h5 class="erp-section-title" data-bs-toggle="tooltip" data-bs-placement="top" title="Informations générales de la commande, y compris le fournisseur et les dates importantes.">
+                        <i class="bi bi-info-circle"></i>Informations Générales
+                    </h5>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group {% if form.fournisseur.errors %}has-error{% endif %}">
+                                {{ form.fournisseur.label_tag }}
+                                <div data-bs-toggle="tooltip" data-bs-placement="top" title="Sélectionnez le fournisseur pour cette commande.">
+                                    {{ form.fournisseur }}
+                                </div>
+                                {% for error in form.fournisseur.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group {% if form.date_commande.errors %}has-error{% endif %}">
+                                {{ form.date_commande.label_tag }}
+                                <div data-bs-toggle="tooltip" data-bs-placement="top" title="Date à laquelle la commande a été émise.">
+                                    {{ form.date_commande }}
+                                </div>
+                                {% for error in form.date_commande.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group {% if form.date_livraison_prevue.errors %}has-error{% endif %}">
+                                {{ form.date_livraison_prevue.label_tag }}
+                                <div data-bs-toggle="tooltip" data-bs-placement="top" title="Date prévue de livraison des produits.">
+                                    {{ form.date_livraison_prevue }}
+                                </div>
+                                {% for error in form.date_livraison_prevue.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group {% if form.notes.errors %}has-error{% endif %}">
+                                {{ form.notes.label_tag }}
+                                <div data-bs-toggle="tooltip" data-bs-placement="top" title="Ajoutez des notes ou des commentaires importants concernant cette commande.">
+                                    {{ form.notes }}
+                                </div>
+                                {% for error in form.notes.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="erp-info-box mb-4">
+                    <h5 class="erp-section-title" data-bs-toggle="tooltip" data-bs-placement="top" title="Détaillez les produits, quantités, prix et taxes pour chaque ligne de la commande.">
+                        <i class="bi bi-list-ul"></i>Lignes de Commande
+                    </h5>
+                    
+                    {{ formset.management_form }}
+                    {% if formset.non_form_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in formset.non_form_errors %}
+                        <div>{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="erp-table-responsive">
+                        <table class="erp-line-table" id="lignes-commande">
+                            <thead class="erp-thead">
+                                <tr>
+                                    <th data-bs-toggle="tooltip" data-bs-placement="top" title="Le produit à commander.">Produit</th>
+                                    <th class="text-right" data-bs-toggle="tooltip" data-bs-placement="top" title="Quantité de produit à commander.">Quantité</th>
+                                    <th class="text-right" data-bs-toggle="tooltip" data-bs-placement="top" title="Prix unitaire hors taxes du produit.">Prix Unitaire HT</th>
+                                    <th class="text-right" data-bs-toggle="tooltip" data-bs-placement="top" title="Pourcentage de remise applicable à ce produit (par exemple, 10 pour 10%).">Remise %</th>
+                                    <th class="text-right" data-bs-toggle="tooltip" data-bs-placement="top" title="Taux de TVA applicable au produit (par exemple, 20 pour 20%).">TVA %</th>
+                                    <th class="text-right" data-bs-toggle="tooltip" data-bs-placement="top" title="Montant total hors taxes pour cette ligne (Quantité * Prix Unitaire * (1 - Remise)).">Montant HT</th>
+                                    <th class="text-right" data-bs-toggle="tooltip" data-bs-placement="top" title="Montant total toutes taxes comprises pour cette ligne (Montant HT + TVA).">Montant TTC</th>
+                                    <th data-bs-toggle="tooltip" data-bs-placement="top" title="Cochez pour marquer cette ligne pour suppression.">Supprimer</th>
+                                </tr>
+                            </thead>
+                            <tbody id="formset-container">
+                                {% for form in formset %}
+                                <tr class="formset-row {% if form.errors %}erp-row-error{% endif %}">
+                                    <td>
+                                        {{ form.id }}
+                                        <div class="form-group" data-bs-toggle="tooltip" data-bs-placement="top" title="Sélectionnez un produit existant ou commencez à taper pour en rechercher un.">
+                                            {{ form.produit }}
+                                            {% for error in form.produit.errors %}
+                                            <div class="text-danger small">{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                    <td class="text-right">
+                                        <div class="form-group" data-bs-toggle="tooltip" data-bs-placement="top" title="Entrez la quantité de produit désirée.">
+                                            {{ form.quantite }}
+                                            {% for error in form.quantite.errors %}
+                                            <div class="text-danger small">{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                    <td class="text-right">
+                                        <div class="form-group" data-bs-toggle="tooltip" data-bs-placement="top" title="Entrez le prix unitaire du produit.">
+                                            {{ form.prix_unitaire }}
+                                            {% for error in form.prix_unitaire.errors %}
+                                            <div class="text-danger small">{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                    <td class="text-right">
+                                        <div class="form-group" data-bs-toggle="tooltip" data-bs-placement="top" title="Entrez la remise en pourcentage (ex: 5 pour 5%).">
+                                            {{ form.remise }}
+                                            {% for error in form.remise.errors %}
+                                            <div class="text-danger small">{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                    <td class="text-right">
+                                        <div class="form-group" data-bs-toggle="tooltip" data-bs-placement="top" title="Entrez le taux de TVA en pourcentage (ex: 20 pour 20%).">
+                                            {{ form.taux_tva }}
+                                            {% for error in form.taux_tva.errors %}
+                                            <div class="text-danger small">{{ error }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                    <td class="text-right montant-ht" data-bs-toggle="tooltip" data-bs-placement="top" title="Montant calculé hors taxes.">0.00</td>
+                                    <td class="text-right montant-ttc" data-bs-toggle="tooltip" data-bs-placement="top" title="Montant calculé toutes taxes comprises.">0.00</td>
+                                    <td class="text-center" data-bs-toggle="tooltip" data-bs-placement="top" title="Cochez cette case pour supprimer cette ligne de produit.">
+                                        {{ form.DELETE }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <button type="button" class="erp-btn erp-btn-secondary mt-2" id="add-row" data-bs-toggle="tooltip" data-bs-placement="top" title="Ajoutez une nouvelle ligne de produit à la commande.">
+                        <i class="bi bi-plus-circle"></i> Ajouter une ligne
+                    </button>
+                    <button type="button" class="erp-btn erp-btn-primary mt-2" id="create-product-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Créez un nouveau produit sans quitter la commande.">
+                        <i class="bi bi-box-seam"></i> Créer un produit
+                    </button>
+                </div>
+
+                <div class="erp-info-box mb-4">
+                    <h5 class="erp-section-title" data-bs-toggle="tooltip" data-bs-placement="top" title="Résumé financier de la commande.">
+                        <i class="bi bi-calculator"></i>Totaux de la Commande
+                    </h5>
+                    <div class="row justify-content-end">
+                        <div class="col-md-4">
+                            <table class="table table-sm table-borderless">
+                                <tbody>
+                                    <tr>
+                                        <td>Total HT:</td>
+                                        <td class="text-right"><strong id="total-ht" data-bs-toggle="tooltip" data-bs-placement="top" title="Somme des montants HT de toutes les lignes.">0.00</strong> {{ devise_principale.symbole }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Total TVA:</td>
+                                        <td class="text-right"><strong id="total-tva" data-bs-toggle="tooltip" data-bs-placement="top" title="Somme de la TVA de toutes les lignes.">0.00</strong> {{ devise_principale.symbole }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Total TTC:</strong></td>
+                                        <td class="text-right"><strong id="total-ttc" data-bs-toggle="tooltip" data-bs-placement="top" title="Montant total de la commande, toutes taxes comprises.">0.00</strong> {{ devise_principale.symbole }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="erp-action-buttons">
+                    <button type="submit" class="erp-btn erp-btn-primary" data-bs-toggle="tooltip" data-bs-placement="top" title="Sauvegardez toutes les modifications de la commande d'achat.">
+                        <i class="bi bi-save"></i> Enregistrer la Commande
+                    </button>
+                    <a href="{% url 'achats:liste_commandes' %}" class="erp-btn erp-btn-outline-secondary" data-bs-toggle="tooltip" data-bs-placement="top" title="Annulez les modifications et retournez à la liste des commandes.">
+                        <i class="bi bi-x-circle"></i> Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="createProductModal" tabindex="-1" aria-labelledby="createProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="background-color: var(--odoo-dark-card-bg); color: var(--odoo-dark-text);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--odoo-dark-border);">
+                <h5 class="modal-title" id="createProductModalLabel" style="color: var(--odoo-dark-text);">
+                    <i class="bi bi-box-seam mr-2"></i>Créer un Nouveau Produit
+                </h5>
+                <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close" style="color: var(--odoo-dark-text-muted);">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="createProductModalBody">
+                <p>Chargement du formulaire...</p>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--odoo-dark-border);">
+                <button type="button" class="erp-btn erp-btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="erp-btn erp-btn-primary" id="saveProductBtn">Enregistrer le Produit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/template" id="empty-row-template">
+    <tr class="formset-row">
+        <td>
+            <input type="hidden" name="lignes-__prefix__-id" id="id_lignes-__prefix__-id">
+            <div class="form-group">
+                <select name="lignes-__prefix__-produit" id="id_lignes-__prefix__-produit" class="form-control select2" required
+                        data-bs-toggle="tooltip" data-bs-placement="top" title="Sélectionnez un produit existant ou commencez à taper pour en rechercher un.">
+                    <option value="">---------</option>
+                    {# We need to make sure 'formset.empty_form.produit.field.queryset' is available or fetch products via AJAX #}
+                    {# For simplicity, assuming it's available. In a real app, AJAX would be better for large product lists. #}
+                    {% for produit in formset.empty_form.produit.field.queryset %}
+                    <option value="{{ produit.pk }}">{{ produit.nom }}</option>
+                    {% endfor %}
+                </select>
+                <div class="text-danger small" id="error_lignes-__prefix__-produit"></div>
+            </div>
+        </td>
+        <td class="text-right">
+            <div class="form-group">
+                <input type="number" name="lignes-__prefix__-quantite" step="0.01" id="id_lignes-__prefix__-quantite" class="form-control" required value="1"
+                       data-bs-toggle="tooltip" data-bs-placement="top" title="Quantité de produit à commander.">
+                <div class="text-danger small" id="error_lignes-__prefix__-quantite"></div>
+            </div>
+        </td>
+        <td class="text-right">
+            <div class="form-group">
+                <input type="number" name="lignes-__prefix__-prix_unitaire" step="0.01" id="id_lignes-__prefix__-prix_unitaire" class="form-control" required value="0.00"
+                       data-bs-toggle="tooltip" data-bs-placement="top" title="Prix unitaire hors taxes du produit.">
+                <div class="text-danger small" id="error_lignes-__prefix__-prix_unitaire"></div>
+            </div>
+        </td>
+        <td class="text-right">
+            <div class="form-group">
+                <input type="number" name="lignes-__prefix__-remise" step="0.01" id="id_lignes-__prefix__-remise" class="form-control" value="0"
+                       data-bs-toggle="tooltip" data-bs-placement="top" title="Pourcentage de remise applicable.">
+                <div class="text-danger small" id="error_lignes-__prefix__-remise"></div>
+            </div>
+        </td>
+        <td class="text-right">
+            <div class="form-group">
+                <input type="number" name="lignes-__prefix__-taux_tva" step="0.01" id="id_lignes-__prefix__-taux_tva" class="form-control" required value="0"
+                       data-bs-toggle="tooltip" data-bs-placement="top" title="Taux de TVA applicable.">
+                <div class="text-danger small" id="error_lignes-__prefix__-taux_tva"></div>
+            </div>
+        </td>
+        <td class="text-right montant-ht" data-bs-toggle="tooltip" data-bs-placement="top" title="Montant calculé hors taxes.">0.00</td>
+        <td class="text-right montant-ttc" data-bs-toggle="tooltip" data-bs-placement="top" title="Montant calculé toutes taxes comprises.">0.00</td>
+        <td class="text-center">
+            <input type="checkbox" name="lignes-__prefix__-DELETE" id="id_lignes-__prefix__-DELETE"
+                   data-bs-toggle="tooltip" data-bs-placement="top" title="Cochez pour supprimer cette ligne.">
+        </td>
+    </tr>
+</script>
+{% endblock achats_content %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script> 
+
+<script>
+$(document).ready(function() {
+    let formsetRowIndex = parseInt($('#id_lignes-TOTAL_FORMS').val() || 0);
+
+    // Initialize Bootstrap Tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+
+    function initSelect2(element) {
+        $(element).select2({
+            placeholder: "Sélectionnez un produit",
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $(element).closest('td') || $('body') // Ensure dropdown is positioned correctly
+        });
+    }
+
+    $('select[name*="produit"]').each(function() {
+        initSelect2(this);
+    });
+
+    function calculateRow(row) {
+        const getValue = (name) => {
+            const val = $(row).find(`[name*="${name}"]`).val();
+            return val ? parseFloat(val) : 0;
+        };
+
+        const quantite = getValue('quantite');
+        const prix = getValue('prix_unitaire');
+        const remise = getValue('remise');
+        const tva = getValue('taux_tva');
+
+        const totalHT = quantite * prix * (1 - remise / 100);
+        const montantTVA = totalHT * tva / 100;
+        const totalTTC = totalHT + montantTVA;
+
+        $(row).find('.montant-ht').text(totalHT.toFixed(2));
+        $(row).find('.montant-ttc').text(totalTTC.toFixed(2));
+
+        return { totalHT, montantTVA, totalTTC };
+    }
+
+    function updateTotals() {
+        let totals = { ht: 0, tva: 0, ttc: 0 };
+
+        $('.formset-row').each(function() {
+            if (!$(this).find('input[name*="-DELETE"]').is(':checked')) {
+                const rowCalculations = calculateRow(this);
+                totals.ht += rowCalculations.totalHT;
+                totals.tva += rowCalculations.montantTVA;
+                totals.ttc += rowCalculations.totalTTC;
+            }
+        });
+
+        $('#total-ht').text(totals.ht.toFixed(2));
+        $('#total-tva').text(totals.tva.toFixed(2));
+        $('#total-ttc').text(totals.ttc.toFixed(2));
+    }
+
+    $('#add-row').click(function() {
+        const totalFormsInput = $('#id_lignes-TOTAL_FORMS');
+        const currentFormsCount = parseInt(totalFormsInput.val());
+        
+        const newRowHtml = $('#empty-row-template').html().replace(/__prefix__/g, currentFormsCount);
+        const $newRow = $(newRowHtml);
+        
+        $('#formset-container').append($newRow);
+        totalFormsInput.val(currentFormsCount + 1);
+
+        initSelect2($newRow.find('select[name*="-produit"]'));
+
+        // Re-initialize tooltips for the new row
+        $newRow.find('[data-bs-toggle="tooltip"]').each(function () {
+            new bootstrap.Tooltip(this);
+        });
+
+        $newRow.find('input[type="number"], select').on('change keyup', function() {
+            $(this).removeClass('is-invalid');
+            $(this).parent().find('.text-danger.small').text(''); 
+            $(this).closest('.formset-row').removeClass('erp-row-error');
+            updateTotals();
+        });
+
+        $newRow.find('input[type="checkbox"][name*="-DELETE"]').on('change', function() {
+            updateTotals();
+        });
+
+        updateTotals();
+    });
+
+    $(document).on('change keyup', '.formset-row input[type="number"], .formset-row select', function() {
+        $(this).removeClass('is-invalid');
+        $(this).parent().find('.text-danger.small').text(''); 
+        $(this).closest('.formset-row').removeClass('erp-row-error'); 
+        updateTotals(); 
+    });
+
+    $(document).on('change', '.formset-row input[type="checkbox"][name*="-DELETE"]', function() {
+        updateTotals();
+    });
+
+    // --- Product Creation Modal Logic ---
+    $('#create-product-btn').click(function() {
+        // Load the product creation form into the modal body
+
+        const url_for_product_creation_form = "{% url 'ajouter_produit' %}"; // Example URL
+
+        $.ajax({
+            url: url_for_product_creation_form,
+            type: 'GET',
+            success: function(response) {
+                $('#createProductModalBody').html(response);
+                $('#createProductModal').modal('show');
+            },
+            error: function(xhr, status, error) {
+                $('#createProductModalBody').html('<p class="text-danger">Erreur lors du chargement du formulaire : ' + xhr.responseText + '</p>');
+                console.error("Error loading product form:", status, error, xhr.responseText);
+            }
+        });
+    });
+
+    // Handle saving the product from the modal
+    $('#saveProductBtn').click(function() {
+        const $form = $('#createProductModalBody form');
+        if (!$form.length) {
+            alert("Formulaire de produit non trouvé.");
+            return;
+        }
+
+        $.ajax({
+            url: $form.attr('action') || "{% url 'ajouter_produit' %}", // Endpoint to save product via AJAX
+            type: 'POST',
+            data: $form.serialize(),
+            success: function(response) {
+                if (response.success) {
+                    // Product created successfully, add it to all product Select2 dropdowns
+                    const newProduct = response.product; // Assuming response includes {id: ..., name: ...}
+                    $('select[name*="-produit"]').each(function() {
+                        const $select = $(this);
+                        // Check if the option already exists to avoid duplicates
+                        if ($select.find(`option[value="${newProduct.id}"]`).length === 0) {
+                            const newOption = new Option(newProduct.name, newProduct.id, false, false);
+                            $select.append(newOption).trigger('change');
+                        }
+                    });
+                    $('#createProductModal').modal('hide');
+                    alert('Produit créé avec succès !');
+                } else {
+                    // Display form errors in the modal
+                    $('#createProductModalBody').html(response.form_html);
+                    // Re-initialize any JS components within the reloaded form, like datepickers if any
+                }
+            },
+            error: function(xhr, status, error) {
+                alert("Une erreur est survenue lors de l'enregistrement du produit.");
+                console.error("Error saving product:", status, error, xhr.responseText);
+            }
+        });
+    });
+
+    // Client-side Validation on Form Submission
+    $('#commande-form').on('submit', function(e) {
+        let isValid = true;
+        
+        $(this).find('.is-invalid').removeClass('is-invalid');
+        $(this).find('.erp-row-error').removeClass('erp-row-error');
+        $(this).find('.text-danger.small').text(''); 
+        $('#no-line-error').remove();
+
+        $(this).find('.erp-info-box:first input[required], .erp-info-box:first select[required], .erp-info-box:first textarea[required]').each(function() {
+            if (!this.checkValidity()) {
+                $(this).addClass('is-invalid');
+                isValid = false;
+                $(this).parent().find('.text-danger.small').text(this.validationMessage);
+            }
+        });
+        
+        let hasAtLeastOneActiveLine = false;
+        $('.formset-row').each(function() {
+            const $row = $(this);
+            const isMarkedForDeletion = $row.find('input[name*="-DELETE"]').is(':checked');
+
+            if (!isMarkedForDeletion) {
+                hasAtLeastOneActiveLine = true;
+                $row.find('input[required], select[required]').each(function() {
+                    if (!this.checkValidity()) {
+                        $(this).addClass('is-invalid');
+                        $row.addClass('erp-row-error');
+                        isValid = false;
+                        $(this).parent().find('.text-danger.small').text(this.validationMessage);
+                    }
+                });
+            }
+        });
+
+        if (!hasAtLeastOneActiveLine && ($('.formset-row').length > 0 || !{{ object|yesno:"false,true" }}) ) {
+            isValid = false;
+            if ($('#no-line-error').length === 0) {
+                $('#formset-container').before('<div id="no-line-error" class="alert alert-danger mb-3">La commande doit contenir au moins une ligne de produit non supprimée.</div>');
+            }
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            
+            const firstErrorElement = $('.is-invalid, .erp-row-error, #no-line-error').first();
+            if (firstErrorElement.length) {
+                $('html, body').animate({
+                    scrollTop: firstErrorElement.offset().top - 100
+                }, 500);
+            }
+        }
+    });
+
+    updateTotals();
+
+    // Initial tooltips for existing elements
+    $('[data-bs-toggle="tooltip"]').tooltip();
+});
+</script>
+{% endblock extra_js %}

@@ -1,0 +1,268 @@
+{% extends "achats/base_achats.html" %}
+{% load crispy_forms_tags static %}
+{% load widget_tweaks %}
+
+{% block title %}Créer un Bon de Réception pour la Commande {{ commande.numero_commande }}{% endblock %}
+
+{% block content %}
+<div class="container-lg mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'achats:liste_commandes' %}">Commandes</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'achats:detail_commande' pk=commande.pk %}">Commande {{ commande.numero_commande }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Nouveau Bon de Réception</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-5 fw-bold text-primary">
+            <i class="fas fa-clipboard-check me-2"></i>Créer un Bon de Réception
+        </h1>
+        <a href="{% url 'achats:detail_commande' pk=commande.pk %}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-1"></i> Retour à la Commande
+        </a>
+    </div>
+
+    <!-- Commande Info Card -->
+    <div class="card border-primary mb-4 shadow">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-file-invoice me-2"></i>Détails de la Commande d'Achat
+            </h5>
+            <span class="badge bg-light text-primary fs-6">{{ commande.get_statut_display }}</span>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    <p class="mb-2"><strong><i class="fas fa-hashtag me-2"></i>Numéro:</strong> 
+                    <span class="text-muted">{{ commande.numero_commande }}</span></p>
+                </div>
+                <div class="col-md-3">
+                    <p class="mb-2"><strong><i class="fas fa-building me-2"></i>Fournisseur:</strong> 
+                    <span class="text-muted">{{ fournisseur.nom }}</span></p>
+                </div>
+                <div class="col-md-3">
+                    <p class="mb-2"><strong><i class="fas fa-calendar-alt me-2"></i>Date:</strong> 
+                    <span class="text-muted">{{ commande.date_commande|date:"d/m/Y" }}</span></p>
+                </div>
+                <div class="col-md-3">
+                    <p class="mb-2"><strong><i class="fas fa-money-bill-wave me-2"></i>Devise:</strong> 
+                    <span class="text-muted">{{ symbole_devise }} ({{ devise_principale.code }})</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" class="needs-validation" novalidate>
+        {% csrf_token %}
+
+        <!-- Bon de Réception Info Card -->
+        <div class="card border-success mb-4 shadow">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Informations du Bon de Réception
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        {{ form.numero_bon|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.date_reception|as_crispy_field }}
+                    </div>
+                    <div class="col-md-4">
+                        {{ form.notes|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lignes de Réception Card -->
+        <div class="card border-info mb-4 shadow">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-list-ul me-2"></i>Lignes de Réception
+                </h5>
+                <span class="badge bg-light text-info fs-6">{{ formset|length }} ligne(s)</span>
+            </div>
+            <div class="card-body">
+                {{ formset.management_form }}
+                <div id="formset-container" class="row g-3">
+                    {% for form in formset %}
+                        <div class="col-12">
+                            <div class="card mb-3 border-info">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0 fw-bold text-info">Ligne de Réception {{ forloop.counter }}</h6>
+                                    {% if formset.can_delete %}
+                                        <div class="form-check form-switch">
+                                            {{ form.DELETE|add_class:"form-check-input" }}
+                                            <label class="form-check-label small" for="{{ form.DELETE.id_for_label }}">Supprimer</label>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="card-body">
+                                    {% if form.instance.pk %}{{ form.id }}{% endif %}
+                                    
+                                    <div class="row g-3">
+                                        <!-- Ligne Commande -->
+                                        <div class="col-md-6">
+                                            {{ form.ligne_commande|as_crispy_field }}
+                                        </div>
+                                        
+                                        <!-- Quantité -->
+                                        <div class="col-md-3">
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="fas fa-balance-scale"></i></span>
+                                                {{ form.quantite|as_crispy_field }}
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Conditionnement -->
+                                        <div class="col-md-3">
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="fas fa-box-open"></i></span>
+                                                {{ form.conditionnement|as_crispy_field }}
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Notes -->
+                                        <div class="col-12">
+                                            <div class="input-group">
+                                                <span class="input-group-text"><i class="fas fa-comment"></i></span>
+                                                {{ form.notes|as_crispy_field }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Error messages -->
+                                    {% for error in form.non_field_errors %}
+                                        <div class="alert alert-danger mt-2">{{ error }}</div>
+                                    {% endfor %}
+                                    {% for field in form %}
+                                        {% for error in field.errors %}
+                                            <div class="invalid-feedback d-block">{{ error }}</div>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="d-flex justify-content-between mt-3">
+                    <button type="button" class="btn btn-outline-info" id="add-form">
+                        <i class="fas fa-plus-circle me-1"></i> Ajouter une ligne
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="reset-forms">
+                        <i class="fas fa-undo me-1"></i> Réinitialiser
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-5">
+            <button type="submit" class="btn btn-primary btn-lg px-4 me-md-2">
+                <i class="fas fa-save me-2"></i>Créer le Bon de Réception
+            </button>
+            <button type="reset" class="btn btn-outline-secondary btn-lg px-4">
+                <i class="fas fa-eraser me-2"></i>Annuler
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Formset management
+    const totalForms = document.getElementById('id_lignes-TOTAL_FORMS');
+    const formsetContainer = document.getElementById('formset-container');
+    const addFormButton = document.getElementById('add-form');
+    const resetFormsButton = document.getElementById('reset-forms');
+    
+    // Get the empty form template
+    const emptyFormTemplate = document.querySelector('.col-12 .card').cloneNode(true);
+    
+    // Initialize form counter
+    let formCount = formsetContainer.children.length;
+    
+    // Add new form
+    addFormButton.addEventListener('click', function() {
+        const newForm = emptyFormTemplate.cloneNode(true);
+        const newFormId = formCount;
+        
+        // Update all ids, names and labels
+        newForm.innerHTML = newForm.innerHTML.replace(/lignes-(\d+)-/g, `lignes-${newFormId}-`);
+        
+        // Update the title
+        newForm.querySelector('.card-header h6').textContent = `Ligne de Réception ${newFormId + 1}`;
+        
+        // Reset all values
+        newForm.querySelectorAll('input, select, textarea').forEach(input => {
+            if (input.type !== 'hidden' && input.name !== 'lignes-TOTAL_FORMS') {
+                if (input.type === 'checkbox') {
+                    input.checked = false;
+                } else {
+                    input.value = '';
+                }
+            }
+        });
+        
+        // Add to container
+        formsetContainer.appendChild(newForm);
+        formCount++;
+        totalForms.value = formCount;
+    });
+    
+    // Reset all forms
+    resetFormsButton.addEventListener('click', function() {
+        formsetContainer.innerHTML = '';
+        formCount = 0;
+        totalForms.value = 0;
+        
+        // Re-add the initial form
+        const initialForm = emptyFormTemplate.cloneNode(true);
+        initialForm.innerHTML = initialForm.innerHTML.replace(/lignes-(\d+)-/g, `lignes-0-`);
+        initialForm.querySelector('.card-header h6').textContent = 'Ligne de Réception 1';
+        formsetContainer.appendChild(initialForm);
+        formCount = 1;
+        totalForms.value = 1;
+    });
+    
+    // Enable Bootstrap validation
+    (function () {
+        'use strict'
+        
+        // Fetch all the forms we want to apply custom Bootstrap validation styles to
+        const forms = document.querySelectorAll('.needs-validation')
+        
+        // Loop over them and prevent submission
+        Array.from(forms).forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                }
+                
+                form.classList.add('was-validated')
+            }, false)
+        })
+    })()
+    
+    // Dynamic update of product info when ligne_commande changes
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.matches('select[id$="-ligne_commande"]')) {
+            const ligneCommandeId = e.target.value;
+            if (ligneCommandeId) {
+                // You could add AJAX here to fetch product details if needed
+                console.log('Selected ligne commande:', ligneCommandeId);
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="invoice-dashboard">
+    <!-- Header Section -->
+    <div class="dashboard-header">
+        <h1 class="dashboard-title">
+            <i class="fas fa-file-invoice"></i> Gestion des Factures
+        </h1>
+        <a href="{% url 'liste_paiements' %}" class="btn-payments">
+            <i class="fas fa-money-bill-wave"></i> Voir les Paiements
+        </a>
+    </div>
+
+    <!-- Invoice Table -->
+    <div class="card invoice-card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table invoice-table">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Numéro</th>
+                            <th>Client</th>
+                            <th>Date</th>
+                            <th class="text-right">Total</th>
+                            <th class="text-right">Payé</th>
+                            <th>Statut</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for facture in factures %}
+                        <tr class="status-{{ facture.statut }}">
+                            <td>
+                                <strong>{{ facture.numero }}</strong>
+                            </td>
+                            <td>{{ facture.commande.client.nom }}</td>
+                            <td>{{ facture.date|date:"d/m/Y" }}</td>
+                            <td class="text-right">{{ facture.montant_total }} €</td>
+                            <td class="text-right">{{ facture.montant_paye }} €</td>
+                            <td>
+                                <span class="status-badge status-{{ facture.statut }}">
+                                    {{ facture.get_statut_display }}
+                                </span>
+                            </td>
+                            <td class="text-center action-buttons">
+                                <a href="{% url 'detail_facture' facture.id %}" class="btn-action btn-view" title="Détails">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'facture_pdf' facture.id %}" target="_blank" class="btn btn-outline-primary">
+                                    <i class="fas fa-file-pdf"></i> Imprimer PDF
+                                </a>
+                                
+                                <a href="{% url 'actions_facture' facture.id %}" class="btn-action btn-edit" title="Actions">
+                                    <i class="fas fa-cog"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center no-data">
+                                Aucune facture disponible
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Main Container */
+    .invoice-dashboard {
+        padding: 30px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    /* Header Styles */
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+
+    .dashboard-title {
+        color: #2c3e50;
+        font-size: 28px;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* Button Styles */
+    .btn-payments {
+        background: #3498db;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s;
+    }
+
+    .btn-payments:hover {
+        background: #2980b9;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    /* Card Styles */
+    .invoice-card {
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    /* Table Styles */
+    .invoice-table {
+        width: 100%;
+    }
+
+    .invoice-table th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 13px;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+    }
+
+    .invoice-table td {
+        vertical-align: middle;
+    }
+
+    /* Status Styles */
+    .status-badge {
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+
+    .status-payee {
+        background-color: rgba(40, 167, 69, 0.1);
+        color: #28a745;
+    }
+
+    .status-impayee {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
+    }
+
+    .status-partielle {
+        background-color: rgba(255, 193, 7, 0.1);
+        color: #ffc107;
+    }
+
+    /* Row Highlighting */
+    .status-payee {
+        background-color: rgba(40, 167, 69, 0.03);
+    }
+
+    .status-impayee {
+        background-color: rgba(220, 53, 69, 0.03);
+    }
+
+    .status-partielle {
+        background-color: rgba(255, 193, 7, 0.03);
+    }
+
+    /* Action Buttons */
+    .action-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .btn-action {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        transition: all 0.3s;
+    }
+
+    .btn-view {
+        background: #4e73df;
+    }
+
+    .btn-payment {
+        background: #1cc88a;
+    }
+
+    .btn-edit {
+        background: #f6c23e;
+    }
+
+    .btn-action:hover {
+        transform: scale(1.1);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    /* No Data */
+    .no-data {
+        padding: 30px;
+        color: #6c757d;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .dashboard-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        
+        .invoice-table {
+            display: block;
+            overflow-x: auto;
+        }
+    }
+</style>
+{% endblock %}

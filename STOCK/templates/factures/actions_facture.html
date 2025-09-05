@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="action-container">
+    <h2>Actions pour la facture {{ facture.numero }}</h2>
+    
+    <div class="facture-info">
+        <p><strong>Client:</strong> {{ facture.commande.client.nom }}</p>
+        <p><strong>Total:</strong> {{ facture.montant_total }} €</p>
+        <p><strong>Payé:</strong> {{ facture.montant_paye }} €</p>
+        <p><strong>Statut:</strong> {{ facture.get_statut_display }}</p>
+    </div>
+    
+    <form method="post" class="action-form">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label>Sélectionnez une action :</label>
+            <select name="action" class="form-select">
+                {% if facture.reste_a_payer <= 0 %}
+                <option value="marquer_payee">Marquer comme payée</option>
+                {% endif %}
+                <option value="annuler">Annuler la facture</option>
+            </select>
+        </div>
+        
+        <button type="submit" class="btn-confirm">Confirmer</button>
+        <a href="{% url 'liste_factures' %}" class="btn-cancel">Retour</a>
+    </form>
+</div>
+
+<style>
+    .action-container {
+        max-width: 600px;
+        margin: 20px auto;
+        padding: 20px;
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .facture-info {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    .action-form {
+        margin-top: 20px;
+    }
+    .form-select {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .btn-confirm, .btn-cancel {
+        padding: 10px 15px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-right: 10px;
+    }
+    .btn-confirm {
+        background: #28a745;
+        color: white;
+    }
+    .btn-cancel {
+        background: #6c757d;
+        color: white;
+        text-decoration: none;
+        display: inline-block;
+    }
+</style>
+{% endblock %}

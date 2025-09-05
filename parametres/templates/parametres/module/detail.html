@@ -1,0 +1,124 @@
+{% extends 'parametres/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Détails du Module: {{ module.nom }}</h5>
+        <div>
+            <a href="{% url 'parametres:module_update' module.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit"></i> Modifier
+            </a>
+            <a href="{% url 'parametres:module_list' %}" class="btn btn-secondary">
+                <i class="fas fa-list"></i> Retour à la liste
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <h6>Informations de base</h6>
+                    <hr>
+                    <p><strong>Code:</strong> {{ module.code }}</p>
+                    <p><strong>Nom:</strong> {{ module.nom }}</p>
+                    <p><strong>Catégorie:</strong> {{ module.get_categorie_display }}</p>
+                    <p><strong>Actif par défaut:</strong> 
+                        {% if module.actif_par_defaut %}
+                            <span class="badge badge-success">Oui</span>
+                        {% else %}
+                            <span class="badge badge-secondary">Non</span>
+                        {% endif %}
+                    </p>
+                    <p><strong>Ordre d'affichage:</strong> {{ module.ordre_affichage }}</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <h6>Description</h6>
+                    <hr>
+                    <p>{{ module.description|default:"Aucune description" }}</p>
+                </div>
+                <div class="mb-3">
+                    <h6>Dates</h6>
+                    <hr>
+                    <p><strong>Créé le:</strong> {{ module.date_creation|date:"d/m/Y H:i" }}</p>
+                    <p><strong>Dernière modification:</strong> {{ module.date_mise_a_jour|date:"d/m/Y H:i" }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">Dépendances</h6>
+                        <a href="{% url 'parametres:dependance_module_create' module.pk %}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus"></i> Ajouter
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if dependances %}
+                        <ul class="list-group">
+                            {% for dependance in dependances %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                {% if dependance.module_principal == module %}
+                                    <span>
+                                        Dépend de <strong>{{ dependance.module_dependance.nom }}</strong>
+                                        ({{ dependance.get_obligatoire_display }})
+                                    </span>
+                                {% else %}
+                                    <span>
+                                        <strong>{{ dependance.module_principal.nom }}</strong> dépend de ce module
+                                        ({{ dependance.get_obligatoire_display }})
+                                    </span>
+                                {% endif %}
+                                {% if dependance.module_principal == module %}
+                                <a href="{% url 'parametres:dependance_module_delete' dependance.pk %}" class="btn btn-sm btn-danger">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                                {% endif %}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="text-muted">Aucune dépendance définie</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">Entreprises associées</h6>
+                        <a href="{% url 'parametres:module_entreprise_create' module.pk %}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus"></i> Ajouter
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if entreprises %}
+                        <ul class="list-group">
+                            {% for entreprise in entreprises %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>
+                                    {{ entreprise.entreprise.nom }}
+                                    <span class="badge {% if entreprise.est_actif %}badge-success{% else %}badge-secondary{% endif %}">
+                                        {{ entreprise.get_est_actif_display }}
+                                    </span>
+                                </span>
+                                <a href="{% url 'parametres:module_entreprise_update' entreprise.pk %}" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% else %}
+                        <p class="text-muted">Aucune entreprise associée</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

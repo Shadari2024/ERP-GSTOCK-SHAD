@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Nouvelle réception</h2>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="card mb-4">
+            <div class="card-header">Informations</div>
+            <div class="card-body">
+                {{ form.as_p }}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">Articles</div>
+            <div class="card-body">
+                {{ formset.management_form }}
+                
+                <table class="table" id="formset-table">
+                    <thead>
+                        <tr>
+                            <th>Produit</th>
+                            <th>Quantité</th>
+                            <th>Prix unitaire</th>
+                            <th>Lot</th>
+                            <th>Péremption</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for form in formset %}
+                        <tr class="form-row">
+                            <td>{{ form.produit }}</td>
+                            <td>{{ form.quantite }}</td>
+                            <td>{{ form.prix_unitaire }}</td>
+                            <td>{{ form.lot }}</td>
+                            <td>{{ form.date_peremption }}</td>
+                            <td></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+                <button type="button" class="btn btn-secondary" id="add-row">
+                    <i class="fas fa-plus"></i> Ajouter un article
+                </button>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-success mt-3">
+            <i class="fas fa-save"></i> Enregistrer
+        </button>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const formsetTable = document.getElementById('formset-table');
+    const tbody = formsetTable.querySelector('tbody');
+    const totalForms = document.getElementById('id_form-TOTAL_FORMS');
+    const addButton = document.getElementById('add-row');
+    
+    let formCount = parseInt(totalForms.value);
+    
+    addButton.addEventListener('click', function() {
+        const newRow = tbody.querySelector('.form-row').cloneNode(true);
+        const inputs = newRow.querySelectorAll('input, select');
+        
+        inputs.forEach(function(input) {
+            const name = input.name.replace(/-\d+-/, '-' + formCount + '-');
+            input.name = name;
+            input.id = 'id_' + name;
+            input.value = '';
+        });
+        
+        tbody.appendChild(newRow);
+        totalForms.value = ++formCount;
+    });
+});
+</script>
+{% endblock %}

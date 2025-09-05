@@ -1,0 +1,59 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">
+                        {% if object %}
+                            <i class="fas fa-edit me-2"></i>{% trans "Modifier le poste" %}
+                        {% else %}
+                            <i class="fas fa-plus-circle me-2"></i>{% trans "Nouveau poste" %}
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.code|as_crispy_field }}
+                                {{ form.intitule|as_crispy_field }}
+                                {{ form.departement|as_crispy_field }}
+                                {{ form.description|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.type_contrat|as_crispy_field }}
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        {{ form.salaire_min|as_crispy_field }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.salaire_max|as_crispy_field }}
+                                    </div>
+                                </div>
+                                {{ form.actif|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>
+                                {% if object %}{% trans "Modifier" %}{% else %}{% trans "Créer" %}{% endif %}
+                            </button>
+                            <a href="{% url 'grh:poste_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>{% trans "Annuler" %}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

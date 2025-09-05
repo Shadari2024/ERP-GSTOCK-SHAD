@@ -1,0 +1,650 @@
+{% extends "achats/base_achats.html" %}
+
+{% block page_title %}Liste des Fournisseurs{% endblock %}
+
+{% block achats_content %}
+<div class="erp-fournisseurs-container">
+    <div class="erp-content-header">
+        <h2 class="erp-content-title">Fournisseurs</h2>
+        
+        <div class="erp-content-actions">
+            {# View Toggle Buttons #}
+            <div class="erp-view-toggles">
+                <button id="listViewBtn" class="erp-btn erp-btn-secondary active" data-view="list" data-tooltip="Afficher les fournisseurs sous forme de liste.">
+                    <i class="bi bi-list-ul"></i> Liste
+                </button>
+                <button id="tableViewBtn" class="erp-btn erp-btn-secondary" data-view="table" data-tooltip="Afficher les fournisseurs sous forme de tableau.">
+                    <i class="bi bi-table"></i> Tableau
+                </button>
+                <button id="gridViewBtn" class="erp-btn erp-btn-secondary" data-view="grid" data-tooltip="Afficher les fournisseurs sous forme de grille.">
+                    <i class="bi bi-grid-3x3-gap-fill"></i> Grille
+                </button>
+            </div>
+
+            <a href="{% url 'achats:creer_fournisseur' %}" class="erp-btn erp-btn-primary"
+                data-tooltip="Créer un nouveau fournisseur.">
+                <i class="bi bi-plus-lg"></i> Nouveau fournisseur
+            </a>
+            <a href="{% url 'achats:importer_fournisseurs' %}" class="erp-btn erp-btn-secondary"
+                data-tooltip="Importer des fournisseurs depuis un fichier.">
+                <i class="bi bi-upload"></i> Importer
+            </a>
+        </div>
+    </div>
+
+    {# --- Display Views --- #}
+    <div id="fournisseursDisplay" class="erp-display-area">
+        {# Table View (Default) #}
+        <div id="tableView" class="erp-table-container">
+            <div class="erp-card"> {# Card wrapper for the table #}
+                <div class="erp-card-body">
+                    <div class="table-responsive">
+                        <table class="erp-table">
+                            <thead>
+                                <tr>
+                                    <th>Code</th>
+                                    <th>Nom</th>
+                                    <th>Email</th>
+                                    <th>Téléphone</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for fournisseur in fournisseurs %}
+                                <tr>
+                                    <td>
+                                        <span class="erp-badge erp-badge-id"
+                                            data-tooltip="Code unique du fournisseur.">{{ fournisseur.code }}</span>
+                                    </td>
+                                    <td>{{ fournisseur.nom }}</td>
+                                    <td>{{ fournisseur.email|default:"N/A" }}</td>
+                                    <td>{{ fournisseur.telephone|default:"N/A" }}</td>
+                                    <td class="erp-table-actions">
+                                        <a href="{% url 'achats:detail_fournisseur' fournisseur.pk %}" class="erp-btn-icon view" 
+                                            data-tooltip="Voir les détails complets de ce fournisseur.">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="{% url 'achats:modifier_fournisseur' fournisseur.pk %}" class="erp-btn-icon edit" 
+                                            data-tooltip="Modifier les informations de ce fournisseur.">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="{% url 'achats:supprimer_fournisseur' fournisseur.pk %}" class="erp-btn-icon delete" 
+                                            data-tooltip="Supprimer ce fournisseur. Attention : cette action est irréversible.">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="erp-empty">
+                                        <i class="bi bi-inbox"></i>
+                                        <span>Aucun fournisseur trouvé</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# List View #}
+        <div id="listView" class="erp-list-container" style="display: none;">
+            {% for fournisseur in fournisseurs %}
+            <div class="erp-list-item erp-card">
+                <div class="erp-list-item-header">
+                    <span class="erp-badge erp-badge-id" data-tooltip="Code unique du fournisseur.">{{ fournisseur.code }}</span>
+                    <h3 class="erp-list-item-title">{{ fournisseur.nom }}</h3>
+                </div>
+                <div class="erp-list-item-body">
+                    <p><strong>Email:</strong> {{ fournisseur.email|default:"N/A" }}</p>
+                    <p><strong>Téléphone:</strong> {{ fournisseur.telephone|default:"N/A" }}</p>
+                </div>
+                <div class="erp-list-item-actions">
+                    <a href="{% url 'achats:detail_fournisseur' fournisseur.pk %}" class="erp-btn-icon view" data-tooltip="Voir les détails.">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a href="{% url 'achats:modifier_fournisseur' fournisseur.pk %}" class="erp-btn-icon edit" data-tooltip="Modifier.">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <a href="{% url 'achats:supprimer_fournisseur' fournisseur.pk %}" class="erp-btn-icon delete" data-tooltip="Supprimer.">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="erp-empty">
+                <i class="bi bi-inbox"></i>
+                <span>Aucun fournisseur trouvé en mode liste.</span>
+            </div>
+            {% endfor %}
+        </div>
+
+        {# Grid View #}
+        <div id="gridView" class="erp-grid-container" style="display: none;">
+            {% for fournisseur in fournisseurs %}
+            <div class="erp-grid-item erp-card">
+                <div class="erp-grid-item-header">
+                    <span class="erp-badge erp-badge-id" data-tooltip="Code unique du fournisseur.">{{ fournisseur.code }}</span>
+                </div>
+                <div class="erp-grid-item-body">
+                    <h3>{{ fournisseur.nom }}</h3>
+                    <p>Email: {{ fournisseur.email|default:"N/A" }}</p>
+                    <p>Téléphone: {{ fournisseur.telephone|default:"N/A" }}</p>
+                </div>
+                <div class="erp-grid-item-actions">
+                    <a href="{% url 'achats:detail_fournisseur' fournisseur.pk %}" class="erp-btn-icon view" data-tooltip="Voir les détails.">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a href="{% url 'achats:modifier_fournisseur' fournisseur.pk %}" class="erp-btn-icon edit" data-tooltip="Modifier.">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <a href="{% url 'achats:supprimer_fournisseur' fournisseur.pk %}" class="erp-btn-icon delete" data-tooltip="Supprimer.">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="erp-empty">
+                <i class="bi bi-inbox"></i>
+                <span>Aucun fournisseur trouvé en mode grille.</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {# --- End Display Views --- #}
+
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* General Container for Fournisseurs Page */
+    .erp-fournisseurs-container {
+        padding: 2rem;
+        background: var(--card-background); /* Dark card background */
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        color: var(--text-color-light); /* Default text color for container */
+    }
+
+    /* Header Section (similar to commandes) */
+    .erp-content-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .erp-content-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-color-light); /* Light text for title */
+        margin: 0;
+    }
+
+    .erp-content-actions {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    /* Common Button Styles (from previous example) */
+    .erp-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius);
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        transition: var(--transition);
+        border: none;
+        text-decoration: none;
+    }
+
+    .erp-btn-primary {
+        background-color: var(--primary-color);
+        color: white;
+        box-shadow: 0 4px 12px rgba(var(--primary-color-rgb), 0.3);
+    }
+    .erp-btn-primary:hover {
+        background-color: var(--secondary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(var(--primary-color-rgb), 0.5);
+    }
+
+    .erp-btn-secondary {
+        background-color: var(--background-body); /* Body background for secondary */
+        color: var(--text-color-light);
+        border: 1px solid var(--border-color);
+        box-shadow: none;
+    }
+    .erp-btn-secondary:hover {
+        background-color: var(--dark-color);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    /* View Toggle Buttons */
+    .erp-view-toggles {
+        display: flex;
+        gap: 0.5rem;
+        margin-right: auto; /* Pushes buttons to the left */
+    }
+
+    .erp-view-toggles .erp-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+        border: 1px solid var(--border-color);
+        background-color: var(--card-background);
+        color: var(--text-color-light);
+    }
+
+    .erp-view-toggles .erp-btn.active {
+        background-color: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .erp-view-toggles .erp-btn:not(.active):hover {
+        background-color: var(--dark-color);
+        color: white;
+    }
+
+    /* Card Styles (Common for List/Grid Items and Table Wrapper) */
+    .erp-card {
+        background-color: var(--background-body); /* Lighter background for cards than the main container */
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        margin-bottom: 0; /* Managed by grid/flex gap */
+        overflow: hidden;
+        display: flex; /* For list/grid to structure content */
+        flex-direction: column;
+        gap: 1rem;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border: 1px solid var(--border-color); /* Add a border to cards */
+    }
+    
+    .erp-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .erp-card-body {
+        padding: 1.5rem 2rem;
+        flex-grow: 1; /* Allow body to grow in flex container */
+    }
+
+    /* Table Styles */
+    .erp-table-container {
+        overflow-x: auto;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow); /* Shadow on the container if needed */
+        background-color: var(--background-body); /* Consistent with card */
+    }
+
+    .erp-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 0.9rem;
+        color: var(--text-color-light);
+    }
+
+    .erp-table thead tr th {
+        text-align: left;
+        padding: 1rem 1.25rem;
+        background-color: var(--primary-color);
+        color: white;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 0.05em;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    .erp-table tbody tr td {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--border-color);
+        transition: background-color 0.2s ease;
+    }
+
+    .erp-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .erp-table tbody tr:hover {
+        background-color: rgba(var(--primary-color-rgb), 0.1);
+    }
+
+    .erp-table thead tr th:first-child { border-top-left-radius: var(--border-radius); }
+    .erp-table thead tr th:last-child { border-top-right-radius: var(--border-radius); }
+    .erp-table tbody tr:last-child td:first-child { border-bottom-left-radius: var(--border-radius); }
+    .erp-table tbody tr:last-child td:last-child { border-bottom-right-radius: var(--border-radius); }
+
+    /* Action Buttons (shared styles) */
+    .erp-table-actions, .erp-list-item-actions, .erp-grid-item-actions {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center; /* Center actions in table cells */
+        align-items: center;
+    }
+
+    .erp-btn-icon {
+        width: 36px;
+        height: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 0.9rem;
+        transition: all 0.2s ease-in-out;
+        border: none;
+        cursor: pointer;
+        text-decoration: none; /* For links */
+    }
+
+    .erp-btn-icon.view {
+        background-color: rgba(var(--accent-color-rgb), 0.2);
+        color: var(--accent-color);
+    }
+    .erp-btn-icon.view:hover {
+        background-color: var(--accent-color);
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .erp-btn-icon.edit {
+        background-color: rgba(248, 150, 30, 0.2); /* Orange for edit */
+        color: #f8961e;
+    }
+    .erp-btn-icon.edit:hover {
+        background-color: #f8961e;
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .erp-btn-icon.delete {
+        background-color: rgba(247, 37, 133, 0.2); /* Pink/Red for delete */
+        color: #f72585;
+    }
+    .erp-btn-icon.delete:hover {
+        background-color: #f72585;
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    /* Empty state */
+    .erp-empty {
+        text-align: center;
+        padding: 3rem;
+        color: var(--text-color-dark);
+        font-style: italic;
+    }
+    .erp-empty i {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        display: block;
+        color: var(--text-color-dark);
+    }
+
+    /* Badge for Code */
+    .erp-badge-id {
+        display: inline-block;
+        background-color: rgba(var(--accent-color-rgb), 0.1);
+        color: var(--accent-color);
+        padding: 0.2rem 0.6rem;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+
+    /* Tooltip styles (ensure these are globally available, e.g., in base_achats.html) */
+    [data-tooltip]::after {
+        content: attr(data-tooltip);
+        visibility: hidden;
+        opacity: 0;
+        background-color: var(--tooltip-bg); /* Use tooltip background variable */
+        color: var(--tooltip-color); /* Use tooltip text color variable */
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px 10px;
+        position: absolute;
+        z-index: 1001;
+        top: 120%; /* Position below element */
+        left: 50%;
+        transform: translateX(-50%) translateY(5px);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        white-space: nowrap;
+        font-size: 0.85rem;
+        pointer-events: none; /* Allows clicks on elements below tooltip */
+        box-shadow: var(--box-shadow);
+    }
+
+    [data-tooltip]:hover::after {
+        visibility: visible;
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+
+    /* List View Styles */
+    .erp-list-container {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem; /* Space between list items */
+    }
+
+    .erp-list-item {
+        /* erp-card styles applied directly */
+        display: flex; /* Override default card display for specific list layout */
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .erp-list-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 0.75rem;
+    }
+
+    .erp-list-item-title {
+        font-size: 1.2rem;
+        color: var(--primary-color);
+        margin: 0;
+    }
+
+    .erp-list-item-body p {
+        margin: 0.5rem 0;
+        font-size: 0.95rem;
+        color: var(--text-color-dark);
+    }
+
+    .erp-list-item-body p strong {
+        color: var(--text-color-light);
+    }
+
+    .erp-list-item-actions {
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+        margin-top: 0.75rem;
+        display: flex;
+        justify-content: flex-end; /* Align actions to the right */
+        gap: 0.5rem;
+    }
+
+    /* Grid View Styles */
+    .erp-grid-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); /* Responsive grid columns */
+        gap: 1.5rem; /* Space between grid items */
+    }
+
+    .erp-grid-item {
+        /* erp-card styles applied directly */
+        display: flex; /* Override default card display for specific grid layout */
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center; /* Center content in grid item */
+    }
+
+    .erp-grid-item-header {
+        display: flex;
+        justify-content: center; /* Center the badge */
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .erp-grid-item-body h3 {
+        font-size: 1.3rem;
+        color: var(--primary-color);
+        margin-top: 0;
+        margin-bottom: 0.75rem;
+    }
+
+    .erp-grid-item-body p {
+        margin: 0.5rem 0;
+        color: var(--text-color-dark);
+    }
+
+    .erp-grid-item-actions {
+        display: flex;
+        justify-content: center; /* Center actions in grid item */
+        padding-top: 1rem;
+        border-top: 1px solid var(--border-color);
+        margin-top: 1rem;
+        gap: 0.5rem;
+    }
+
+    /* Conditional Display for Views */
+    #tableView {
+        display: block; /* Default to table display */
+    }
+    #listView,
+    #gridView {
+        display: none; /* Hidden by default, controlled by JS */
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .erp-fournisseurs-container {
+            padding: 1rem;
+        }
+
+        .erp-content-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .erp-content-actions {
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .erp-content-actions .erp-btn {
+            width: 100%;
+        }
+
+        .erp-view-toggles {
+            flex-direction: row; /* Keep buttons inline if possible, or stack if necessary */
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%; /* Take full width on small screens */
+        }
+        .erp-view-toggles .erp-btn {
+            flex-grow: 1; /* Distribute space among buttons */
+        }
+
+        .erp-card-body {
+            padding: 1rem;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .erp-table {
+            min-width: 600px; /* Ensure table doesn't collapse too much */
+        }
+        
+        .erp-table thead tr th,
+        .erp-table tbody tr td {
+            padding: 0.75rem 1rem;
+        }
+
+        .erp-grid-container {
+            grid-template-columns: 1fr; /* Single column on small screens */
+        }
+
+        .erp-list-item-actions,
+        .erp-grid-item-actions {
+            justify-content: center; /* Center actions on small screens */
+        }
+    }
+</style>
+{% endblock extra_css %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const viewButtons = document.querySelectorAll('.erp-view-toggles .erp-btn');
+        const tableView = document.getElementById('tableView');
+        const listView = document.getElementById('listView');
+        const gridView = document.getElementById('gridView');
+
+        // Function to set the active view
+        function setActiveView(viewType) {
+            // Hide all views
+            tableView.style.display = 'none';
+            listView.style.display = 'none';
+            gridView.style.display = 'none';
+
+            // Remove active class from all buttons
+            viewButtons.forEach(button => button.classList.remove('active'));
+
+            // Show the selected view and activate its button
+            if (viewType === 'table') {
+                tableView.style.display = 'block'; // Table is block
+                document.getElementById('tableViewBtn').classList.add('active');
+            } else if (viewType === 'list') {
+                listView.style.display = 'flex'; // List container uses flex
+                document.getElementById('listViewBtn').classList.add('active');
+            } else if (viewType === 'grid') {
+                gridView.style.display = 'grid'; // Grid container uses grid
+                document.getElementById('gridViewBtn').classList.add('active');
+            }
+
+            // Save the preference to local storage
+            localStorage.setItem('fournisseursViewPreference', viewType);
+        }
+
+        // Add event listeners to view buttons
+        viewButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const viewType = this.dataset.view;
+                setActiveView(viewType);
+            });
+        });
+
+        // Load saved preference on page load
+        const savedView = localStorage.getItem('fournisseursViewPreference');
+        if (savedView) {
+            setActiveView(savedView);
+        } else {
+            // Default to list view if no preference is saved
+            setActiveView('list'); // Changed default to list for suppliers, adjust as needed
+        }
+    });
+</script>
+{% endblock extra_js %}

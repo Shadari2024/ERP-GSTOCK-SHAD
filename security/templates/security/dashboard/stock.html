@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Tableau de Bord - Stock{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <h1>Tableau de Bord - Gestionnaire de Stock</h1>
+    
+    <div class="stock-actions">
+        <!-- Ajoutez ici les éléments spécifiques à la gestion de stock -->
+        <a href="{% url 'stock:liste' %}" class="btn btn-primary">Voir le stock</a>
+        <a href="{% url 'stock:ajouter' %}" class="btn btn-success">Ajouter un produit</a>
+    </div>
+</div>
+{% endblock %}

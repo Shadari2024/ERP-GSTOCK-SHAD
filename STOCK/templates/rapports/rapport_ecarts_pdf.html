@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Rapport des Écarts d'Inventaire</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+            @bottom-right {
+                content: "Page " counter(page) " sur " counter(pages);
+                font-size: 10px;
+                color: #666;
+            }
+        }
+        body {
+            font-family: 'Helvetica', Arial, sans-serif;
+            color: #333;
+            line-height: 1.5;
+            font-size: 12px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 15px;
+        }
+        .title {
+            color: #2c3e50;
+            font-size: 22px;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        .info-box {
+            background-color: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 11px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 11px;
+            page-break-inside: avoid;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+            padding: 8px;
+            text-align: left;
+        }
+        td {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .alert-row {
+            background-color: #fff8f8 !important;
+        }
+        .alert-cell {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 10px;
+            color: #7f8c8d;
+            border-top: 1px solid #eee;
+            padding-top: 8px;
+        }
+        .signature {
+            margin-top: 40px;
+            width: 60%;
+            float: right;
+        }
+        .signature-line {
+            border-top: 1px solid #333;
+            width: 200px;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 class="title">Rapport des Écarts d'Inventaire</h1>
+        <p class="subtitle">Généré le {% now "j F Y à H:i" %}</p>
+    </div>
+
+    <div class="info-box">
+        <p>
+            Ce rapport liste tous les écarts d'inventaire non validés. 
+            <strong>Total des écarts : {{ ecarts|length }}</strong>
+        </p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Référence</th>
+                <th>Produit</th>
+                <th>Stock Théorique</th>
+                <th>Stock Physique</th>
+                <th>Écart</th>
+                <th>Date Inventaire</th>
+                <th>Responsable</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ecart in ecarts %}
+            <tr class="{% if ecart.ecart < 0 %}alert-row{% endif %}">
+                <td>{{ ecart.produit.reference }}</td>
+                <td>{{ ecart.produit.designation }}</td>
+                <td>{{ ecart.stock_theorique }}</td>
+                <td>{{ ecart.stock_physique }}</td>
+                <td class="{% if ecart.ecart < 0 %}alert-cell{% endif %}">
+                    {{ ecart.ecart }}
+                </td>
+                <td>{{ ecart.date_inventaire|date:"d/m/Y" }}</td>
+                <td>{{ ecart.utilisateur.get_full_name|default:ecart.utilisateur.username }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align: center;">Aucun écart d'inventaire à signaler</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="signature">
+        <p>Fait à ___________________, le {% now "d/m/Y" %}</p>
+        <div class="signature-line"></div>
+        <p>Signature du responsable</p>
+    </div>
+
+    <div class="footer">
+        Rapport généré par {{ user.get_full_name|default:user.username }} - Système de Gestion d'Inventaire
+    </div>
+</body>
+</html>

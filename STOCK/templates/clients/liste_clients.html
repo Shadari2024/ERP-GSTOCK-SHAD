@@ -1,0 +1,721 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4 animate__animated animate__fadeIn">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 gap-3">
+        <div class="d-flex align-items-center">
+            <div class="icon-wrapper bg-primary bg-opacity-10 p-3 rounded-3 me-3">
+                <i class="bi bi-people-fill fs-3 text-primary"></i>
+            </div>
+            <div>
+                <h2 class="mb-0 fw-bold">Gestion des Clients</h2>
+                <p class="text-muted mb-0">{{ page_obj.paginator.count }} client(s) enregistré(s)</p>
+            </div>
+        </div>
+        
+        <div class="btn-group" role="group">
+            <a href="{% url 'ajoute_client' %}" class="btn btn-primary btn-hover-gradient">
+                <i class="bi bi-plus-circle me-2"></i>Nouveau Client
+            </a>
+            <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="visually-hidden">Toggle Dropdown</span>
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#"><i class="bi bi-download me-2"></i>Exporter</a></li>
+                <li><a class="dropdown-item" href="#"><i class="bi bi-printer me-2"></i>Imprimer</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Statistiques rapides -->
+    <div class="row mb-4 g-3">
+        <div class="col-md-3">
+            <div class="card bg-primary bg-opacity-10 border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0 text-primary">Clients Actifs</h6>
+                            <h3 class="mb-0 fw-bold">{{ stats.actifs }}</h3>
+                        </div>
+                        <i class="bi bi-check-circle-fill fs-2 text-primary opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning bg-opacity-10 border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0 text-warning">Clients Inactifs</h6>
+                            <h3 class="mb-0 fw-bold">{{ stats.inactifs }}</h3>
+                        </div>
+                        <i class="bi bi-pause-circle-fill fs-2 text-warning opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success bg-opacity-10 border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0 text-success">Entreprises</h6>
+                            <h3 class="mb-0 fw-bold">{{ stats.entreprises }}</h3>
+                        </div>
+                        <i class="bi bi-building fs-2 text-success opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info bg-opacity-10 border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0 text-info">Particuliers</h6>
+                            <h3 class="mb-0 fw-bold">{{ stats.particuliers }}</h3>
+                        </div>
+                        <i class="bi bi-person-fill fs-2 text-info opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres et recherche avancée -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3">
+            <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3">
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-secondary view-btn active" data-view="table">
+                        <i class="bi bi-list-ul me-1"></i> Tableau
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary view-btn" data-view="kanban">
+                        <i class="bi bi-grid me-1"></i> Boîtes
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary view-btn" data-view="list">
+                        <i class="bi bi-card-list me-1"></i> Liste
+                    </button>
+                </div>
+                
+                <div class="d-flex flex-column flex-md-row gap-3 w-100" style="max-width: 800px;">
+                    <div class="search-box position-relative flex-grow-1">
+                        <i class="bi bi-search position-absolute top-50 translate-middle-y ms-3 text-muted"></i>
+                        <input type="text" id="searchInput" class="form-control ps-5" placeholder="Rechercher un client..." value="{{ request.GET.q }}">
+                    </div>
+                    
+                    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="false" aria-controls="filtersCollapse">
+                        <i class="bi bi-funnel me-1"></i> Filtres
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Panneau de filtres avancés -->
+            <div class="collapse mt-3" id="filtersCollapse">
+                <div class="card card-body border-0 shadow-none bg-light">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="statut" class="form-label small">Statut</label>
+                            <select class="form-select form-select-sm" id="statut" name="statut">
+                                <option value="">Tous les statuts</option>
+                                <option value="ACTIF" {% if request.GET.statut == 'ACTIF' %}selected{% endif %}>Actif</option>
+                                <option value="INACTIF" {% if request.GET.statut == 'INACTIF' %}selected{% endif %}>Inactif</option>
+                                <option value="PROSPECT" {% if request.GET.statut == 'PROSPECT' %}selected{% endif %}>Prospect</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="type_client" class="form-label small">Type</label>
+                            <select class="form-select form-select-sm" id="type_client" name="type_client">
+                                <option value="">Tous les types</option>
+                                <option value="ENT" {% if request.GET.type_client == 'ENT' %}selected{% endif %}>Entreprise</option>
+                                <option value="PART" {% if request.GET.type_client == 'PART' %}selected{% endif %}>Particulier</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="pays" class="form-label small">Pays</label>
+                            <select class="form-select form-select-sm" id="pays" name="pays">
+                                <option value="">Tous les pays</option>
+                                {% for code, nom in pays_options %}
+                                    <option value="{{ code }}" {% if request.GET.pays == code %}selected{% endif %}>{{ nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="date_creation" class="form-label small">Date création</label>
+                            <select class="form-select form-select-sm" id="date_creation" name="date_creation">
+                                <option value="">Toutes périodes</option>
+                                <option value="today" {% if request.GET.date_creation == 'today' %}selected{% endif %}>Aujourd'hui</option>
+                                <option value="week" {% if request.GET.date_creation == 'week' %}selected{% endif %}>Cette semaine</option>
+                                <option value="month" {% if request.GET.date_creation == 'month' %}selected{% endif %}>Ce mois</option>
+                                <option value="year" {% if request.GET.date_creation == 'year' %}selected{% endif %}>Cette année</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="d-flex justify-content-end gap-2">
+                                <button type="submit" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-funnel me-1"></i> Appliquer
+                                </button>
+                                <a href="{% url 'liste_client' %}" class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i> Réinitialiser
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vue Tableau -->
+    <div class="view-container" id="tableView">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">#</th>
+                                <th>Client</th>
+                                <th>Type</th>
+                                <th>Coordonnées</th>
+                                <th>Adresse Complète</th>
+                                <th>Infos Financières</th>
+                                <th>Statut</th>
+                                <th>Dates</th>
+                                <th>Créé par</th>
+                                <th class="text-end pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clientsTable">
+                            {% for client in Clients %}
+                            <tr class="animate__animated animate__fadeIn client-row">
+                                <td class="ps-4 fw-semibold">{{ forloop.counter0|add:page_obj.start_index }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar bg-primary bg-opacity-10 text-primary me-3">
+                                            {{ client.nom|slice:":1"|upper }}
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-semibold">{{ client.nom }}</h6>
+                                            <small class="text-muted">ID: CL-{{ client.pk|stringformat:"04d" }}</small>
+                                            {% if client.numero_fiscal %}<small class="d-block text-muted">N° Fiscal: {{ client.numero_fiscal }}</small>{% endif %}
+                                            {% if client.numero_tva %}<small class="d-block text-muted">N° TVA: {{ client.numero_tva }}</small>{% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if client.type_client %}
+                                        <span class="badge {% if client.type_client == 'ENT' %}bg-info{% else %}bg-secondary{% endif %} bg-opacity-10 text-{% if client.type_client == 'ENT' %}info{% else %}secondary{% endif %}">
+                                            {{ client.get_type_client_display }}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div>
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="bi bi-telephone text-muted me-2"></i>
+                                            <span>{{ client.telephone|default:"-" }}</span>
+                                        </div>
+                                        {% if client.telephone_secondaire %}
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="bi bi-telephone-inbound text-muted me-2"></i>
+                                            <span>{{ client.telephone_secondaire }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if client.email %}
+                                        <div class="d-flex align-items-center mb-1">
+                                            <i class="bi bi-envelope text-muted me-2"></i>
+                                            <span>{{ client.email }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if client.website %}
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-globe text-muted me-2"></i>
+                                            <a href="{{ client.website }}" target="_blank" class="text-decoration-none small text-truncate">{{ client.website|default:"-" }}</a>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if client.adresse %}
+                                        {{ client.adresse }}{% if client.ville %}, {{ client.ville }}{% endif %}{% if client.code_postal %} ({{ client.code_postal }}){% endif %}
+                                        {% if client.pays %}<br><small class="text-muted">{{ client.get_pays_display }}</small>{% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="small">
+                                        Limite Cr.: <strong>{{ client.limite_credit|floatformat:2 }} {{ client.devise_preferee.symbole|default:'$' }}</strong><br>
+                                        Délai P.: <strong>{{ client.delai_paiement }} jours</strong><br>
+                                        Remise: <strong>{{ client.taux_remise|floatformat:2 }}%</strong><br>
+                                        TVA Exonérée: {% if client.exonere_tva %}<i class="bi bi-check-circle-fill text-success"></i> Oui{% else %}<i class="bi bi-x-circle-fill text-danger"></i> Non{% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ client.statut|lower }} bg-opacity-10 text-{{ client.statut|lower }}">
+                                        {{ client.get_statut_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="small text-muted">
+                                        Création: {{ client.date_creation|date:"d M Y" }}<br>
+                                        Modification: {{ client.derniere_modification|date:"d M Y" }}
+                                    </div>
+                                </td>
+                                <td>
+                                   <span class="small text-muted">
+    {% if client.cree_par %}
+        {{ client.cree_par.get_full_name|default:client.cree_par.username }}
+    {% else %}
+        N/A {% endif %}
+</span>
+                                    {% if client.notes %}
+                                    <span class="d-block mt-1">
+                                        <i class="bi bi-card-text text-muted" data-bs-toggle="tooltip" title="{{ client.notes }}"></i>
+                                    </span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end pe-4">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{% url 'details_client' client.pk %}" class="btn btn-light" data-bs-toggle="tooltip" title="Voir détails">
+                                            <i class="bi bi-eye text-primary"></i>
+                                        </a>
+                                        <a href="{% url 'modif_client' client.pk %}" class="btn btn-light" data-bs-toggle="tooltip" title="Modifier">
+                                            <i class="bi bi-pencil text-warning"></i>
+                                        </a>
+                                        <a href="{% url 'sup_client' client.pk %}" onclick="return confirm('Voulez-vous vraiment supprimer ce client ?');" class="btn btn-light" data-bs-toggle="tooltip" title="Supprimer">
+                                            <i class="bi bi-trash text-danger"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="10" class="text-center py-5">
+                                    <div class="empty-state">
+                                        <i class="bi bi-people fs-1 text-muted"></i>
+                                        <h5 class="mt-3">Aucun client trouvé</h5>
+                                        <p class="text-muted">Commencez par ajouter vos premiers clients</p>
+                                        <a href="{% url 'ajoute_client' %}" class="btn btn-primary mt-2">
+                                            <i class="bi bi-plus-circle me-2"></i>Ajouter un client
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vue Kanban -->
+    <div class="view-container d-none" id="kanbanView">
+        <div class="row g-3">
+            {% for client in Clients %}
+            <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="card client-card h-100 border-0 shadow-sm animate__animated animate__fadeIn">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <div class="avatar bg-primary bg-opacity-10 text-primary">
+                            {{ client.nom|slice:":1"|upper }}
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-link text-muted" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-three-dots-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="{% url 'details_client' client.pk %}"><i class="bi bi-eye me-2 text-primary"></i>Détails</a></li>
+                                <li><a class="dropdown-item" href="{% url 'modif_client' client.pk %}"><i class="bi bi-pencil me-2 text-warning"></i>Modifier</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="{% url 'sup_client' client.pk %}" onclick="return confirm('Voulez-vous vraiment supprimer ce client ?');"><i class="bi bi-trash me-2"></i>Supprimer</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="card-title fw-semibold mb-2">{{ client.nom }}</h6>
+                        <small class="text-muted d-block mb-2">ID: CL-{{ client.pk|stringformat:"04d" }}</small>
+                        
+                        {% if client.type_client %}
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-tag text-muted me-2"></i>
+                            <span class="small">{{ client.get_type_client_display }}</span>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-telephone text-muted me-2"></i>
+                            <span class="small">{{ client.telephone|default:"-" }}</span>
+                        </div>
+                        
+                        {% if client.email %}
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-envelope text-muted me-2"></i>
+                            <span class="small text-truncate">{{ client.email }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if client.website %}
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-globe text-muted me-2"></i>
+                            <a href="{{ client.website }}" target="_blank" class="text-decoration-none small text-truncate">{{ client.website }}</a>
+                        </div>
+                        {% endif %}
+
+                        {% if client.adresse %}
+                        <div class="d-flex align-items-start mb-2">
+                            <i class="bi bi-geo-alt text-muted me-2 mt-1"></i>
+                            <span class="small">{{ client.adresse|truncatechars:40 }}{% if client.ville %}, {{ client.ville }}{% endif %}</span>
+                        </div>
+                        {% endif %}
+
+                        <hr class="my-2">
+                        <div class="small text-muted">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Crédit:</span>
+                                <strong>{{ client.limite_credit|floatformat:2 }} {{ client.devise_preferee.symbole|default:'$' }}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Délai Paiement:</span>
+                                <strong>{{ client.delai_paiement }} jours</strong>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span>Remise:</span>
+                                <strong>{{ client.taux_remise|floatformat:2 }}%</strong>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="card-footer bg-transparent border-0 pt-0">
+                        <span class="badge bg-{{ client.statut|lower }} bg-opacity-10 text-{{ client.statut|lower }}">
+                            {{ client.get_statut_display }}
+                        </span>
+                        {% if client.notes %}
+                        <span class="float-end">
+                            <i class="bi bi-card-text text-muted" data-bs-toggle="tooltip" title="{{ client.notes }}"></i>
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <div class="empty-state">
+                            <i class="bi bi-people fs-1 text-muted"></i>
+                            <h5 class="mt-3">Aucun client trouvé</h5>
+                            <p class="text-muted">Commencez par ajouter vos premiers clients</p>
+                            <a href="{% url 'ajoute_client' %}" class="btn btn-primary mt-2">
+                                <i class="bi bi-plus-circle me-2"></i>Ajouter un client
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Vue Liste (simplifiée) -->
+    <div class="view-container d-none" id="listView">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for client in Clients %}
+                    <div class="list-group-item list-group-item-action animate__animated animate__fadeIn">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar bg-primary bg-opacity-10 text-primary me-3">
+                                    {{ client.nom|slice:":1"|upper }}
+                                </div>
+                                <div>
+                                    <h6 class="mb-0 fw-semibold">{{ client.nom }}</h6>
+                                    <small class="text-muted">{{ client.telephone|default:"-" }} • {{ client.email|default:"-" }}</small>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-{{ client.statut|lower }} bg-opacity-10 text-{{ client.statut|lower }}">
+                                    {{ client.get_statut_display }}
+                                </span>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'details_client' client.pk %}" class="btn btn-light" data-bs-toggle="tooltip" title="Voir détails">
+                                        <i class="bi bi-eye text-primary"></i>
+                                    </a>
+                                    <a href="{% url 'modif_client' client.pk %}" class="btn btn-light" data-bs-toggle="tooltip" title="Modifier">
+                                        <i class="bi bi-pencil text-warning"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="list-group-item">
+                        <div class="empty-state py-4">
+                            <i class="bi bi-people fs-1 text-muted"></i>
+                            <h5 class="mt-3">Aucun client trouvé</h5>
+                            <p class="text-muted">Commencez par ajouter vos premiers clients</p>
+                            <a href="{% url 'ajoute_client' %}" class="btn btn-primary mt-2">
+                                <i class="bi bi-plus-circle me-2"></i>Ajouter un client
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if is_paginated %}
+    <div class="d-flex justify-content-between align-items-center mt-4">
+        <div class="text-muted">
+            Affichage de <b>{{ page_obj.start_index }}</b> à <b>{{ page_obj.end_index }}</b> sur <b>{{ page_obj.paginator.count }}</b> clients
+        </div>
+        <nav>
+            <ul class="pagination pagination-sm">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% for key, value in request.GET.items %}{% if key != 'q' and key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="First">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% for key, value in request.GET.items %}{% if key != 'q' and key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Previous">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item"><a class="page-link" href="?page={{ num }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% for key, value in request.GET.items %}{% if key != 'q' and key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a></li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% for key, value in request.GET.items %}{% if key != 'q' and key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Next">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% for key, value in request.GET.items %}{% if key != 'q' and key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Last">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialisation des tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Gestion du changement de vue
+    const viewButtons = document.querySelectorAll('.view-btn');
+    const viewContainers = document.querySelectorAll('.view-container');
+    
+    viewButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        // Désactive tous les boutons
+        viewButtons.forEach(btn => btn.classList.remove('active'));
+        // Active le bouton cliqué
+        this.classList.add('active');
+        
+        // Cache tous les conteneurs
+        viewContainers.forEach(container => container.classList.add('d-none'));
+        // Affiche le conteneur correspondant
+        const viewToShow = document.getElementById(`${this.dataset.view}View`);
+        if (viewToShow) viewToShow.classList.remove('d-none');
+      });
+    });
+    
+    // Recherche dynamique
+    const searchInput = document.getElementById('searchInput');
+    let searchTimeout;
+    
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const currentSearchTerm = this.value;
+        searchTimeout = setTimeout(() => {
+            // Construire l'URL avec tous les paramètres GET existants
+            const urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('q', currentSearchTerm);
+            urlParams.delete('page'); // Reset à la première page
+            window.location.href = `${window.location.pathname}?${urlParams.toString()}`;
+        }, 500);
+    });
+
+    // Fixe l'état d'affichage de la vue (tableau/kanban/liste) basée sur une préférence utilisateur
+    const currentViewPreference = localStorage.getItem('clientViewPreference') || 'table';
+    document.querySelector(`.view-btn[data-view="${currentViewPreference}"]`).click();
+    
+    viewButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            localStorage.setItem('clientViewPreference', this.dataset.view);
+        });
+    });
+
+    // Gestion des filtres - afficher/masquer le panneau
+    const filtersCollapse = document.getElementById('filtersCollapse');
+    const filtersButton = document.querySelector('[data-bs-target="#filtersCollapse"]');
+    
+    // Vérifier si des filtres sont actifs
+    const urlParams = new URLSearchParams(window.location.search);
+    let hasFilters = false;
+    for (const [key, value] of urlParams) {
+        if (key !== 'q' && key !== 'page') {
+            hasFilters = true;
+            break;
+        }
+    }
+    
+    // Si des filtres sont actifs, ouvrir le panneau
+    if (hasFilters) {
+        new bootstrap.Collapse(filtersCollapse, { show: true });
+        filtersButton.classList.add('active');
+    }
+    
+    // Mettre à jour l'état du bouton de filtres
+    filtersCollapse.addEventListener('show.bs.collapse', function() {
+        filtersButton.classList.add('active');
+    });
+    
+    filtersCollapse.addEventListener('hide.bs.collapse', function() {
+        filtersButton.classList.remove('active');
+    });
+});
+</script>
+
+<style>
+    /* Styles pour la vue Kanban */
+    #kanbanView .client-card {
+        transition: all 0.2s ease;
+        border-radius: 0.5rem;
+    }
+    
+    #kanbanView .client-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    
+    #kanbanView .avatar {
+        width: 36px;
+        height: 36px;
+        font-size: 0.9rem;
+    }
+    
+    #kanbanView .card-title {
+        font-size: 1rem;
+    }
+    
+    #kanbanView .card-body {
+        padding: 1rem;
+    }
+    
+    #kanbanView .card-header {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    #kanbanView .card-footer {
+        padding: 0.5rem 1rem 1rem;
+    }
+    
+    /* Styles pour la vue Liste */
+    #listView .list-group-item {
+        padding: 1rem 1.25rem;
+        border-left: none;
+        border-right: none;
+    }
+    
+    #listView .list-group-item:first-child {
+        border-top: none;
+    }
+    
+    #listView .avatar {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+    }
+    
+    /* Boutons de vue active */
+    .view-btn.active {
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+        color: #495057;
+    }
+    
+    /* Bouton filtres actif */
+    [data-bs-target="#filtersCollapse"].active {
+        background-color: #e9ecef;
+    }
+    
+    /* Styles existants */
+    body {
+        background-color: #f8f9fc;
+    }
+    
+    .card {
+        border-radius: 0.5rem;
+        border: none;
+    }
+    
+    .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+    
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+        font-size: 0.75em;
+    }
+    
+    .search-box .form-control {
+        padding-left: 2.5rem;
+        border-radius: 2rem;
+        border: 1px solid #e3e6f0;
+    }
+    
+    .empty-state {
+        padding: 2rem;
+        text-align: center;
+    }
+    
+    @media (max-width: 768px) {
+        #kanbanView .col-xl-3, 
+        #kanbanView .col-lg-4, 
+        #kanbanView .col-md-6 {
+            width: 100%;
+        }
+        
+        .stat-card {
+            margin-bottom: 1rem;
+        }
+    }
+</style>
+{% endblock %}

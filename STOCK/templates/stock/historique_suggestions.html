@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="h5 mb-0">
+                    <i class="fas fa-history me-2"></i>Historique des suggestions de réapprovisionnement
+                </h2>
+                <a href="{% url 'export_historique_reappro' %}?produit={{ produit_id }}&date={{ date }}" 
+                   class="btn btn-sm btn-light">
+                    <i class="fas fa-file-export me-1"></i> Exporter
+                </a>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <form method="get" class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <label for="produit" class="form-label">Produit</label>
+                    <select name="produit" id="produit" class="form-select">
+                        <option value="">Tous les produits</option>
+                        {% for produit in produits %}
+                            <option value="{{ produit.id }}" {% if produit.id|stringformat:"s" == produit_id %}selected{% endif %}>
+                                {{ produit.nom }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-4">
+                    <label for="date" class="form-label">Date</label>
+                    <input type="date" name="date" id="date" value="{{ date }}" class="form-control">
+                </div>
+                
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-1"></i> Filtrer
+                    </button>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-hover table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col" class="text-nowrap">Produit</th>
+                            <th scope="col" class="text-nowrap text-center">Date de suggestion</th>
+                            <th scope="col" class="text-nowrap text-center">Quantité prédite</th>
+                            <th scope="col" class="text-nowrap text-center">Quantité suggérée</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for suggestion in suggestions %}
+                        <tr>
+                            <td class="fw-semibold">{{ suggestion.produit.nom }}</td>
+                            <td class="text-center">{{ suggestion.date_suggestion|date:"d/m/Y" }}</td>
+                            <td class="text-center">{{ suggestion.quantite_predite }}</td>
+                            <td class="text-center fw-bold text-success">
+                                {{ suggestion.quantite_suggeree }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">
+                                <i class="fas fa-info-circle me-2"></i>Aucune suggestion enregistrée
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if suggestions.paginator.num_pages > 1 %}
+            <nav aria-label="Pagination">
+                <ul class="pagination justify-content-center mt-4">
+                    {% if suggestions.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" 
+                           href="?page={{ suggestions.previous_page_number }}&produit={{ produit_id }}&date={{ date }}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link"><i class="fas fa-chevron-left"></i></span>
+                    </li>
+                    {% endif %}
+
+                    {% for num in suggestions.paginator.page_range %}
+                        {% if suggestions.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" 
+                               href="?page={{ num }}&produit={{ produit_id }}&date={{ date }}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if suggestions.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" 
+                           href="?page={{ suggestions.next_page_number }}&produit={{ produit_id }}&date={{ date }}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link"><i class="fas fa-chevron-right"></i></span>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border-radius: 0.5rem;
+        overflow: hidden;
+        border: none;
+    }
+    
+    .table {
+        font-size: 0.875rem;
+    }
+    
+    .table th {
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        background-color: #f8f9fa;
+    }
+    
+    .table td {
+        vertical-align: middle;
+    }
+    
+    .pagination .page-item.active .page-link {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+    
+    @media (max-width: 768px) {
+        .card-header .btn {
+            margin-top: 0.5rem;
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}

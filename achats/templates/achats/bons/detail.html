@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+{% load static humanize %}
+
+{% block title %}Bon de Réception {{ object.numero_bon }}{% endblock %}
+
+{% block content %}
+<div class="container-lg mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'achats:liste_commandes' %}">Commandes</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'achats:detail_commande' pk=object.commande.pk %}">Commande {{ object.commande.numero_commande }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Bon {{ object.numero_bon }}</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-5 fw-bold text-primary">
+            <i class="fas fa-clipboard-check me-2"></i>Bon de Réception #{{ object.numero_bon }}
+        </h1>
+        <div>
+            <a href="{% url 'achats:liste_commandes' %}" class="btn btn-outline-secondary me-2">
+                <i class="fas fa-list me-1"></i> Liste des Commandes
+            </a>
+            <a href="{% url 'achats:detail_commande' pk=object.commande.pk %}" class="btn btn-primary">
+                <i class="fas fa-arrow-left me-1"></i> Retour à la Commande
+            </a>
+        </div>
+    </div>
+
+    <!-- Info Cards Row -->
+    <div class="row mb-4">
+        <!-- Bon Info -->
+        <div class="col-md-6 mb-3 mb-md-0">
+            <div class="card h-100 border-primary shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Détails du Bon
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong><i class="fas fa-hashtag me-2"></i>Numéro:</strong><br>
+                            <span class="text-muted">{{ object.numero_bon }}</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong><i class="fas fa-calendar-alt me-2"></i>Date réception:</strong><br>
+                            <span class="text-muted">{{ object.date_reception|date:"d/m/Y" }}</span></p>
+                        </div>
+                    </div>
+                    <p><strong><i class="fas fa-user me-2"></i>Créé par:</strong><br>
+                    <span class="text-muted">{{ object.created_by.get_full_name|default:object.created_by.username }}</span></p>
+                    
+                    {% if object.notes %}
+                    <p><strong><i class="fas fa-comment me-2"></i>Notes:</strong><br>
+                    <span class="text-muted">{{ object.notes }}</span></p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Commande Info -->
+        <div class="col-md-6">
+            <div class="card h-100 border-info shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-file-invoice me-2"></i>Commande Associée
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p><strong><i class="fas fa-hashtag me-2"></i>Numéro:</strong><br>
+                    <a href="{% url 'achats:detail_commande' pk=object.commande.pk %}" class="text-decoration-none">
+                        {{ object.commande.numero_commande }}
+                    </a></p>
+                    
+                    <p><strong><i class="fas fa-building me-2"></i>Fournisseur:</strong><br>
+                    <span class="text-muted">{{ object.commande.fournisseur.nom }}</span></p>
+                    
+                    <p><strong><i class="fas fa-calendar me-2"></i>Date commande:</strong><br>
+                    <span class="text-muted">{{ object.commande.date_commande|date:"d/m/Y" }}</span></p>
+                    
+                    <p><strong><i class="fas fa-money-bill-wave me-2"></i>Devise:</strong><br>
+                    <span class="text-muted">{{ symbole_devise }} ({{ devise_principale.code }})</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lignes de Réception -->
+    <div class="card border-success shadow-sm mb-4">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-list-ul me-2"></i>Articles Reçus
+            </h5>
+            <span class="badge bg-light text-success fs-6">{{ lignes.count }} article(s)</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="5%">#</th>
+                            <th width="25%">Produit</th>
+                            <th width="15%">Référence</th>
+                            <th width="10%" class="text-end">Quantité</th>
+                            <th width="15%" class="text-end">Prix Unitaire</th>
+                            <th width="15%" class="text-end">Total</th>
+                            <th width="15%">Conditionnement</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ligne in lignes %}
+                        <tr>
+                            <td>{{ forloop.counter }}</td>
+                            <td>
+                                <strong>{{ ligne.ligne_commande.produit.nom }}</strong>
+                                {% if ligne.notes %}
+                                <br><small class="text-muted">{{ ligne.notes }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ ligne.ligne_commande.produit.reference|default:"-" }}</td>
+                            <td class="text-end">{{ ligne.quantite|intcomma }}</td>
+                            <td class="text-end">{{ ligne.ligne_commande.prix_unitaire|floatformat:2|intcomma }} {{ symbole_devise }}</td>
+                            <td class="text-end">{{ ligne.ligne_commande.get_total|floatformat:2|intcomma }} {{ symbole_devise }}</td>
+                            <td>{{ ligne.conditionnement|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">Aucun article reçu</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <th colspan="5">Total</th>
+                            <th class="text-end">{{ object.get_total|floatformat:2|intcomma }} {{ symbole_devise }}</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="d-flex justify-content-between mb-5">
+        <div>
+            <span class="text-muted small">
+                <i class="fas fa-clock me-1"></i> 
+                Créé le {{ object.created_at|date:"d/m/Y à H:i" }}
+                {% if object.updated_at != object.created_at %}
+                - Modifié le {{ object.updated_at|date:"d/m/Y à H:i" }}
+                {% endif %}
+            </span>
+        </div>
+        <div>
+            <button class="btn btn-outline-secondary me-2">
+                <i class="fas fa-print me-1"></i> Imprimer
+            </button>
+            <a href="#" class="btn btn-outline-primary">
+                <i class="fas fa-file-pdf me-1"></i> Exporter PDF
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .table th {
+        white-space: nowrap;
+    }
+    .card {
+        border-radius: 0.5rem;
+    }
+    .card-header {
+        border-radius: 0.5rem 0.5rem 0 0 !important;
+    }
+</style>
+{% endblock %}

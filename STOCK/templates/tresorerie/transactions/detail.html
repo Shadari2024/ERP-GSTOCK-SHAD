@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <h2>Détails de la transaction</h2>
+    
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">Transaction #{{ transaction.id }}</h5>
+            <p><strong>Date:</strong> {{ transaction.date_transaction|date:"d/m/Y H:i" }}</p>
+            <p><strong>Compte:</strong> {{ transaction.compte.nom }}</p>
+            <p><strong>Type:</strong> {{ transaction.get_type_transaction_display }}</p>
+            <p><strong>Catégorie:</strong> {{ transaction.categorie.nom|default:"-" }}</p>
+            <p><strong>Montant:</strong> {{ transaction.montant }} {{ request.user.parametre.devise }}</p>
+            <p><strong>Mode paiement:</strong> {{ transaction.get_mode_paiement_display }}</p>
+            <p><strong>Description:</strong> {{ transaction.description|default:"-" }}</p>
+            
+            {% if transaction.piece_jointe %}
+            <p><strong>Pièce jointe:</strong> <a href="{{ transaction.piece_jointe.url }}" target="_blank">Voir</a></p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <a href="{% url 'liste_transactions' %}" class="btn btn-secondary mt-3">Retour</a>
+</div>
+{% endblock %}

@@ -1,0 +1,230 @@
+{% extends "comptabilite/base.html" %}
+{% load i18n %}
+
+{% block title %}
+    {% if object %}{% trans "Modifier le compte" %}{% else %}{% trans "Nouveau compte" %}{% endif %}
+{% endblock %}
+
+{% block breadcrumb %}
+    {% if object %}
+        <li class="breadcrumb-item"><a href="{% url 'comptabilite:plan_comptable_list' %}">Plan Comptable</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Modifier {{ object.numero }}</li>
+    {% else %}
+        <li class="breadcrumb-item"><a href="{% url 'comptabilite:plan_comptable_list' %}">Plan Comptable</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Nouveau compte</li>
+    {% endif %}
+{% endblock %}
+
+{% block page_title %}
+    {% if object %}
+        {% trans "Modifier le compte" %} {{ object.numero }}
+    {% else %}
+        {% trans "Nouveau compte comptable" %}
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas {% if object %}fa-edit{% else %}fa-plus-circle{% endif %} me-2"></i>
+                    {% if object %}{% trans "Modification du compte" %}{% else %}{% trans "Création d'un nouveau compte" %}{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row">
+                        <div class="col-md-2">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.classe.id_for_label }}" class="form-label">
+                                    {{ form.classe.label }} *
+                                </label>
+                                {{ form.classe }}
+                                {% if form.classe.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.classe.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">Classe OHADA (1-7)</small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.numero.id_for_label }}" class="form-label">
+                                    {{ form.numero.label }} *
+                                </label>
+                                {{ form.numero }}
+                                {% if form.numero.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.numero.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">Ex: 40101</small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-7">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.type_compte.id_for_label }}" class="form-label">
+                                    {{ form.type_compte.label }} *
+                                </label>
+                                {{ form.type_compte }}
+                                {% if form.type_compte.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.type_compte.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="{{ form.intitule.id_for_label }}" class="form-label">
+                            {{ form.intitule.label }} *
+                        </label>
+                        {{ form.intitule }}
+                        {% if form.intitule.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.intitule.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Intitulé complet du compte</small>
+                    </div>
+                    
+                    <div class="form-group mb-4">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            {{ form.description.label }}
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.description.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Description détaillée du compte</small>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'comptabilite:plan_comptable_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i> {% trans "Retour" %}
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            {% if object %}{% trans "Modifier" %}{% else %}{% trans "Créer" %}{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Aide sur le plan comptable OHADA -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>{% trans "Structure OHADA" %}
+                </h6>
+            </div>
+            <div class="card-body">
+                <h6>{% trans "Classes de comptes:" %}</h6>
+                <ul class="list-unstyled small">
+                    <li><span class="badge bg-secondary">1</span> {% trans "Comptes de capitaux" %}</li>
+                    <li><span class="badge bg-secondary">2</span> {% trans "Comptes d'immobilisations" %}</li>
+                    <li><span class="badge bg-secondary">3</span> {% trans "Comptes de stocks" %}</li>
+                    <li><span class="badge bg-secondary">4</span> {% trans "Comptes de tiers" %}</li>
+                    <li><span class="badge bg-secondary">5</span> {% trans "Comptes financiers" %}</li>
+                    <li><span class="badge bg-secondary">6</span> {% trans "Comptes de charges" %}</li>
+                    <li><span class="badge bg-secondary">7</span> {% trans "Comptes de produits" %}</li>
+                </ul>
+                
+                <h6 class="mt-3">{% trans "Exemples de numérotation:" %}</h6>
+                <ul class="list-unstyled small">
+                    <li><code>401</code> {% trans "Fournisseurs" %}</li>
+                    <li><code>411</code> {% trans "Clients" %}</li>
+                    <li><code>512</code> {% trans "Banque" %}</li>
+                    <li><code>601</code> {% trans "Achats" %}</li>
+                    <li><code>701</code> {% trans "Ventes" %}</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Validation du formulaire -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-check-circle me-2"></i>{% trans "Validation" %}
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="validation-info">
+                    <p class="small text-muted">{% trans "Le numéro de compte doit respecter le format OHADA:" %}</p>
+                    <ul class="small">
+                        <li>{% trans "Commencer par le numéro de classe (1-7)" %}</li>
+                        <li>{% trans "Suivi de 2 chiffres pour la sous-classe" %}</li>
+                        <li>{% trans "Suivi de 2 chiffres pour le numéro de compte" %}</li>
+                    </ul>
+                    <p class="small text-muted">{% trans "Exemple: 40101 (Classe 4, Sous-classe 01, Compte 01)" %}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Ajouter des classes Bootstrap aux champs du formulaire
+        $('input, select, textarea').addClass('form-control');
+        
+        // Validation en temps réel du numéro de compte
+        $('#id_numero').on('blur', function() {
+            const numero = $(this).val();
+            const classe = $('#id_classe').val();
+            
+            if (numero && classe && !numero.startsWith(classe)) {
+                alert('{% trans "Le numéro de compte doit commencer par le numéro de classe sélectionné." %}');
+            }
+        });
+        
+        // Aide contextuelle pour le type de compte
+        $('#id_type_compte').change(function() {
+            const type = $(this).val();
+            let message = '';
+            
+            switch(type) {
+                case 'actif':
+                    message = '{% trans "Comptes représentant les biens et droits de l\'entreprise (Classes 1-5)" %}';
+                    break;
+                case 'passif':
+                    message = '{% trans "Comptes représentant les dettes et capitaux de l\'entreprise (Classes 1-5)" %}';
+                    break;
+                case 'charge':
+                    message = '{% trans "Comptes représentant les dépenses de l\'entreprise (Classe 6)" %}';
+                    break;
+                case 'produit':
+                    message = '{% trans "Comptes représentant les revenus de l\'entreprise (Classe 7)" %}';
+                    break;
+            }
+            
+            if (message) {
+                $('#validation-info').prepend('<div class="alert alert-info small">' + message + '</div>');
+            }
+        });
+    });
+</script>
+{% endblock %}

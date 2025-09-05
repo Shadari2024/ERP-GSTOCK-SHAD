@@ -1,0 +1,173 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+
+{% block page_title %}{% trans "Gestion des bulletins de paie" %}{% endblock %}
+{% block page_description %}{% trans "Gérez l'ensemble des fiches de paie, de la création à la consultation." %}{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item active" aria-current="page">{% trans "Bulletins de paie" %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row mb-3 align-items-center">
+    <div class="col-md-6">
+        <h1 class="h3 text-white">{% trans "Bulletins de paie" %}</h1>
+    </div>
+    <div class="col-md-6 text-end d-flex justify-content-end gap-2">
+        <a href="{% url 'grh:bulletin_create' %}" class="btn btn-primary" data-bs-toggle="tooltip" data-bs-placement="top" title="Créer un bulletin de paie manuellement">
+            <i class="bi bi-plus-circle-fill me-1"></i> {% trans "Nouveau bulletin" %}
+        </a>
+        <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#genererAutoModal" data-bs-toggle="tooltip" data-bs-placement="top" title="Générer les bulletins pour tous les employés d'une période">
+            <i class="bi bi-gear-fill me-1"></i> {% trans "Génération automatique" %}
+        </button>
+    </div>
+</div>
+
+<div class="modal fade" id="genererAutoModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content bg-dark text-white border-secondary">
+            <div class="modal-header border-bottom-secondary">
+                <h5 class="modal-title">{% trans "Génération automatique des bulletins" %}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'grh:generer_bulletin_auto' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p class="text-muted">{% trans "Sélectionnez la période pour laquelle générer les bulletins de paie." %}</p>
+                    <div class="mb-3">
+                        <label class="form-label">{% trans "Période" %}</label>
+                        <input type="month" name="periode" class="form-control" value="{{ current_periode }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted">{% trans "Employé (optionnel)" %}</label>
+                        <select name="employe" class="form-select">
+                            <option value="">{% trans "Tous les employés actifs" %}</option>
+                            {% for emp in employes %}
+                            <option value="{{ emp.id }}">{{ emp.nom_complet }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-top-secondary">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Annuler" %}</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-magic me-1"></i> {% trans "Générer" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm p-4">
+    <div class="card-header border-bottom-secondary pb-3">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h5 class="card-title mb-0">{% trans "Liste des bulletins de paie" %}</h5>
+            </div>
+            <div class="col-md-6">
+                <form method="get" class="d-flex justify-content-end gap-2">
+                    <input type="month" name="periode" class="form-control form-control-sm" 
+                           value="{{ request.GET.periode }}" placeholder="{% trans 'Période (YYYY-MM)' %}">
+                    <select name="employe" class="form-select form-select-sm">
+                        <option value="">{% trans "Tous les employés" %}</option>
+                        {% for emp in employes %}
+                            <option value="{{ emp.id }}" {% if request.GET.employe == emp.id|stringformat:"s" %}selected{% endif %}>
+                                {{ emp.nom_complet }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-outline-primary btn-sm">{% trans "Filtrer" %}</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col" class="text-secondary">{% trans "Période" %}</th>
+                        <th scope="col" class="text-secondary">{% trans "Employé" %}</th>
+                        <th scope="col" class="text-secondary">{% trans "Salaire brut" %}</th>
+                        <th scope="col" class="text-secondary">{% trans "Cotisations" %}</th>
+                        <th scope="col" class="text-secondary">{% trans "Salaire net" %}</th>
+                        <th scope="col" class="text-secondary">{% trans "Net à payer" %}</th>
+                        <th scope="col" class="text-secondary">{% trans "Date édition" %}</th>
+                        <th scope="col" class="text-secondary text-end">{% trans "Actions" %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for bulletin in bulletins %}
+                    <tr>
+                        <td>{{ bulletin.periode }}</td>
+                        <td><a href="{% url 'grh:employe_detail' bulletin.employe.pk %}" class="text-white text-decoration-none">{{ bulletin.employe.nom_complet }}</a></td>
+                        <td>{{ bulletin.salaire_brut }} {{ devise_principale_symbole }}</td>
+                        <td>{{ bulletin.total_cotisations }} {{ devise_principale_symbole }}</td>
+                        <td>{{ bulletin.salaire_net }} {{ devise_principale_symbole }}</td>
+                        <td class="text-success fw-bold">{{ bulletin.net_a_payer }} {{ devise_principale_symbole }}</td>
+                        <td>{{ bulletin.date_edition|date:"d/m/Y" }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'grh:bulletin_detail' bulletin.pk %}" class="btn btn-sm btn-outline-info me-1" data-bs-toggle="tooltip" data-bs-placement="top" title="Voir les détails du bulletin">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if bulletin.fichier_bulletin %}
+                            <a href="{{ bulletin.fichier_bulletin.url }}" target="_blank" class="btn btn-sm btn-outline-success" data-bs-toggle="tooltip" data-bs-placement="top" title="Télécharger le PDF">
+                                <i class="bi bi-download"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-secondary py-4">
+                            <i class="bi bi-cash-stack d-block mb-2 fs-4"></i>
+                            {% trans "Aucun bulletin de paie trouvé pour cette période." %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if bulletins %}
+        <div class="row g-3 mt-4">
+            <div class="col-md-3">
+                <div class="card bg-secondary text-white border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <h6 class="card-subtitle mb-2 text-muted">{% trans "Total Brut" %}</h6>
+                        <h4 class="card-text fw-bold">{{ total_brut }} {{ devise_principale_symbole }}</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-secondary text-white border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <h6 class="card-subtitle mb-2 text-muted">{% trans "Total Cotisations" %}</h6>
+                        <h4 class="card-text fw-bold">{{ total_cotisations }} {{ devise_principale_symbole }}</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-secondary text-white border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <h6 class="card-subtitle mb-2 text-muted">{% trans "Total Net" %}</h6>
+                        <h4 class="card-text fw-bold">{{ total_net }} {{ devise_principale_symbole }}</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-secondary text-white border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <h6 class="card-subtitle mb-2 text-muted">{% trans "Bulletins générés" %}</h6>
+                        <h4 class="card-text fw-bold">{{ bulletins.count }}</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

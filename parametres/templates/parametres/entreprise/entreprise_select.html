@@ -1,0 +1,36 @@
+{# parametres/templates/parametres/entreprise/entreprise_select.html #}
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% translate "Sélectionner une Entreprise" %}{% endblock %}
+
+{% block content %}
+    <div class="container text-center py-5">
+        <div class="card mx-auto" style="max-width: 500px;">
+            <div class="card-header bg-primary text-white">
+                <h2 class="card-title">{% translate "Sélectionner une Entreprise" %}</h2>
+            </div>
+            <div class="card-body">
+                {% if current_selected_entreprise %}
+                    <p class="mb-4">{% translate "Entreprise actuellement sélectionnée :" %} <strong>{{ current_selected_entreprise.nom }}</strong></p>
+                {% else %}
+                    <p class="mb-4">{% translate "Veuillez choisir une entreprise pour continuer." %}</p>
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="form-group mb-3">
+                        {{ form.entreprise.label_tag }}
+                        {{ form.entreprise }}
+                        {% if form.entreprise.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.entreprise.errors %}{{ error }}{% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <button type="submit" class="btn btn-success btn-lg">{% translate "Continuer" %}</button>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}

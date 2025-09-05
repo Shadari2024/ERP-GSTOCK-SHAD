@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Journal des Caisses{% endblock %}
+
+{% block content %}
+<div class="odoo-view">
+    <div class="o_control_panel d-flex justify-content-between align-items-center mb-4">
+        <div class="o_cp_left">
+            <h1 class="text-white mb-0">Journal des Caisses</h1>
+        </div>
+        <div class="o_cp_right">
+            <a href="{% url 'ventes:etat_caisse' %}" class="btn btn-secondary">
+                <i class="fas fa-cash-register me-2"></i> État de la Caisse Actuelle
+            </a>
+        </div>
+    </div>
+
+    <div class="o_content">
+        {% if caisses %}
+            <div class="card p-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col"># Caisse</th>
+                                    <th scope="col">Utilisateur</th>
+                                    <th scope="col">Ouverture</th>
+                                    <th scope="col">Fermeture</th>
+                                    <th scope="col">Montant Ouverture</th>
+                                    <th scope="col">Montant Fermeture</th>
+                                    <th scope="col">Écart</th>
+                                    <th scope="col">Statut</th>
+                                    <th scope="col">Commentaire</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for caisse in caisses %}
+                                <tr>
+                                    <td>{{ caisse.id }}</td>
+                                    <td>{{ caisse.utilisateur.username }}</td>
+                                    <td>{{ caisse.date_ouverture|date:"d M Y H:i" }}</td>
+                                    <td>
+                                        {% if caisse.date_fermeture %}
+                                            {{ caisse.date_fermeture|date:"d M Y H:i" }}
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">Ouverte</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ caisse.montant_ouverture|floatformat:2 }} FCFA</td>
+                                    <td>
+                                        {% if caisse.montant_fermeture is not None %}
+                                            {{ caisse.montant_fermeture|floatformat:2 }} FCFA
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if caisse.statut == False %} {# Only show écart for closed caisses #}
+                                            {% with total_paiements_espece_for_caisse=caisse.paiement_set.filter.total %} {# This needs to be calculated in the view for each caisse #}
+                                            {# If total_paiements_espece_for_caisse is not directly available, you need to add it to your queryset or calculate it in the view for each object in the list #}
+                                            {# For JournalCaisseListView, you might need to use .annotate() to get this for each Caisse instance #}
+                                            {% comment %}
+                                            Logic example (in views.py for JournalCaisseListView's get_queryset):
+                                            from django.db.models import Sum
+                                            return Caisse.objects.filter(...).annotate(
+                                                total_espece_paiements=Sum('paiement__montant', filter=Q(paiement__mode_paiement='espece'))
+                                            )
+                                            Then in template: {{ caisse.montant_fermeture|default:0|add:caisse.montant_ouverture|subtract:caisse.total_espece_paiements|floatformat:2 }}
+                                            {% endcomment %}
+                                            
+                                            {% if caisse.montant_fermeture is not None %}
+                                                {% with ecart=caisse.montant_fermeture|sub:caisse.solde_theorique %} {# Assuming solde_theorique is a property/method on Caisse model #}
+                                                    {% if ecart > 0.01 %}
+                                                        <span class="text-danger">{{ ecart|floatformat:2 }}</span>
+                                                    {% elif ecart < -0.01 %}
+                                                        <span class="text-danger">{{ ecart|floatformat:2 }}</span>
+                                                    {% else %}
+                                                        <span class="text-success">0.00</span>
+                                                    {% endif %}
+                                                {% endwith %}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if caisse.statut %}
+                                            <span class="badge bg-success">Ouverte</span>
+                                        {% else %}
+                                            <span class="badge bg-dark">Clôturée</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ caisse.commentaire|default:"-" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <p class="text-white-50">Aucune caisse n'a été enregistrée pour votre entreprise.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

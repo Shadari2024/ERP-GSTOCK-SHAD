@@ -1,0 +1,205 @@
+{% extends "comptabilite/base.html" %}
+{% load i18n %}
+
+{% block title %}Détails du compte {{ object.numero }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'comptabilite:plan_comptable_list' %}">Plan Comptable</a></li>
+<li class="breadcrumb-item active" aria-current="page">Détails {{ object.numero }}</li>
+{% endblock %}
+
+{% block page_title %}Détails du compte: {{ object.numero }} - {{ object.intitule }}{% endblock %}
+
+{% block actions %}
+<div class="btn-group">
+    <a href="{% url 'comptabilite:plan_comptable_update' object.pk %}" class="btn btn-outline-primary">
+        <i class="fas fa-edit me-1"></i> Modifier
+    </a>
+    <a href="{% url 'comptabilite:plan_comptable_list' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-list me-1"></i> Retour à la liste
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">Informations du compte</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="40%">Numéro de compte:</th>
+                                <td><span class="badge bg-primary fs-6">{{ object.numero }}</span></td>
+                            </tr>
+                            <tr>
+                                <th>Intitulé:</th>
+                                <td>{{ object.intitule }}</td>
+                            </tr>
+                            <tr>
+                                <th>Classe OHADA:</th>
+                                <td>
+                                    <span class="badge bg-secondary">Classe {{ object.classe }}</span>
+                                    {% if object.classe == '1' %}(Capitaux){% endif %}
+                                    {% if object.classe == '2' %}(Immobilisations){% endif %}
+                                    {% if object.classe == '3' %}(Stocks){% endif %}
+                                    {% if object.classe == '4' %}(Tiers){% endif %}
+                                    {% if object.classe == '5' %}(Financiers){% endif %}
+                                    {% if object.classe == '6' %}(Charges){% endif %}
+                                    {% if object.classe == '7' %}(Produits){% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <th width="40%">Type de compte:</th>
+                                <td>
+                                    {% if object.type_compte == 'actif' %}
+                                        <span class="badge bg-info">Actif</span>
+                                    {% elif object.type_compte == 'passif' %}
+                                        <span class="badge bg-success">Passif</span>
+                                    {% elif object.type_compte == 'charge' %}
+                                        <span class="badge bg-danger">Charge</span>
+                                    {% elif object.type_compte == 'produit' %}
+                                        <span class="badge bg-primary">Produit</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Entreprise:</th>
+                                <td>{{ object.entreprise }}</td>
+                            </tr>
+                            <tr>
+                                <th>Date création:</th>
+                                <td>{{ object.created_at|date:"d/m/Y H:i" }}</td>
+                            </tr>
+                            <tr>
+                                <th>Dernière modification:</th>
+                                <td>{{ object.updated_at|date:"d/m/Y H:i" }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                {% if object.description %}
+                <div class="mt-4">
+                    <h6>Description:</h6>
+                    <div class="border rounded p-3 bg-light">
+                        {{ object.description|linebreaks }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Statistiques d'utilisation -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title">Statistiques d'utilisation</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <div class="border rounded p-3">
+                            <h3 class="text-primary">0</h3>
+                            <p class="text-muted mb-0">Écritures ce mois</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3">
+                            <h3 class="text-success">0</h3>
+                            <p class="text-muted mb-0">Écritures totales</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3">
+                            <h3 class="text-info">{{ devise_principale_symbole }} 0.00</h3>
+                            <p class="text-muted mb-0">Solde actuel</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Actions rapides -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'comptabilite:ecriture_create' %}?compte={{ object.numero }}" 
+                       class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Nouvelle écriture
+                    </a>
+                    <a href="{% url 'comptabilite:grand_livre' %}?compte={{ object.numero }}" 
+                       class="btn btn-outline-primary">
+                        <i class="fas fa-book-open me-2"></i>Voir le grand livre
+                    </a>
+                    {% if perms.comptabilite.delete_plancomptableohada %}
+                    <button type="button" class="btn btn-outline-danger" 
+                            data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="fas fa-trash me-2"></i>Supprimer le compte
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Comptes similaires -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Comptes de la même classe</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for compte in comptes_meme_classe %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <a href="{% url 'comptabilite:plan_comptable_detail' compte.pk %}" 
+                           class="text-decoration-none">
+                            {{ compte.numero }} - {{ compte.intitule|truncatewords:3 }}
+                        </a>
+                        <span class="badge bg-secondary">{{ compte.type_compte }}</span>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item text-muted">Aucun autre compte dans cette classe</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de suppression -->
+{% if perms.comptabilite.delete_plancomptableohada %}
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmer la suppression</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer le compte <strong>{{ object.numero }} - {{ object.intitule }}</strong> ?</p>
+                <p class="text-danger">Cette action est irréversible. Toutes les écritures associées devront être modifiées.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form method="post" action="{% url 'comptabilite:plan_comptable_delete' object.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Supprimer définitivement</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

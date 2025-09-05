@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-dark text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="mb-0">
+                    <i class="fas fa-undo me-2"></i>Gestion des retours
+                </h2>
+                {% if perms.STOCK.add_retourproduit %}
+                <a href="#" class="btn btn-light disabled">
+                    <i class="fas fa-plus me-1"></i> Nouveau retour
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Commande</th>
+                            <th>Client</th>
+                            <th>Date</th>
+                            <th>Statut</th>
+                            <th>Motif</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for retour in retours %}
+                        <tr>
+                            <td>{{ retour.id }}</td>
+                            <td>
+                                <a href="{% url 'detail_commande' retour.commande.id %}">
+                                    #{{ retour.commande.id }}
+                                </a>
+                            </td>
+                            <td>{{ retour.commande.client.nom }}</td>
+                            <td>{{ retour.date_creation|date:"d/m/Y" }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if retour.statut == 'traite' %}bg-success
+                                    {% elif retour.statut == 'annule' %}bg-danger
+                                    {% else %}bg-warning{% endif %}">
+                                    {{ retour.get_statut_display }}
+                                </span>
+                            </td>
+                            <td>{{ retour.get_motif_display }}</td>
+                            <td>
+                                <a href="{% url 'detail_retour' retour.id %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if retour.peut_etre_traite and perms.STOCK.change_retourproduit %}
+                                <a href="{% url 'traiter_retour' retour.id %}" class="btn btn-sm btn-success ms-1">
+                                    <i class="fas fa-check"></i>
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                                <h5>Aucun retour enregistré</h5>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

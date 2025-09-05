@@ -1,0 +1,334 @@
+{% extends "achats/base_achats.html" %}
+
+{% block title %}Liste des Bons de Réception{% endblock %}
+
+{% block content %}
+<div class="erp-detail-container"> {# Using erp-detail-container for consistent padding and max-width #}
+    <div class="erp-card"> {# Using erp-card for the main container #}
+        <div class="erp-card-header d-flex justify-content-between align-items-center">
+            <h1 class="erp-card-title" data-tooltip="Consultez l'historique et le détail de tous les bons de réception.">Bons de Réception</h1>
+            <a href="{% url 'achats:liste_commandes' %}" class="erp-btn erp-btn-secondary"
+               data-tooltip="Retourne à la liste complète des commandes d'achat.">
+                <i class="fas fa-arrow-left"></i> Retour aux Commandes
+            </a>
+        </div>
+
+        <div class="erp-card-body"> {# Using erp-card-body for padding #}
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert"
+                         data-tooltip="Message de notification concernant une action effectuée.">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"
+                                data-tooltip="Fermer cette notification."></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% if bons %}
+            <div class="erp-table-responsive"> {# Using erp-table-responsive for consistent styling #}
+                <table class="erp-line-table"> {# Using erp-line-table for consistent styling #}
+                    <thead class="erp-thead"> {# Using erp-thead for dark header #}
+                        <tr>
+                            <th data-tooltip="Numéro d'identification unique du bon de réception.">N° Bon</th>
+                            <th data-tooltip="Numéro de la commande d'achat associée à ce bon de réception.">Commande Liée</th>
+                            <th data-tooltip="Nom du fournisseur ayant livré les articles.">Fournisseur</th>
+                            <th data-tooltip="Date à laquelle les articles ont été effectivement reçus.">Date Réception</th>
+                            <th data-tooltip="L'utilisateur qui a créé ce bon de réception.">Créé par</th>
+                            <th data-tooltip="Actions disponibles pour chaque bon de réception (ex: voir les détails).">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bon in bons %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'achats:detail_bon' pk=bon.pk %}"
+                                   data-tooltip="Cliquez pour voir les détails complets de ce bon de réception.">
+                                    <strong>{{ bon.numero_bon }}</strong>
+                                </a>
+                            </td>
+                            <td>
+                                <a href="{% url 'achats:detail_commande' pk=bon.commande.pk %}"
+                                   data-tooltip="Cliquez pour voir les détails de la commande d'achat associée.">
+                                    {{ bon.commande.numero_commande }}
+                                </a>
+                            </td>
+                            <td data-tooltip="Nom du fournisseur lié à la commande.">{{ bon.commande.fournisseur.nom }}</td>
+                            <td data-tooltip="Date de la réception des articles.">{{ bon.date_reception|date:"d/m/Y" }}</td>
+                            <td data-tooltip="Nom de l'utilisateur qui a enregistré ce bon de réception.">{{ bon.created_by.get_full_name|default:bon.created_by.username }}</td>
+                            <td>
+                                <a href="{% url 'achats:detail_bon' pk=bon.pk %}" class="erp-btn erp-btn-info erp-btn-sm"
+                                   data-tooltip="Voir le détail complet de ce bon de réception." title="Détails">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {# Add edit/delete buttons if you implement them later #}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <div class="alert alert-info" role="alert"
+                     data-tooltip="Il n'y a aucun bon de réception enregistré dans le système pour l'instant.">
+                    Aucun bon de réception trouvé.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    /* General ERP styles (from base_achats.html or global) */
+    :root {
+        --primary-color: #5b21b6; /* Deep Purple */
+        --primary-color-rgb: 91, 33, 182;
+        --secondary-color: #7c3aed; /* Lighter Purple */
+        --secondary-color-rgb: 124, 58, 237;
+        --accent-color: #2563eb; /* Blue accent */
+        --accent-color-rgb: 37, 99, 235;
+
+        --background-body: #1a202c; /* Dark background for body */
+        --card-background: #2d3748; /* Slightly lighter dark for cards */
+        --text-color-light: #e2e8f0; /* Light text for readability on dark backgrounds */
+        --text-color-dark: #a0aec0; /* Slightly darker text for labels/less emphasis */
+        --border-color: #4a5568; /* Subtle border color */
+        --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2); /* Darker shadows */
+        --transition: all 0.3s ease; /* Smooth transitions */
+        --border-radius: 0.5rem; /* Consistent border radius */
+
+        --tooltip-bg: #4a5568; /* Darker tooltip background */
+        --tooltip-color: #e2e8f0; /* Light tooltip text */
+        
+        /* Status Colors - Tailored for dark theme (if applicable here, though less used on list) */
+        --status-brouillon-bg: rgba(248, 150, 30, 0.2);
+        --status-brouillon-text: #f8961e;
+        --status-validee-bg: rgba(76, 201, 240, 0.2);
+        --status-validee-text: #4cc9f0;
+
+        /* Button Colors - Specific for this page's actions */
+        --btn-secondary-bg: var(--background-body);
+        --btn-secondary-text: var(--text-color-light);
+        --btn-secondary-border: 1px solid var(--border-color);
+        --btn-secondary-hover-bg: #3b4252; /* Slightly lighter dark on hover */
+
+        --btn-info-bg: #17a2b8; /* Bootstrap info color */
+        --btn-info-text: white;
+        --btn-info-hover-bg: #138496;
+    }
+
+    body {
+        background-color: var(--background-body);
+        color: var(--text-color-light);
+    }
+
+    /* Odoo-like styles adaptation for dark theme */
+    .erp-detail-container {
+        padding: 2rem;
+    }
+
+    .erp-card {
+        background: var(--card-background);
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        overflow: hidden;
+    }
+    
+    .erp-card-header {
+        background-color: var(--background-body); /* Slightly darker header */
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid var(--border-color);
+        display: flex; /* Ensure flex behavior */
+        flex-wrap: wrap; /* Allow wrapping */
+        gap: 1rem; /* Space between items */
+    }
+    
+    .erp-card-title {
+        color: var(--text-color-light);
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    
+    /* Button Styles */
+    .erp-btn {
+        padding: 0.6rem 1.2rem;
+        border-radius: var(--border-radius);
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        transition: var(--transition);
+        border: none;
+        text-decoration: none;
+        font-size: 0.9rem;
+    }
+
+    .erp-btn-secondary {
+        background-color: var(--btn-secondary-bg);
+        color: var(--btn-secondary-text);
+        border: var(--btn-secondary-border);
+        box-shadow: none;
+    }
+    .erp-btn-secondary:hover {
+        background-color: var(--btn-secondary-hover-bg);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .erp-btn-info {
+        background-color: var(--btn-info-bg);
+        color: var(--btn-info-text);
+        box-shadow: 0 4px 12px rgba(23, 162, 184, 0.2);
+    }
+    .erp-btn-info:hover {
+        background-color: var(--btn-info-hover-bg);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(23, 162, 184, 0.3);
+    }
+
+    .erp-btn-sm {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+
+    .erp-card-body {
+        padding: 2rem;
+        color: var(--text-color-light);
+    }
+    
+    /* Table Styles */
+    .erp-table-responsive {
+        overflow-x: auto;
+    }
+
+    .erp-line-table {
+        width: 100%;
+        border-collapse: collapse;
+        color: var(--text-color-light);
+    }
+    
+    .erp-thead {
+        background-color: var(--primary-color);
+        color: white;
+    }
+
+    .erp-line-table th {
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.9rem;
+        border: 1px solid var(--border-color); /* Add borders to header for consistency */
+    }
+    .erp-line-table td {
+        padding: 0.8rem 1rem;
+        border: 1px solid var(--border-color); /* Visible borders for line table */
+    }
+    
+    .erp-line-table tbody tr:nth-child(even) {
+        background-color: var(--background-body); /* Alternate row background */
+    }
+    .erp-line-table tbody tr:hover {
+        background-color: rgba(var(--primary-color-rgb), 0.08); /* Hover effect */
+    }
+
+    .erp-empty-lines { /* Renamed for consistency with erp-line-table */
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-color-dark);
+        font-style: italic;
+    }
+
+    /* Bootstrap Alert Overrides for dark theme */
+    .alert {
+        background-color: var(--card-background); /* Darker background for alerts */
+        color: var(--text-color-light); /* Light text */
+        border: 1px solid var(--border-color); /* Subtle border */
+    }
+    .alert-info {
+        background-color: rgba(72, 149, 239, 0.15); /* Light blue tint */
+        color: var(--text-color-light);
+        border-color: rgba(72, 149, 239, 0.3);
+    }
+    .alert .btn-close {
+        filter: invert(1); /* Invert color for dark theme */
+        opacity: 0.7;
+    }
+    .alert .btn-close:hover {
+        opacity: 1;
+    }
+
+    /* Tooltip styles (should be in base_achats.html for global availability) */
+    [data-tooltip] {
+        position: relative;
+        cursor: help;
+    }
+
+    [data-tooltip]::after {
+        content: attr(data-tooltip);
+        visibility: hidden;
+        opacity: 0;
+        background-color: var(--tooltip-bg);
+        color: var(--tooltip-color);
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px 10px;
+        position: absolute;
+        z-index: 1001;
+        top: 120%; /* Position below element */
+        left: 50%;
+        transform: translateX(-50%) translateY(5px);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        white-space: nowrap;
+        font-size: 0.85rem;
+        pointer-events: none;
+        box-shadow: var(--box-shadow);
+    }
+
+    [data-tooltip]:hover::after {
+        visibility: visible;
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .erp-card-header {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 1rem;
+        }
+
+        .erp-card-title {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .erp-card-body {
+            padding: 1.5rem;
+        }
+
+        .erp-btn {
+            width: 100%;
+            text-align: center;
+            justify-content: center; /* Center icon and text */
+        }
+        
+        .erp-line-table th, .erp-line-table td {
+            padding: 0.6rem 0.8rem;
+            font-size: 0.85rem;
+        }
+
+        /* Tooltip adjustments for small screens */
+        [data-tooltip]::after {
+            left: 50%;
+            transform: translateX(-50%) translateY(5px);
+            width: auto; /* Allow width to adjust based on content */
+            max-width: 90vw; /* Prevent very wide tooltips */
+            white-space: normal; /* Allow text to wrap */
+        }
+    }
+</style>
+{% endblock %}

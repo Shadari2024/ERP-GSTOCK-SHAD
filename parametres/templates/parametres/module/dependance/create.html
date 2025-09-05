@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Ajouter une Dépendance</h5>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="{{ form.module_principal.id_for_label }}">Module Principal</label>
+                        <input type="text" class="form-control" value="{{ module.nom }}" readonly>
+                        <input type="hidden" name="module_principal" value="{{ module.pk }}">
+                        {% for error in form.module_principal.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="{{ form.module_dependance.id_for_label }}">{{ form.module_dependance.label }}</label>
+                        {{ form.module_dependance }}
+                        {% for error in form.module_dependance.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <div class="form-check">
+                    {{ form.obligatoire }}
+                    <label class="form-check-label" for="{{ form.obligatoire.id_for_label }}">
+                        {{ form.obligatoire.label }}
+                    </label>
+                    <small class="form-text text-muted">Si cette dépendance est obligatoire, le module principal ne pourra pas être activé sans ce module.</small>
+                </div>
+            </div>
+            
+            <div class="form-group text-right">
+                {% comment %} <a href="{% url 'parametres:module_detail' module.pk %}" class="btn btn-secondary"> {% endcomment %}
+                    Annuler
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Enregistrer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

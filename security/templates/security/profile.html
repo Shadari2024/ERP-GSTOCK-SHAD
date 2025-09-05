@@ -1,0 +1,54 @@
+<!-- templates/security/profile.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4><i class="fas fa-user me-2"></i>Gestion du Profil</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="id_photo" class="form-label">Photo de profil</label>
+                                    {{ form.photo }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_signature" class="form-label">Signature</label>
+                                    {{ form.signature }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_poste" class="form-label">Poste</label>
+                                    {{ form.poste }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="id_date_embauche" class="form-label">Date d'embauche</label>
+                                    {{ form.date_embauche }}
+                                </div>
+                                <div class="mb-3">
+                                    <label for="id_notes" class="form-label">Notes</label>
+                                    {{ form.notes }}
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Enregistrer
+                        </button>
+                        <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Annuler
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

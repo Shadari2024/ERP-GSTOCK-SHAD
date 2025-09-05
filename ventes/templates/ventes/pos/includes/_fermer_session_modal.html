@@ -1,0 +1,34 @@
+{% else %}
+<!-- Modal pour fermer une session -->
+<div class="modal fade" id="fermerSessionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'ventes:fermer_session_pos' pk=point_de_vente.id session_pk=session_ouverte.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Fermer la Session</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Session ouverte le {{ session_ouverte.date_ouverture|date:"d/m/Y à H:i" }}
+                        avec {{ session_ouverte.fonds_ouverture|floatformat:2 }} €
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="fonds_fermeture" class="form-label">Fonds de fermeture (€)</label>
+                        <input type="number" class="form-control" id="fonds_fermeture" 
+                               name="fonds_fermeture" step="0.01" min="0" required
+                               placeholder="Montant final en caisse">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger">Fermer la Session</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}

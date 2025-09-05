@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-lg">
+        <div class="card-header bg-success text-white">
+            <h2 class="mb-0">
+                <i class="bi bi-percent me-2"></i>Appliquer une promotion
+                <small class="fs-6">Commande #{{ commande.id }}</small>
+            </h2>
+        </div>
+        
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h4 class="mb-0">Détails de la commande</h4>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Client :</strong> {{ commande.client.nom }}</p>
+                            <p><strong>Date :</strong> {{ commande.date_commande|date:"d/m/Y H:i" }}</p>
+                            <p><strong>Total :</strong> {{ commande.total_ttc }} {{ commande.devise }}</p>
+                            
+                            {% if commande.remises.exists %}
+                            <div class="alert alert-info mt-3">
+                                <h5 class="alert-heading">Remises appliquées</h5>
+                                <ul class="mb-0">
+                                    {% for remise in commande.remises.all %}
+                                    <li>
+                                        {{ remise.promotion.nom }} : 
+                                        -{{ remise.montant_remise }} {{ commande.devise }}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h4 class="mb-0">Application de promotion</h4>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Code promotionnel</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" name="code_promo" required>
+                                        <button class="btn btn-success" type="submit">
+                                            <i class="bi bi-check-lg"></i> Appliquer
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">Entrez le code promo fourni par le client</small>
+                                </div>
+                            </form>
+                            
+                            <div class="mt-4">
+                                <h5>Promotions actives</h5>
+                                <div class="list-group">
+                                    {% for promo in promotions_actives %}
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <strong>{{ promo.nom }}</strong>
+                                                <small class="d-block">{{ promo.code_promo }}</small>
+                                            </div>
+                                            <span class="badge bg-primary">
+                                                {% if promo.type_remise == 'pourcentage' %}
+                                                -{{ promo.valeur }}%
+                                                {% else %}
+                                                -{{ promo.valeur }} {{ commande.devise }}
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    {% empty %}
+                                    <div class="list-group-item text-muted">
+                                        Aucune promotion active disponible
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-3 text-end">
+                <a href="{% url 'detail_commande' commande.id %}" class="btn btn-primary">
+                    <i class="bi bi-arrow-left me-1"></i> Retour à la commande
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

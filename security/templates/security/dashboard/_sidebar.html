@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+{% load static %}
+{% load security_tags %}
+
+{% block title %}Administration - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar - Design amélioré -->
+        <div class="col-md-3 col-lg-2 d-md-block sidebar collapse" style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);">
+            <div class="position-sticky pt-3">
+                <div class="text-center mb-4">
+                    <img src="{% static 'images/logo-admin.png' %}" alt="Logo" class="img-fluid" style="max-width: 80px;">
+                </div>
+                
+                <ul class="nav flex-column">
+                    <!-- Tableau de bord -->
+                    <li class="nav-item mb-2">
+                        <a class="nav-link text-white d-flex align-items-center py-2 rounded" 
+                           href="{% url 'security:admin_dashboard' %}"
+                           style="background: rgba(255,255,255,0.1);">
+                            <i class="bi bi-speedometer2 me-2 fs-5"></i>
+                            <span>Tableau de bord</span>
+                        </a>
+                    </li>
+                    
+                    <!-- Section Utilisateurs -->
+                    <li class="nav-item mb-2">
+                        <a class="nav-link text-white d-flex align-items-center py-2 rounded" 
+                           data-bs-toggle="collapse" href="#usersCollapse"
+                           style="background: rgba(255,255,255,0.05);">
+                            <i class="bi bi-people me-2 fs-5"></i>
+                            <span>Utilisateurs</span>
+                            <i class="bi bi-chevron-down ms-auto"></i>
+                        </a>
+                        <div class="collapse show" id="usersCollapse">
+                            <ul class="nav flex-column ms-4 mt-2">
+                                <li class="nav-item mb-1">
+                                    <a class="nav-link text-white py-1 ps-3 d-flex align-items-center rounded" 
+                                       href="{% url 'security:liste_utilisateurs' %}">
+                                        <i class="bi bi-list-ul me-2"></i>
+                                        <span>Tous les utilisateurs</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item mb-1">
+                                    <a class="nav-link text-white py-1 ps-3 d-flex align-items-center rounded" 
+                                       href="{% url 'security:creer_utilisateur' %}">
+                                        <i class="bi bi-person-plus me-2"></i>
+                                        <span>Créer un utilisateur</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                    
+                    <!-- Section Autorisations - Design amélioré -->
+                    <li class="nav-item mb-2">
+                        <a class="nav-link text-white d-flex align-items-center py-2 rounded" 
+                           data-bs-toggle="collapse" href="#permsCollapse"
+                           style="background: rgba(255,255,255,0.05);">
+                            <i class="bi bi-shield-lock me-2 fs-5"></i>
+                            <span>Autorisations</span>
+                            <i class="bi bi-chevron-down ms-auto"></i>
+                        </a>
+                        <div class="collapse" id="permsCollapse">
+                            <ul class="nav flex-column ms-4 mt-2">
+                                <li class="nav-item mb-1">
+                                    <a class="nav-link text-white py-1 ps-3 d-flex align-items-center rounded" 
+                                       href="{% url 'security:liste_groupes' %}">
+                                        <i class="bi bi-collection me-2"></i>
+                                        <span>Groupes</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item mb-1">
+                                    <a class="nav-link text-white py-1 ps-3 d-flex align-items-center rounded" 
+                                       href="{% url 'security:liste_permissions' %}">
+                                        <i class="bi bi-key me-2"></i>
+                                        <span>Permissions</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item mb-1">
+                                    <a class="nav-link text-white py-1 ps-3 d-flex align-items-center rounded" 
+                                       href="{% url 'security:affecter_permissions' %}">
+                                        <i class="bi bi-diagram-3 me-2"></i>
+                                        <span>Affectations</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                    
+                    <!-- Autres sections avec le même style -->
+                    <!-- ... -->
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Main Content - Design amélioré -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4" style="background-color: #f8f9fc;">
+            <!-- Header amélioré -->
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2 text-primary">
+                    <i class="bi bi-speedometer2 me-2"></i>
+                    Tableau de bord Administrateur
+                </h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-download me-1"></i> Exporter
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cartes de statistiques améliorées -->
+            <div class="row mb-4 g-4">
+                <div class="col-xl-3 col-md-6">
+                    <div class="card border-start-primary border-3 shadow-sm h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    <div class="icon-circle bg-primary text-white">
+                                        <i class="fas fa-users fs-4"></i>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="text-xs fw-bold text-primary text-uppercase mb-1">
+                                        Utilisateurs</div>
+                                    <div class="h5 mb-0 fw-bold text-gray-800">{{ stats.total_users }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Autres cartes avec le même style -->
+                <!-- ... -->
+            </div>
+            
+            <!-- Tableaux avec design amélioré -->
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                            <h6 class="m-0 fw-bold text-primary">
+                                <i class="bi bi-people me-2"></i>
+                                Derniers utilisateurs
+                            </h6>
+                            <a href="{% url 'security:liste_utilisateurs' %}" class="btn btn-sm btn-outline-primary">
+                                Voir tout <i class="bi bi-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Nom</th>
+                                            <th>Rôle</th>
+                                            <th>Statut</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for user in recent_users %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-sm me-2">
+                                                        {% if user.profile.avatar %}
+                                                        <img src="{{ user.profile.avatar.url }}" class="rounded-circle" width="32" height="32" alt="Avatar">
+                                                        {% else %}
+                                                        <div class="avatar-initials bg-{{ user.role|role_badge_color }} text-white rounded-circle d-flex align-items-center justify-content-center" style="width:32px;height:32px;">
+                                                            {{ user.username|first|upper }}
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-bold">{{ user.username }}</div>
+                                                        <small class="text-muted">{{ user.get_full_name }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{{ user.role|role_badge_color }} rounded-pill">
+                                                    {{ user.get_role_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if user.is_active %}
+                                                <span class="badge bg-success rounded-pill">
+                                                    <i class="bi bi-check-circle me-1"></i> Actif
+                                                </span>
+                                                {% else %}
+                                                <span class="badge bg-secondary rounded-pill">
+                                                    <i class="bi bi-x-circle me-1"></i> Inactif
+                                                </span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Autres tableaux avec le même style -->
+                <!-- ... -->
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Styles personnalisés */
+    .sidebar {
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    }
+    
+    .nav-link {
+        transition: all 0.3s ease;
+    }
+    
+    .nav-link:hover {
+        background-color: rgba(255,255,255,0.15) !important;
+    }
+    
+    .icon-circle {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .avatar-initials {
+        font-weight: 600;
+    }
+    
+    .card {
+        border: none;
+        border-radius: 0.5rem;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+    }
+    
+    .table-hover tbody tr {
+        transition: background-color 0.2s ease;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(0,123,255,0.05);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Scripts personnalisés -->
+<script>
+// Initialisation des tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    // Activer les tooltips Bootstrap
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Animation des cartes au chargement
+    const cards = document.querySelectorAll('.card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        
+        setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, 100 * index);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4 animate__animated animate__fadeIn">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0 text-primary fw-bold">
+                <i class="bi bi-person-circle me-2"></i>Détails du Client: {{ client.nom }}
+            </h2>
+            <p class="text-muted small">ID Client: CL-{{ client.pk|stringformat:"04d" }}</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'liste_client' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left me-1"></i>Retour
+            </a>
+            <a href="{% url 'modif_client' client.pk %}" class="btn btn-warning btn-sm">
+                <i class="bi bi-pencil me-1"></i>Modifier
+            </a>
+             <a href="{% url 'sup_client' client.pk %}" class="btn btn-danger btn-sm">
+                <i class="bi bi-delete me-1"></i>Supprimer
+            </a>
+            <a href="{% url 'creer_commande' %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle me-1"></i>Nouvelle Commande
+            </a>
+        </div>
+    </div>
+
+    {# Modale de confirmation de suppression #}
+    <div class="modal fade" id="deleteClientModal" tabindex="-1" aria-labelledby="deleteClientModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="deleteClientModalLabel">Confirmer la suppression</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Êtes-vous sûr de vouloir supprimer le client **{{ client.nom }}** (ID: CL-{{ client.pk }})? Cette action est irréversible.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <a href="{% url 'sup_client' client.pk %}" class="btn btn-danger">Supprimer</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        {# Colonne Principale (Informations Générales, Contact, Adresse) #}
+        <div class="col-lg-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light fw-bold text-dark">
+                    <i class="bi bi-info-circle me-2"></i>Informations Générales
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small mb-0">Nom de l'entreprise/personne</label>
+                            <p class="form-control-plaintext fw-bold">{{ client.nom }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small mb-0">Type de client</label>
+                            <p class="form-control-plaintext">
+                                <span class="badge {% if client.type_client == 'ENT' %}bg-info{% else %}bg-secondary{% endif %} bg-opacity-10 text-{% if client.type_client == 'ENT' %}info{% else %}secondary{% endif %}">
+                                    {{ client.get_type_client_display }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small mb-0">Statut</label>
+                            <p class="form-control-plaintext">
+                                <span class="badge bg-{{ client.statut|lower }} bg-opacity-10 text-{{ client.statut|lower }}">
+                                    {{ client.get_statut_display }}
+                                </span>
+                            </p>
+                            
+                        </div>
+                        {% if client.code_client %}
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small mb-0">Code Client</label>
+                            <p class="form-control-plaintext">{{ client.code_client }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.numero_fiscal %}
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small mb-0">Numéro Fiscal</label>
+                            <p class="form-control-plaintext">{{ client.numero_fiscal }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.numero_tva %}
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small mb-0">Numéro TVA</label>
+                            <p class="form-control-plaintext">{{ client.numero_tva }}</p>
+                        </div>
+                        {% endif %}
+                        <div class="col-12">
+                            <label class="form-label text-muted small mb-0">Notes Internes</label>
+                            <p class="form-control-plaintext">{{ client.notes|default:"Aucune note spécifique." }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light fw-bold text-dark">
+                    <i class="bi bi-telephone-fill me-2"></i>Coordonnées
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small mb-0">Téléphone Principal</label>
+                            <p class="form-control-plaintext">{{ client.telephone|default:"N/A" }}</p>
+                        </div>
+                        {% if client.telephone_secondaire %}
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small mb-0">Téléphone Secondaire</label>
+                            <p class="form-control-plaintext">{{ client.telephone_secondaire }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.email %}
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small mb-0">Email</label>
+                            <p class="form-control-plaintext"><a href="mailto:{{ client.email }}">{{ client.email }}</a></p>
+                        </div>
+                        {% endif %}
+                        {% if client.website %}
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small mb-0">Site Web</label>
+                            <p class="form-control-plaintext"><a href="{{ client.website }}" target="_blank">{{ client.website }}</a></p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light fw-bold text-dark">
+                    <i class="bi bi-geo-alt-fill me-2"></i>Adresse Postale
+                </div>
+                <div class="card-body">
+                    {% if client.adresse or client.ville or client.code_postal or client.pays %}
+                        <address class="mb-0">
+                            {% if client.adresse %}{{ client.adresse }}<br>{% endif %}
+                            {% if client.ville %}{{ client.ville }}{% if client.code_postal %}, {{ client.code_postal }}{% endif %}<br>{% endif %}
+                            {% if client.pays %}{{ client.get_pays_display }}{% endif %}
+                        </address>
+                    {% else %}
+                        <p class="text-muted">Aucune adresse enregistrée.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# Colonne Latérale (Informations Financières, Audit) #}
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light fw-bold text-dark">
+                    <i class="bi bi-cash-stack me-2"></i>Conditions Financières
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label text-muted small mb-0">Limite de Crédit</label>
+                            <p class="form-control-plaintext">{{ client.limite_credit|floatformat:2 }} {{ client.devise_preferee.symbole|default:'$' }}</p>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small mb-0">Délai de Paiement</label>
+                            <p class="form-control-plaintext">{{ client.delai_paiement }} jours</p>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small mb-0">Taux de Remise (%)</label>
+                            <p class="form-control-plaintext">{{ client.taux_remise|floatformat:2 }}%</p>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label text-muted small mb-0">Exonéré de TVA</label>
+                            <p class="form-control-plaintext">
+                                {% if client.exonere_tva %}<span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-check-circle me-1"></i>Oui</span>{% else %}<span class="badge bg-danger bg-opacity-10 text-danger"><i class="bi bi-x-circle me-1"></i>Non</span>{% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light fw-bold text-dark">
+                    <i class="bi bi-clock-history me-2"></i>Historique
+                </div>
+                <div class="card-body small text-muted">
+                    <p class="mb-1"><strong>Créé le:</strong> {{ client.cree_le|date:"d M Y H:i" }}</p>
+                    <p class="mb-1"><strong>Créé par:</strong> {{ client.cree_par.get_full_name|default:client.cree_par.username }}</p>
+                    <p class="mb-0"><strong>Dernière modif.:</strong> {{ client.modifie_le|date:"d M Y H:i" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Historique des commandes #}
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-light fw-bold text-dark">
+            <i class="bi bi-receipt-cutoff me-2"></i>Historique des Commandes
+        </div>
+        <div class="card-body p-0">
+            {% if historique_commandes %}
+            <div class="table-responsive">
+                <table class="table table-hover table-sm align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">#</th>
+                            <th>Code Commande</th>
+                            <th>Date</th>
+                            <th>Montant Total</th>
+                            <th>Statut</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for commande in historique_commandes %}
+                        <tr>
+                            <td class="ps-4">{{ forloop.counter }}</td>
+                            <td>{{ commande.pk }}</td>
+                            <td>{{ commande.date_commande|date:"d M Y" }}</td>
+                            <td>{{ commande.montant_total|floatformat:2 }} {{ commande.devise.symbole|default:'$' }}</td>
+                            <td>
+                                <span class="badge bg-{{ commande.statut|lower }} bg-opacity-10 text-{{ commande.statut|lower }}">
+                                    {{ commande.get_statut_display }}
+                                </span>
+                            </td>
+                            <td class="text-end pe-4">
+                                <a href="{% url 'detail_commande' commande.pk %}" class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="Voir détails">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-cart-x fs-1 text-muted"></i>
+                <h5 class="mt-3 text-muted">Aucune commande enregistrée pour ce client</h5>
+                <p class="text-muted">Créez votre première commande pour suivre l'activité.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialisation des tooltips Bootstrap
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    });
+</script>
+
+<style>
+    body {
+        background-color: #f8f9fa; /* Light background for Odoo feel */
+    }
+    .card {
+        border: none;
+        border-radius: 0.5rem;
+    }
+    .card-header {
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        background-color: #f0f2f5 !important; /* Slightly darker header */
+        font-size: 0.95rem;
+    }
+    .form-control-plaintext {
+        padding-top: 0.375rem;
+        padding-bottom: 0.375rem;
+        margin-bottom: 0;
+        line-height: 1.5;
+    }
+    .form-label.text-muted.small {
+        font-size: 0.75rem; /* Smaller labels for Odoo-like input fields */
+        margin-bottom: 0.1rem;
+    }
+    .badge {
+        font-weight: 500;
+        padding: 0.4em 0.7em;
+        font-size: 0.78em;
+    }
+    .btn-sm {
+        padding: 0.35rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    .table-sm th, .table-sm td {
+        padding: 0.5rem;
+    }
+</style>
+{% endblock %}

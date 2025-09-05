@@ -1,0 +1,241 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load humanize %}
+{% load static %}
+{% load math_filters %}
+
+
+{% block title %}{% translate "Gestion des Dettes" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-lg">
+        <div class="card-header bg-gradient-danger text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="mb-0"><i class="bi bi-currency-exchange me-2"></i>{% translate "Gestion des Dettes" %}</h3>
+                <span class="badge bg-white text-danger fs-6">
+                    {% translate "Total dû" %}: {{ total_dettes_dues_formatted|safe }}
+                </span>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between mb-4">
+                <div class="btn-group" role="group">
+                    <a href="{% url 'liste_dettes' %}" class="btn btn-outline-secondary {% if not request.GET.statut %}active{% endif %}">
+                        {% translate "Toutes" %}
+                    </a>
+                    <a href="{% url 'liste_dettes' %}?statut=impayees" class="btn btn-outline-warning {% if request.GET.statut == 'impayees' %}active{% endif %}">
+                        {% translate "Impayées" %} ({{ dettes_en_retard|add:dettes_a_venir }})
+                    </a>
+                    <a href="{% url 'liste_dettes' %}?statut=en_retard" class="btn btn-outline-danger {% if request.GET.statut == 'en_retard' %}active{% endif %}">
+                        {% translate "En retard" %} ({{ dettes_en_retard }})
+                    </a>
+                    <a href="{% url 'liste_dettes' %}?statut=payees" class="btn btn-outline-success {% if request.GET.statut == 'payees' %}active{% endif %}">
+                        {% translate "Payées" %}
+                    </a>
+                </div>
+                
+                {# Le sélecteur de devise a été supprimé ici #}
+
+                {% if perms.STOCK.add_dette %}
+                {% comment %} <a href="{% url 'creer_dette' %}" class="btn btn-primary"> {% endcomment %}
+                    <i class="bi bi-plus-circle me-1"></i> {% translate "Nouvelle Dette" %}
+                </a>
+                {% endif %}
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>{% translate "Client" %}</th>
+                            <th>{% translate "Commande" %}</th>
+                            <th>{% translate "Montant Dû" %} ({{ devise_principale_obj.symbole }})</th> {# En-tête simplifié #}
+                            <th>{% translate "Date Échéance" %}</th>
+                            <th>{% translate "Statut" %}</th>
+                            <th>{% translate "Jours Restants" %}</th>
+                            <th>{% translate "Paiements" %}</th>
+                            <th>{% translate "Actions" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dette in dettes %}
+                        <tr class="{% if dette.date_echeance < today and not dette.est_soldee %}table-danger{% endif %}">
+                            <td>
+                                <a href="{% url 'details_client' my_id=dette.client.id %}">
+                                    {{ dette.client.nom }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if dette.commande %}
+                                <a href="{% url 'detail_commande' commande_id=dette.commande.id %}"> 
+                                    {% translate "Commande" %} #{{ dette.commande.id }}
+                                </a>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td class="fw-bold">
+                                {# Le montant affiché est maintenant toujours dans la devise principale #}
+                                <span class="{% if dette.montant_du_converted_value > 0 %}text-danger{% else %}text-success{% endif %}">
+                                    {{ dette.montant_du_formatted|safe }}
+                                </span>
+                            </td>
+                            <td>{{ dette.date_echeance|date:"d M Y" }}</td>
+                            <td>
+                                {% if dette.est_soldee %}
+                                    <span class="badge bg-success">{% translate "Soldée" %}</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">{% translate "Non soldée" %}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if not dette.est_soldee %}
+                                    {% with jours_restants=dette.jours_avant_echeance %} 
+                                        {% if jours_restants < 0 %}
+                                            <span class="text-danger">{% translate "Retard" %}: {{ jours_restants|abs }} {% translate "jour(s)" %}</span>
+                                        {% else %}
+                                            <span class="text-success">{{ jours_restants }} {% translate "jour(s)" %}</span>
+                                        {% endif %}
+                                    {% endwith %}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if dette.paiements.all %}
+                                    <ul class="list-unstyled mb-0 small">
+                                    {% for paiement in dette.paiements.all %}
+                                        <li>
+                                            {{ paiement.date_paiement|date:"d M Y" }}: 
+                                            <span class="fw-bold text-success">{{ paiement.montant_paiement|floatformat:2|intcomma }} {{ devise_principale_obj.symbole }}</span> {# Utilise la devise principale #}
+                                            <a href="{% url 'generer_facture_paiement_dette' paiement_id=paiement.id %}" class="badge bg-primary ms-1" title="{% translate 'Voir Facture' %}" target="_blank">
+                                                <i class="bi bi-receipt"></i>
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <span class="text-muted">{% translate "Aucun paiement" %}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    {% comment %} <a href="{% url 'details_dette' pk=dette.id %}" class="btn btn-outline-primary" title="{% translate 'Détails' %}"> {% endcomment %}
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if perms.STOCK.change_dette and not dette.est_soldee %}
+                                    {% comment %} <a href="{% url 'modifier_dette' pk=dette.id %}" class="btn btn-outline-warning" title="{% translate 'Modifier' %}"> {% endcomment %}
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    {% endif %}
+                                    
+                                    {% if not dette.est_soldee and dette.montant_du_converted_value > 0 %}
+                                        {% if perms.STOCK.add_paiement_dette %}
+                                        <a href="{% url 'payer_dette' dette_id=dette.id %}" class="btn btn-outline-success" title="{% translate 'Payer' %}"
+                                           onclick="return confirm('{% translate 'Êtes-vous sûr de vouloir enregistrer un paiement pour cette dette ?' %}');">
+                                            <i class="bi bi-wallet"></i> {% translate "Payer" %}
+                                        </a>
+                                        {% endif %}
+                                        {% if perms.STOCK.marquer_dette_soldee %}
+                                        <a href="{% url 'marquer_dette_soldee' dette_id=dette.id %}" class="btn btn-outline-info" title="{% translate 'Marquer comme Soldée' %}"
+                                           onclick="return confirm('{% translate 'Êtes-vous sûr de vouloir marquer cette dette comme entièrement soldée ? Cela mettra le montant dû à zéro.' %}');">
+                                            <i class="bi bi-check-all"></i> {% translate "Soldée" %}
+                                        </a>
+                                        {% endif %}
+                                    {% endif %}
+
+                                    {% if perms.STOCK.delete_dette %}
+                                    {% comment %} <a href="{% url 'supprimer_dette' pk=dette.id %}" class="btn btn-outline-danger" title="{% translate 'Supprimer' %}" onclick="return confirm('{% translate 'Êtes-vous sûr de vouloir supprimer cette dette ?' %}')"> {% endcomment %}
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5"> {# Colspan ajusté pour 8 colonnes #}
+                                <div class="empty-state">
+                                    <i class="bi bi-check-circle fs-1 text-muted"></i>
+                                    <h5 class="mt-3">{% translate "Aucune dette trouvée" %}</h5>
+                                    <p class="text-muted">{% translate "Aucune dette ne correspond à vos critères de recherche." %}</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if is_paginated %}
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item"><a class="page-link" href="?page={{ num }}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">{{ num }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border: none;
+        border-radius: 0.75rem;
+    }
+    .card-header {
+        border-radius: 0.75rem 0.75rem 0 0 !important;
+    }
+    .bg-gradient-danger {
+        background: linear-gradient(135deg, #dc3545 0%, #a71d2a 100%);
+    }
+    .table th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 0.5px;
+    }
+    .empty-state {
+        padding: 2rem;
+        text-align: center;
+    }
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+    }
+</style>
+{% endblock %}

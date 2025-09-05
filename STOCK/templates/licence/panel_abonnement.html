@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h2>Choisissez votre abonnement</h2>
+    
+    {% if licence %}
+        <div class="alert alert-info">
+            Votre statut actuel: <strong>{{ licence.get_status_display }}</strong><br>
+            Date d'expiration: {{ licence.date_expiration|date:"d/m/Y" }}<br>
+            Jours restants: {{ licence.jours_restants }}
+        </div>
+    {% endif %}
+    
+    <div class="row">
+        {% for abonnement in abonnements %}
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="my-0 font-weight-normal">{{ abonnement.get_duree_display }}</h4>
+                </div>
+                <div class="card-body">
+                    <h1 class="card-title pricing-card-title">
+                        {{ abonnement.prix }}€
+                        {% if abonnement.prix < abonnement.prix_original %}
+                            <small class="text-muted">
+                                <del>{{ abonnement.prix_original }}€</del>
+                            </small>
+                        {% endif %}
+                    </h1>
+                    <ul class="list-unstyled mt-3 mb-4">
+                        <li>Accès complet à l'application</li>
+                        <li>Support technique prioritaire</li>
+                        <li>Mises à jour incluses</li>
+                    </ul>
+                    <button onclick="location.href='{% url 'creer_session_paiement' abonnement.id %}'"
+                            class="btn btn-lg btn-block btn-primary">
+                        Souscrire
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    {% if not licence or licence.est_essai %}
+        <div class="text-center mt-4">
+            <a href="{% url 'commencer_essai' %}" class="btn btn-success btn-lg">
+                Essai gratuit de 1 mois
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

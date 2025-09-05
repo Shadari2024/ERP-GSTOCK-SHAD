@@ -1,0 +1,114 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h2>{% trans "Détails du contrat" %}</h2>
+        </div>
+        <div class="col text-end">
+            <a href="{% url 'grh:contrat_update' contrat.pk %}" class="btn btn-warning">
+                <i class="fas fa-edit me-1"></i> {% trans "Modifier" %}
+            </a>
+            <a href="{% url 'grh:contrat_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i> {% trans "Retour" %}
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Informations générales" %}</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">{% trans "Référence" %}:</dt>
+                        <dd class="col-sm-8">{{ contrat.reference }}</dd>
+                        
+                        <dt class="col-sm-4">{% trans "Employé" %}:</dt>
+                        <dd class="col-sm-8">{{ contrat.employe.nom_complet }}</dd>
+                        
+                        <dt class="col-sm-4">{% trans "Type de contrat" %}:</dt>
+                        <dd class="col-sm-8">{{ contrat.get_type_contrat_display }}</dd>
+                        
+                        <dt class="col-sm-4">{% trans "Poste" %}:</dt>
+                        <dd class="col-sm-8">{{ contrat.poste.intitule }}</dd>
+                        
+                        <dt class="col-sm-4">{% trans "Statut" %}:</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-{% if contrat.statut == 'EN_COURS' %}success{% elif contrat.statut == 'TERMINE' %}secondary{% else %}danger{% endif %}">
+                                {{ contrat.get_statut_display }}
+                            </span>
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Dates et rémunération" %}</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">{% trans "Date de début" %}:</dt>
+                        <dd class="col-sm-8">{{ contrat.date_debut|date:"d/m/Y" }}</dd>
+                        
+                        <dt class="col-sm-4">{% trans "Date de fin" %}:</dt>
+                        <dd class="col-sm-8">{{ contrat.date_fin|date:"d/m/Y"|default:"-" }}</dd>
+                        
+                        <dt class="col-sm-4">{% trans "Salaire de base" %}:</dt>
+                        <dd class="col-sm-8">{{ contrat.salaire_base }} {{ devise_principale_symbole }}</dd>
+                        
+                        <dt class="col-sm-4">{% trans "Durée d'essai" %}:</dt>
+                        <dd class="col-sm-8">{{ contrat.duree_essai|default:"-" }} {% trans "jours" %}</dd>
+                        
+                        <dt class="col-sm-4">{% trans "Fin période d'essai" %}:</dt>
+                        <dd class="col-sm-8">{{ contrat.date_fin_essai|date:"d/m/Y"|default:"-" }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Conditions de travail" %}</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">{% trans "Heures/semaine" %}:</dt>
+                        <dd class="col-sm-8">{{ contrat.heures_semaine }}h</dd>
+                        
+                        <dt class="col-sm-4">{% trans "Jours de congés/an" %}:</dt>
+                        <dd class="col-sm-8">{{ contrat.jours_conges_an }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Document" %}</h5>
+                </div>
+                <div class="card-body">
+                    {% if contrat.fichier_contrat %}
+                    <a href="{{ contrat.fichier_contrat.url }}" target="_blank" class="btn btn-primary">
+                        <i class="fas fa-download me-2"></i> {% trans "Télécharger le contrat" %}
+                    </a>
+                    {% else %}
+                    <p class="text-muted">{% trans "Aucun document attaché" %}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

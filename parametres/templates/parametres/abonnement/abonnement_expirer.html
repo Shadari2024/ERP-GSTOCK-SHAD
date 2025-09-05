@@ -1,0 +1,36 @@
+{# parametres/templates/parametres/abonnement/abonnement_expirer.html #}
+{% extends 'base.html' %} {# Assurez-vous que 'base.html' est votre template de base #}
+{% load i18n %} {# Pour les traductions #}
+
+{% block title %}{% translate "Abonnement Expiré" %}{% endblock %}
+
+{% block content %}
+    <div class="container text-center py-5">
+        <div class="card bg-danger text-white mx-auto" style="max-width: 600px;">
+            <div class="card-header">
+                <i class="fas fa-exclamation-triangle fa-3x mb-3"></i> {# Icône d'avertissement, nécessite Font Awesome #}
+                <h1 class="card-title">{% translate "Votre Abonnement a Expiré" %}</h1>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    {% translate "Nous sommes désolés, mais l'abonnement de votre entreprise a pris fin." %}
+                    {% translate "Pour continuer à accéder à toutes les fonctionnalités de notre système, veuillez vous réabonner." %}
+                </p>
+                
+                <p class="mt-4">
+                    {% translate "Pour vous réabonner, veuillez cliquer sur le bouton ci-dessous ou contacter notre service client." %}
+                </p>
+
+                {# Bouton pour souscrire un nouvel abonnement #}
+                <a href="{% url 'parametres:abonnement_create' %}" class="btn btn-light btn-lg mt-3">
+                    <i class="fas fa-magic"></i> {% translate "Souscrire un Nouvel Abonnement" %}
+                </a>
+
+                {# Ou un lien vers une page de contact/support #}
+                <p class="mt-4">
+                    {% translate "Si vous avez des questions, contactez le support :" %} <a href="mailto:support@votresite.com" class="text-white">support@votresite.com</a>
+                </p>
+            </div>
+        </div>
+    </div>
+{% endblock %}

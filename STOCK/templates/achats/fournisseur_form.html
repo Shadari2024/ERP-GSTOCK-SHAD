@@ -1,0 +1,338 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-lg rounded-4 overflow-hidden">
+                <!-- En-tête avec navigation -->
+                <div class="card-header bg-dark text-white py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="h4 mb-0"><i class="fas fa-user-plus me-2"></i>Nouveau Fournisseur</h2>
+                            <nav aria-label="breadcrumb" class="mt-2">
+                                <ol class="breadcrumb breadcrumb-light mb-0">
+                                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}" class="text-light">Tableau de bord</a></li>
+                                    <li class="breadcrumb-item"><a href="{% url 'fournisseur_list' %}" class="text-light">Fournisseurs</a></li>
+                                    <li class="breadcrumb-item active" aria-current="page">Nouveau</li>
+                                </ol>
+                            </nav>
+                        </div>
+                        <a href="{% url 'fournisseur_list' %}" class="btn btn-outline-light btn-sm rounded-pill">
+                            <i class="fas fa-arrow-left me-1"></i> Retour
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="card-body p-4">
+                    <form method="post" class="needs-validation" novalidate id="fournisseurForm">
+                        {% csrf_token %}
+                        
+                        <!-- Champ caché pour l'entreprise SAAS -->
+                        <input type="hidden" name="entreprise" value="{{ request.entreprise.id }}">
+                        
+                        <!-- Section 1 : Informations de base -->
+                        <div class="mb-4">
+                            <h5 class="text-primary mb-3"><i class="fas fa-id-card me-2"></i>Informations principales</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <input type="text" name="nom" id="nom" 
+                                               class="form-control shadow-sm" 
+                                               placeholder="Nom complet" required
+                                               value="{{ form.nom.value|default:'' }}">
+                                        <label for="nom">Nom du fournisseur *</label>
+                                        <div class="invalid-feedback">Veuillez saisir un nom valide</div>
+                                        {% if form.nom.errors %}
+                                        <div class="text-danger small mt-1">{{ form.nom.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <select name="type" id="type" 
+                                                class="form-select" required>
+                                            <option value="" disabled selected>Sélectionnez un type *</option>
+                                            {% for value, label in form.fields.type.choices %}
+                                                <option value="{{ value }}" {% if form.type.value == value %}selected{% endif %}>
+                                                    {{ label }}
+                                                </option>
+                                            {% endfor %}
+                                        </select>
+                                        <label for="type">Type de fournisseur *</label>
+                                        {% if form.type.errors %}
+                                        <div class="text-danger small mt-1">{{ form.type.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Section 2 : Coordonnées -->
+                        <div class="mb-4">
+                            <h5 class="text-primary mb-3"><i class="fas fa-address-book me-2"></i>Coordonnées</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <input type="tel" name="telephone" id="telephone" 
+                                               class="form-control shadow-sm" 
+                                               placeholder="Téléphone" required
+                                               pattern="[0-9]{10}"
+                                               value="{{ form.telephone.value|default:'' }}">
+                                        <label for="telephone">Téléphone *</label>
+                                        <small class="form-text text-muted">Format: 0612345678</small>
+                                        {% if form.telephone.errors %}
+                                        <div class="text-danger small mt-1">{{ form.telephone.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <input type="email" name="email" id="email" 
+                                               class="form-control shadow-sm" 
+                                               placeholder="Email"
+                                               value="{{ form.email.value|default:'' }}">
+                                        <label for="email">Email (optionnel)</label>
+                                        {% if form.email.errors %}
+                                        <div class="text-danger small mt-1">{{ form.email.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-12">
+                                    <div class="form-floating">
+                                        <textarea name="adresse" id="adresse" 
+                                                  class="form-control shadow-sm" 
+                                                  style="height: 100px" 
+                                                  placeholder="Adresse" required>{{ form.adresse.value|default:'' }}</textarea>
+                                        <label for="adresse">Adresse complète *</label>
+                                        {% if form.adresse.errors %}
+                                        <div class="text-danger small mt-1">{{ form.adresse.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-floating">
+                                        <input type="text" name="ville" id="ville" 
+                                               class="form-control shadow-sm" 
+                                               placeholder="Ville"
+                                               value="{{ form.ville.value|default:'' }}">
+                                        <label for="ville">Ville</label>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-floating">
+                                        <input type="text" name="pays" id="pays" 
+                                               class="form-control shadow-sm" 
+                                               placeholder="Pays"
+                                               value="{{ form.pays.value|default:'' }}">
+                                        <label for="pays">Pays</label>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="form-floating">
+                                        <input type="text" name="code_postal" id="code_postal" 
+                                               class="form-control shadow-sm" 
+                                               placeholder="Code postal"
+                                               value="{{ form.code_postal.value|default:'' }}">
+                                        <label for="code_postal">Code postal</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Section 3 : Informations commerciales -->
+                        <div class="mb-4">
+                            <h5 class="text-primary mb-3"><i class="fas fa-file-invoice-dollar me-2"></i>Informations commerciales</h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <input type="number" name="taux_tva" id="taux_tva" 
+                                               class="form-control shadow-sm" 
+                                               placeholder="Taux TVA" step="0.01" min="0" max="100"
+                                               value="{{ form.taux_tva.value|default:'0' }}">
+                                        <label for="taux_tva">Taux TVA (%)</label>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <input type="number" name="delai_livraison" id="delai_livraison" 
+                                               class="form-control shadow-sm" 
+                                               placeholder="Délai livraison" min="1"
+                                               value="{{ form.delai_livraison.value|default:'7' }}">
+                                        <label for="delai_livraison">Délai de livraison (jours)</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Section 4 : Informations complémentaires -->
+                        <div class="mb-4">
+                            <h5 class="text-primary mb-3"><i class="fas fa-info-circle me-2"></i>Informations complémentaires</h5>
+                            <div class="form-floating">
+                                <textarea name="notes" id="notes" 
+                                          class="form-control shadow-sm" 
+                                          style="height: 100px" 
+                                          placeholder="Notes">{{ form.notes.value|default:'' }}</textarea>
+                                <label for="notes">Notes (optionnel)</label>
+                                <div class="d-flex justify-content-between mt-2">
+                                    <small class="text-muted">Maximum 500 caractères</small>
+                                    <small class="text-muted"><span id="charCount">0</span>/500</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Boutons de soumission -->
+                        <div class="d-flex justify-content-between pt-3 border-top">
+                            <button type="reset" class="btn btn-outline-secondary rounded-pill px-4">
+                                <i class="fas fa-eraser me-2"></i>Réinitialiser
+                            </button>
+                            <button type="submit" class="btn btn-primary rounded-pill px-4" id="submitBtn">
+                                <span class="submit-text">
+                                    <i class="fas fa-save me-2"></i>Enregistrer
+                                </span>
+                                <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-animated {
+        background: linear-gradient(135deg, #4e73df, #224abe);
+        background-size: 200% 200%;
+        animation: gradient 10s ease infinite;
+    }
+    
+    @keyframes gradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    
+    .form-floating label {
+        padding-left: 1.5rem;
+        color: #6c757d;
+    }
+    
+    .form-control, .form-select {
+        border-radius: 0.5rem;
+        padding: 1rem 1.25rem;
+        border: 1px solid #d1d3e2;
+        transition: all 0.3s;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #4e73df;
+        box-shadow: 0 0 0 0.25rem rgba(78, 115, 223, 0.25);
+    }
+    
+    .card {
+        border: none;
+    }
+    
+    .breadcrumb-light .breadcrumb-item a {
+        color: #e9ecef;
+        text-decoration: none;
+    }
+    
+    .breadcrumb-light .breadcrumb-item.active {
+        color: #e9ecef;
+    }
+    
+    .breadcrumb-light .breadcrumb-item + .breadcrumb-item::before {
+        color: #e9ecef;
+    }
+    
+    @media (max-width: 768px) {
+        .card-body {
+            padding: 1.5rem;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Compteur de caractères
+    const notesField = document.getElementById('notes');
+    const charCount = document.getElementById('charCount');
+    
+    notesField.addEventListener('input', function() {
+        charCount.textContent = this.value.length;
+        if (this.value.length > 500) {
+            this.classList.add('is-invalid');
+        } else {
+            this.classList.remove('is-invalid');
+        }
+    });
+    
+    // Initialisation du compteur
+    charCount.textContent = notesField.value.length;
+    
+    // Gestion de la soumission du formulaire
+    const form = document.getElementById('fournisseurForm');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    form.addEventListener('submit', function() {
+        const submitText = submitBtn.querySelector('.submit-text');
+        const spinner = submitBtn.querySelector('.spinner-border');
+        
+        submitText.classList.add('d-none');
+        spinner.classList.remove('d-none');
+        submitBtn.disabled = true;
+    });
+    
+    // Validation en temps réel
+    form.addEventListener('input', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+            e.target.classList.remove('is-invalid');
+        }
+    }, true);
+    
+    // Validation avant soumission
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+        
+        // Validation des champs requis
+        const requiredFields = form.querySelectorAll('[required]');
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            }
+        });
+        
+        // Validation spécifique pour le téléphone
+        const phoneField = document.getElementById('telephone');
+        if (!/^[0-9]{10}$/.test(phoneField.value)) {
+            phoneField.classList.add('is-invalid');
+            isValid = false;
+        }
+        
+        if (!isValid) {
+            e.preventDefault();
+            submitBtn.querySelector('.submit-text').classList.remove('d-none');
+            submitBtn.querySelector('.spinner-border').classList.add('d-none');
+            submitBtn.disabled = false;
+            
+            // Scroll vers le premier champ invalide
+            const firstInvalid = form.querySelector('.is-invalid');
+            if (firstInvalid) {
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

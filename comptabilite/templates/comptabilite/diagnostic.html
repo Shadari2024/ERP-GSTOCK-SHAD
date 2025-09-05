@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+
+{% block title %}Diagnostic Comptabilité{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1>Diagnostic du Module Comptable</h1>
+            <div class="card">
+                <div class="card-header">
+                    <h3>Entreprise: {{ entreprise.nom }}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header bg-info text-white">
+                                    <h4>Comptes Comptables</h4>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>Total des comptes:</strong> {{ total_comptes }}</p>
+                                    <p><strong>Comptes essentiels trouvés:</strong></p>
+                                    <ul>
+                                        {% for compte in comptes_essentiels %}
+                                        <li>{{ compte.numero }} - {{ compte.intitule }} ({{ compte.type_compte }})</li>
+                                        {% empty %}
+                                        <li class="text-danger">Aucun compte essentiel trouvé!</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-header bg-info text-white">
+                                    <h4>Journaux Comptables</h4>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>Total des journaux:</strong> {{ total_journaux }}</p>
+                                    <p><strong>Journal des achats (ACH):</strong> 
+                                        {% if journal_achat %}
+                                            <span class="text-success">{{ journal_achat.code }} - {{ journal_achat.intitule }}</span>
+                                        {% else %}
+                                            <span class="text-danger">Non trouvé!</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h4>Actions</h4>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" action="{% url 'achats:init_comptabilite' %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-primary">
+                                    Initialiser la Comptabilité
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

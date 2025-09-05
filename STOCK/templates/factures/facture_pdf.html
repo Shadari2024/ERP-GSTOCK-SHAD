@@ -1,0 +1,249 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Facture n°{{ facture.numero|default:facture.id }}</title>
+    <style type="text/css">
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 9px;
+            color: #000;
+            margin: 10px;
+            padding: 0;
+        }
+    
+        .header {
+            margin-bottom: 5px;
+            overflow: hidden;
+        }
+    
+        .logo-container {
+            float: left;
+            width: 40%;
+        }
+    
+        .logo-container h2 {
+            font-size: 12px;
+            margin: 0 0 2px 0;
+        }
+    
+        .invoice-header {
+            float: right;
+            width: 55%;
+            text-align: right;
+        }
+    
+        .invoice-title {
+            font-size: 14px;
+            margin: 0 0 2px 0;
+        }
+    
+        .info-container {
+            margin-bottom: 5px;
+            overflow: hidden;
+        }
+    
+        .info-block {
+            float: left;
+            width: 48%;
+            padding: 2px;
+            box-sizing: border-box;
+        }
+    
+        .info-title {
+            font-weight: bold;
+            font-size: 10px;
+            border-bottom: 1px solid #000;
+            margin-bottom: 2px;
+            padding-bottom: 1px;
+        }
+    
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 8px;
+            margin-top: 5px;
+        }
+    
+        .items-table th, .items-table td {
+            border: 1px solid #000;
+            padding: 3px 2px;
+            text-align: left;
+        }
+    
+        .items-table th {
+            background-color: #f5f5f5;
+        }
+    
+        .items-table .text-right {
+            text-align: right;
+        }
+    
+        .totals-table {
+            width: 40%;
+            float: right;
+            margin-top: 5px;
+            border-collapse: collapse;
+            font-size: 9px;
+        }
+    
+        .totals-table td {
+            padding: 3px;
+        }
+    
+        .totals-table .label {
+            text-align: right;
+            font-weight: bold;
+            width: 60%;
+        }
+    
+        .totals-table .value {
+            text-align: right;
+            width: 40%;
+        }
+    
+        .grand-total {
+            font-weight: bold;
+            border-top: 1px solid #000;
+            border-bottom: 1px solid #000;
+        }
+    
+        .footer {
+            clear: both;
+            margin-top: 10px;
+            padding-top: 5px;
+            border-top: 1px solid #000;
+            font-size: 8px;
+            text-align: center;
+        }
+    
+        .status {
+            font-size: 8px;
+            padding: 1px 3px;
+            border-radius: 2px;
+            color: #fff;
+            display: inline-block;
+        }
+    
+        .status-payee { background-color: #28a745; }
+        .status-impayee { background-color: #dc3545; }
+        .status-partielle { background-color: #ffc107; color: #000; }
+    </style>
+    
+    
+</head>
+<body>
+    <!-- En-tête avec logo et informations société -->
+    <div class="header">
+        <div class="logo-container">
+           
+            <h2>{{ parametres.nom_societe }}</h2>
+            <p>
+                {{ parametres.adresse|linebreaksbr }}<br>
+                Tél: {{ parametres.telephone }}<br>
+                Email: {{ parametres.email }}
+            </p>
+        </div>
+        
+        <div class="invoice-header">
+            <h1 class="invoice-title">FACTURE</h1>
+            <p>
+                <span class="text-bold">N°:</span> {{ facture.numero|default:facture.id }}<br>
+                <span class="text-bold">Date:</span> {{ facture.date|date:"d/m/Y" }}<br>
+                <span class="text-bold">Statut:</span> 
+                <span class="status status-{{ facture.statut }}">
+                    {{ facture.get_statut_display }}
+                </span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Informations client et facture -->
+    <div class="info-container">
+        <div class="info-block">
+            <div class="info-title">CLIENT</div>
+            <p>
+                <span class="text-bold">{{ facture.commande.client.nom }}</span><br>
+                {% if facture.commande.client.adresse %}
+                    {{ facture.commande.client.adresse|linebreaksbr }}<br>
+                {% endif %}
+                Tél: {{ facture.commande.client.telephone }}<br>
+                {% if facture.commande.client.email %}
+                    Email: {{ facture.commande.client.email }}
+                {% endif %}
+            </p>
+        </div>
+        
+        <div class="info-block right">
+            <div class="info-title">DÉTAILS FACTURE</div>
+            <p>
+                <span class="text-bold">Commande N°:</span> {{ facture.commande.id }}<br>
+                <span class="text-bold">Date commande:</span> {{ facture.commande.date_commande|date:"d/m/Y" }}<br>
+                <span class="text-bold">Échéance:</span> {{ facture.commande.expiration|date:"d/m/Y" }}<br>
+                <span class="text-bold">Mode paiement:</span> {{ facture.commande.get_paiement_display }}<br>
+                <span class="text-bold">Vendeur:</span> {{ facture.commande.vendeur.get_full_name|default:facture.commande.vendeur.username }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Tableau des articles -->
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="width: 5%;">#</th>
+                <th style="width: 35%;">Article</th>
+                <th style="width: 15%;">Référence</th>
+                <th style="width: 10%;" class="text-right">Qté</th>
+                <th style="width: 15%;" class="text-right">PU HT</th>
+                <th style="width: 10%;" class="text-right">TVA</th>
+                <th style="width: 10%;" class="text-right">Total HT</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in facture.commande.lignes.all %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ ligne.produit.nom }}</td>
+                <td>{{ ligne.produit.code_barre_numero|default:"-" }}</td>
+                <td class="text-right">{{ ligne.quantite }}</td>
+                <td class="text-right">{{ ligne.prix_unitaire|floatformat:2|intcomma }} {{ parametres.devise }}</td>
+                <td class="text-right">{{ parametres.taux_tva|floatformat:0 }}%</td>
+                <td class="text-right">{{ ligne.total_ligne_ht|floatformat:2|intcomma }} {{ parametres.devise }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Totaux -->
+    <table class="totals-table">
+        <tr>
+            <td class="label">Total HT:</td>
+            <td class="value">{{ facture.commande.total_ht|floatformat:2|intcomma }} {{ parametres.devise }}</td>
+        </tr>
+        <tr>
+            <td class="label">TVA ({{ parametres.taux_tva|floatformat:0 }}%):</td>
+            <td class="value">{{ facture.commande.total_tva|floatformat:2|intcomma }} {{ parametres.devise }}</td>
+        </tr>
+        <tr class="grand-total">
+            <td class="label">Total TTC:</td>
+            <td class="value">{{ facture.commande.total_ttc|floatformat:2|intcomma }} {{ parametres.devise }}</td>
+        </tr>
+        <tr>
+            <td class="label">Montant payé:</td>
+            <td class="value">{{ facture.montant_paye|floatformat:2|intcomma }} {{ parametres.devise }}</td>
+        </tr>
+        <tr>
+            <td class="label">Reste à payer:</td>
+            <td class="value text-bold">{{ facture.reste_a_payer|floatformat:2|intcomma }} {{ parametres.devise }}</td>
+        </tr>
+    </table>
+
+    <!-- Mentions légales -->
+    <div class="footer">
+        <p>{{ parametres.nom_societe }} - SIRET: XXXX XXX XXX XXXXX - APE: XXXX - TVA Intracommunautaire: FRXXXXXX</p>
+        <p>En cas de retard de paiement, pénalités de 3 fois le taux d'intérêt légal (art. L. 441-6 du code de commerce)</p>
+        <p>Facture générée électroniquement - valable sans signature</p>
+    </div>
+</body>
+</html>

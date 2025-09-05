@@ -1,0 +1,474 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div class="container-fluid px-4 py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
+        <div>
+            <h2 class="mb-0 fw-bold text-gradient-primary">
+                <i class="fas fa-clipboard-list me-2"></i>Liste des Commandes
+            </h2>
+            <small class="text-muted">Gestion et suivi des commandes clients</small>
+        </div>
+        <div class="d-flex gap-3">
+            {% if can_add %}
+            <a href="{% url 'creer_commande' %}" class="btn btn-success rounded-pill px-4 hover-scale">
+                <i class="fas fa-plus me-2"></i>Nouvelle Commande
+            </a>
+            {% endif %}
+            {% if can_export %}
+            <div class="dropdown">
+                <button class="btn btn-primary rounded-pill px-4 dropdown-toggle hover-scale" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-file-export me-2"></i>Exporter
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="exportDropdown">
+                    <li><a class="dropdown-item hover-bg" href="{% url 'export_commandes_excel' %}"><i class="fas fa-file-excel me-2 text-success"></i>Excel</a></li>
+                    <li><a class="dropdown-item hover-bg" href="{% url 'export_commandes_csv' %}"><i class="fas fa-file-csv me-2 text-primary"></i>CSV</a></li>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4 border-0 animate__animated animate__fadeIn">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-8 col-lg-9">
+                    <label for="id_search" class="form-label small text-uppercase fw-bold visually-hidden">Recherche</label>
+                    <div class="input-group shadow-sm">
+                        <input type="text" name="search" id="id_search" value="{{ request.GET.search }}" class="form-control form-control-lg" placeholder="Rechercher par client..." aria-label="Recherche">
+                        <button class="btn btn-primary hover-scale" type="submit">
+                            <i class="fas fa-search me-2"></i>Rechercher
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-3 text-end">
+                    <a href="{% url 'liste_commandes' %}" class="btn btn-outline-secondary btn-lg hover-scale w-100" title="Réinitialiser les filtres">
+                        <i class="fas fa-undo me-2"></i>Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 animate__animated animate__fadeInUp">
+        <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
+            <h6 class="mb-0 fw-bold">Commandes récentes</h6>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="viewOptions" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-eye me-1"></i>Affichage
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="viewOptions">
+                    <li><a class="dropdown-item hover-bg view-mode-btn" href="#" data-view-mode="list"><i class="fas fa-list me-2"></i>Liste</a></li>
+                    <li><a class="dropdown-item hover-bg view-mode-btn" href="#" data-view-mode="grid"><i class="fas fa-th-large me-2"></i>Grille</a></li>
+                    <li><a class="dropdown-item hover-bg view-mode-btn" href="#" data-view-mode="compact"><i class="fas fa-bars me-2"></i>Compact</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div id="orders-list-view" class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Client</th>
+                            <th>Date</th>
+                            <th>Expiration</th>
+                            <th>Montant</th>
+                            <th>Statut</th>
+                            <th class="text-center">Vente</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for commande in commandes %}
+                        <tr class="animate__animated animate__fadeIn" style="animation-delay: {{ forloop.counter0|divisibleby:2|yesno:'0.1s,0.2s' }}">
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar avatar-sm me-3">
+                                        <span class="avatar-title bg-primary bg-opacity-10 text-primary rounded-circle">
+                                            {{ commande.client.nom|first|upper }}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">{{ commande.client.nom }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small">{{ commande.date_commande|date:"d/m/Y" }}</div>
+                                <div class="text-muted smaller">{{ commande.date_commande|date:"H:i" }}</div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-calendar-day me-2 text-{{ commande.est_expiree|yesno:'danger,success' }}"></i>
+                                    <div>
+                                        <div class="{% if commande.est_expiree %}text-danger{% else %}text-success{% endif %}">
+                                            {{ commande.expiration|date:"d/m/Y" }}
+                                        </div>
+                                        <div class="text-muted smaller">
+                                            {{ commande.expiration|timeuntil:commande.date_commande }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-bold">
+                                    {{ commande.montant_original_formatted }}
+                                    <span class="text-muted">{{ devise_principale_obj.code }}</span>
+                                </div>
+                                {% if commande.devise_originale and commande.devise_originale.code != devise_principale_obj.code %}
+                                <div class="small text-muted">
+                                    {{ commande.montant_converti_formatted }} {{ commande.devise_originale.code }}
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ commande.get_statut_color }} bg-opacity-10 text-{{ commande.get_statut_color }} rounded-pill py-1 px-3 d-inline-flex align-items-center">
+                                    <span class="dot bg-{{ commande.get_statut_color }} me-1"></span>
+                                    {{ commande.get_statut_display }}
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                {% if commande.vente_confirmee %}
+                                <span class="badge bg-success bg-opacity-10 text-success rounded-pill py-1 px-3">
+                                    <i class="fas fa-check-circle me-1"></i>Confirmée
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary rounded-pill py-1 px-3">
+                                    <i class="fas fa-clock me-1"></i>En attente
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a href="{% url 'detail_commande' commande.id %}" target="_blank" class="btn btn-outline-primary btn-sm hover-scale" title="Voir les détails">
+                                        <i class="fas fa-eye me-1"></i>Détails
+                                    </a>
+
+                                    <a href="{% url 'generer_bon_livraison' commande.id %}" class="btn btn-outline-success btn-sm hover-scale" title="Bon de livraison">
+                                        <i class="fas fa-truck me-1"></i>BL
+                                    </a>
+
+                                    {% if can_change %}
+                                    <a href="{% url 'creer_retour' commande.id %}" class="btn btn-outline-warning btn-sm hover-scale" title="Créer un retour">
+                                        <i class="fas fa-undo me-1"></i>Retour
+                                    </a>
+
+                                    <a href="{% url 'appliquer_promotion' commande.id %}" class="btn btn-outline-info btn-sm hover-scale" title="Appliquer une remise">
+                                        <i class="fas fa-tag me-1"></i>Remise
+                                    </a>
+                                    {% endif %}
+
+                                    {% if can_delete %}
+                                    <button type="button" class="btn btn-outline-danger btn-sm hover-scale delete-btn" data-bs-toggle="modal" data-bs-target="#deleteModal" data-command-id="{{ commande.id }}" title="Supprimer">
+                                        <i class="fas fa-trash-alt me-1"></i>Suppr
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <div class="animate__animated animate__fadeIn">
+                                    <img src="{% static 'images/empty-state.svg' %}" alt="Aucune donnée" class="img-fluid mb-3" style="max-height: 150px;">
+                                    <h5 class="text-muted mb-3">Aucune commande trouvée</h5>
+                                    {% if can_add %}
+                                    <a href="{% url 'creer_commande' %}" class="btn btn-primary hover-scale">
+                                        <i class="fas fa-plus me-2"></i>Créer une commande
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="orders-grid-view" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 p-3" style="display: none;">
+                {% for commande in commandes %}
+                <div class="col animate__animated animate__fadeIn" style="animation-delay: {{ forloop.counter0|divisibleby:2|yesno:'0.1s,0.2s' }}">
+                    <div class="card h-100 shadow-sm border-0 hover-scale">
+                        <div class="card-body d-flex flex-column">
+                            <h6 class="card-subtitle mb-2 text-muted">Client: {{ commande.client.nom }}</h6>
+                            <p class="card-text mb-1">
+                                <i class="fas fa-calendar-alt me-2"></i>Date: {{ commande.date_commande|date:"d/m/Y H:i" }}
+                            </p>
+                            <p class="card-text mb-1">
+                                <i class="fas fa-hourglass-half me-2"></i>Expiration: <span class="{% if commande.est_expiree %}text-danger{% else %}text-success{% endif %}">{{ commande.expiration|date:"d/m/Y" }}</span>
+                            </p>
+                            <p class="card-text mb-1">
+                                <i class="fas fa-money-bill-wave me-2"></i>Montant: <span class="fw-bold">{{ commande.montant_original_formatted }} {{ devise_principale_obj.code }}</span>
+                            </p>
+                            <p class="card-text mb-3">
+                                <i class="fas fa-info-circle me-2"></i>Statut:
+                                <span class="badge bg-{{ commande.get_statut_color }} bg-opacity-10 text-{{ commande.get_statut_color }} rounded-pill">
+                                    {{ commande.get_statut_display }}
+                                </span>
+                            </p>
+                            <div class="mt-auto d-flex justify-content-between align-items-center pt-2 border-top">
+                                <a href="{% url 'detail_commande' commande.id %}" class="btn btn-sm btn-outline-primary hover-scale flex-grow-1 me-2" target="_blank">
+                                    <i class="fas fa-eye me-1"></i>Détails
+                                </a>
+                                {% if can_delete %}
+                                <button type="button" class="btn btn-sm btn-outline-danger hover-scale delete-btn" data-bs-toggle="modal" data-bs-target="#deleteModal" data-command-id="{{ commande.id }}" aria-label="Supprimer">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12 text-center py-5">
+                    <div class="animate__animated animate__fadeIn">
+                        <img src="{% static 'images/empty-state.svg' %}" alt="Aucune donnée" class="img-fluid mb-3" style="max-height: 150px;">
+                        <h5 class="text-muted mb-3">Aucune commande trouvée</h5>
+                        {% if can_add %}
+                        <a href="{% url 'creer_commande' %}" class="btn btn-primary hover-scale">
+                            <i class="fas fa-plus me-2"></i>Créer une commande
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div id="orders-compact-view" style="display: none;">
+                {% for commande in commandes %}
+                <div class="card mb-2 mx-3 shadow-sm border-0 hover-scale animate__animated animate__fadeIn" style="animation-delay: {{ forloop.counter0|divisibleby:2|yesno:'0.1s,0.2s' }}">
+                    <div class="card-body d-flex align-items-center justify-content-between py-2">
+                        <div>
+                            <h6 class="mb-0 fw-bold">{{ commande.client.nom }}</h6>
+                            <small class="text-muted">
+                                {{ commande.date_commande|date:"d/m/Y" }} | {{ commande.montant_original_formatted }} {{ devise_principale_obj.code }} | Statut: <span class="text-{{ commande.get_statut_color }}">{{ commande.get_statut_display }}</span>
+                            </small>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <a href="{% url 'detail_commande' commande.id %}" class="btn btn-sm btn-outline-secondary me-2 hover-scale" target="_blank" title="Détails">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if can_delete %}
+                            <button type="button" class="btn btn-sm btn-outline-danger delete-btn hover-scale" data-bs-toggle="modal" data-bs-target="#deleteModal" data-command-id="{{ commande.id }}" aria-label="Supprimer">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12 text-center py-5">
+                    <div class="animate__animated animate__fadeIn">
+                        <img src="{% static 'images/empty-state.svg' %}" alt="Aucune donnée" class="img-fluid mb-3" style="max-height: 150px;">
+                        <h5 class="text-muted mb-3">Aucune commande trouvée</h5>
+                        {% if can_add %}
+                        <a href="{% url 'creer_commande' %}" class="btn btn-primary hover-scale">
+                            <i class="fas fa-plus me-2"></i>Créer une commande
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% if commandes.paginator.num_pages > 1 %}
+    <div class="d-flex justify-content-between align-items-center mt-4 animate__animated animate__fadeIn">
+        <div class="text-muted small">
+            Affichage de <span class="fw-bold">{{ commandes.start_index }}</span> à <span class="fw-bold">{{ commandes.end_index }}</span> sur <span class="fw-bold">{{ commandes.paginator.count }}</span> commandes
+        </div>
+        <nav aria-label="Pagination">
+            <ul class="pagination pagination-sm">
+                {% if commandes.has_previous %}
+                <li class="page-item">
+                    <a class="page-link hover-scale" href="?page={{ commandes.previous_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Précédent">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+                {% endif %}
+                {% for num in commandes.paginator.page_range %}
+                    {% if commandes.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > commandes.number|add:'-3' and num < commandes.number|add:'3' %}
+                    <li class="page-item"><a class="page-link hover-scale" href="?page={{ num }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a></li>
+                    {% endif %}
+                {% endfor %}
+                {% if commandes.has_next %}
+                <li class="page-item">
+                    <a class="page-link hover-scale" href="?page={{ commandes.next_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" aria-label="Suivant">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+{% if can_delete %}
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmer la suppression
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer cette commande ?</p>
+                <p class="small text-muted">Cette action est irréversible.</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form id="deleteOrderForm" method="post" action="">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt me-1"></i>Supprimer
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+:root {
+    --bs-purple: #6f42c1;
+}
+.hover-scale {
+    transition: all 0.2s ease;
+}
+.hover-scale:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.text-gradient-primary {
+    background: linear-gradient(135deg, var(--bs-primary) 0%, var(--bs-info) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.text-purple {
+    color: var(--bs-purple) !important;
+}
+.avatar-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+.dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+.table th {
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.5px;
+    color: var(--bs-gray-600);
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+.table td {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    vertical-align: middle;
+}
+.btn-close-white { /* For better contrast on dark modal header */
+    filter: invert(1) grayscale(100%) brightness(200%);
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // View management
+    const listView = document.getElementById('orders-list-view');
+    const gridView = document.getElementById('orders-grid-view');
+    const compactView = document.getElementById('orders-compact-view');
+    const viewModeButtons = document.querySelectorAll('.view-mode-btn');
+
+    function setActiveView(mode) {
+        // Hide all views first
+        [listView, gridView, compactView].forEach(v => v.style.display = 'none');
+
+        // Show the selected view
+        if (mode === 'list') {
+            listView.style.display = 'block';
+        } else if (mode === 'grid') {
+            gridView.style.display = 'flex'; // Use flex for Bootstrap row classes
+        } else if (mode === 'compact') {
+            compactView.style.display = 'block';
+        }
+        // Save preferred view mode to local storage
+        localStorage.setItem('preferredViewMode', mode);
+    }
+
+    // Load preferred view mode on page load, default to 'list'
+    const savedViewMode = localStorage.getItem('preferredViewMode') || 'list';
+    setActiveView(savedViewMode);
+
+    // Add click listeners to view mode buttons
+    viewModeButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault(); // Prevent default link behavior
+            const mode = this.dataset.viewMode;
+            setActiveView(mode);
+        });
+    });
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteModal = document.getElementById('deleteModal');
+    if (deleteModal) {
+        deleteModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const commandId = button.getAttribute('data-command-id');
+            const deleteForm = document.getElementById('deleteOrderForm');
+            
+            // 🔁 Correction : Utilisez le pattern Django défini dans urls.py
+            deleteForm.action = `/commande/${commandId}/supprimer/`;
+        });
+    }
+
+    // Ajout de la gestion du token CSRF pour les requêtes AJAX (si nécessaire)
+    const deleteButtons = document.querySelectorAll('.delete-btn');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const commandId = this.getAttribute('data-command-id');
+            
+            if (confirm('Êtes-vous sûr de vouloir supprimer cette commande ?')) {
+                try {
+                    const response = await fetch(`/commande/${commandId}/supprimer/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        // Supprimez l'élément du DOM après suppression
+                        this.closest('tr').remove(); // Vue en tableau
+                    } else {
+                        alert('Erreur lors de la suppression');
+                    }
+                } catch (error) {
+                    console.error('Erreur:', error);
+                }
+            }
+        });
+    });
+});
+// Fonction pour récupérer le token CSRF
+
+});
+</script>
+{% endblock %}

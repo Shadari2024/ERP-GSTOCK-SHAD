@@ -1,0 +1,392 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if object %}{% trans "Modifier le congé" %}{% else %}{% trans "Nouvelle demande de congé" %}{% endif %} - {{ block.super }}{% endblock %}
+
+{% block page_title %}
+    {% if object %}
+        <i class="fas fa-edit me-2"></i>{% trans "Modifier le congé" %}
+    {% else %}
+        <i class="fas fa-calendar-plus me-2"></i>{% trans "Nouvelle demande de congé" %}
+    {% endif %}
+{% endblock %}
+
+{% block page_description %}
+    {% if object %}
+        {% trans "Modifier la demande de congé" %}
+    {% else %}
+        {% trans "Créer une nouvelle demande de congé" %}
+    {% endif %}
+{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'grh:conge_list' %}">{% trans "Congés" %}</a></li>
+    <li class="breadcrumb-item active">{% if object %}{% trans "Modifier" %}{% else %}{% trans "Nouveau" %}{% endif %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        {% if object %}
+                            <i class="fas fa-edit me-2"></i>{% trans "Modifier le congé" %}
+                        {% else %}
+                            <i class="fas fa-calendar-plus me-2"></i>{% trans "Nouvelle demande de congé" %}
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="conge-form">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card mb-4">
+                                    <div class="card-header bg-light">
+                                        <h6 class="card-title mb-0">
+                                            <i class="fas fa-user me-2"></i>{% trans "Informations employé" %}
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {{ form.employe|as_crispy_field }}
+                                        {{ form.type_conge|as_crispy_field }}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="card mb-4">
+                                    <div class="card-header bg-light">
+                                        <h6 class="card-title mb-0">
+                                            <i class="fas fa-calendar me-2"></i>{% trans "Période de congé" %}
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                {{ form.date_debut|as_crispy_field }}
+                                            </div>
+                                            <div class="col-md-6">
+                                                {{ form.date_fin|as_crispy_field }}
+                                            </div>
+                                        </div>
+                                        <div class="alert alert-info mt-2" id="duree-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <span id="duree-text">{% trans "Sélectionnez les dates pour calculer la durée" %}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="card mb-4">
+                                    <div class="card-header bg-light">
+                                        <h6 class="card-title mb-0">
+                                            <i class="fas fa-file-alt me-2"></i>{% trans "Détails de la demande" %}
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {{ form.motif|as_crispy_field }}
+                                        <div class="form-group">
+                                            <label>{% trans "Nombre de jours" %}</label>
+                                            <input type="number" id="id_nombre_jours" name="nombre_jours" 
+                                                   class="form-control" value="{{ form.nombre_jours.value|default:'' }}"
+                                                   readonly>
+                                            <small class="form-text text-muted">
+                                                {% trans "Calculé automatiquement à partir des dates sélectionnées" %}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="card mb-4">
+                                    <div class="card-header bg-light">
+                                        <h6 class="card-title mb-0">
+                                            <i class="fas fa-cog me-2"></i>{% trans "Statut" %}
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        {{ form.statut|as_crispy_field }}
+                                        {% if object and object.date_validation %}
+                                        <div class="mt-3 p-2 bg-light rounded">
+                                            <small class="text-muted">
+                                                {% trans "Validé le" %} {{ object.date_validation|date:"d/m/Y H:i" }}<br>
+                                                {% if object.valide_par %}
+                                                {% trans "Par" %} {{ object.valide_par.nom_complet }}
+                                                {% endif %}
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Informations sur les congés restants -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-info text-white">
+                                <h6 class="card-title mb-0">
+                                    <i class="fas fa-chart-pie me-2"></i>{% trans "Solde de congés" %}
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row" id="solde-conges">
+                                    <div class="col-md-12 text-center">
+                                        <p class="text-muted">{% trans "Sélectionnez un employé pour voir son solde de congés" %}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-actions mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save me-2"></i>
+                                {% if object %}
+                                    {% trans "Modifier la demande" %}
+                                {% else %}
+                                    {% trans "Soumettre la demande" %}
+                                {% endif %}
+                            </button>
+                            <a href="{% url 'grh:conge_list' %}" class="btn btn-secondary btn-lg ms-2">
+                                <i class="fas fa-times me-2"></i>{% trans "Annuler" %}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const dateDebutInput = document.getElementById('id_date_debut');
+    const dateFinInput = document.getElementById('id_date_fin');
+    const nombreJoursInput = document.getElementById('id_nombre_jours');
+    const employeSelect = document.getElementById('id_employe');
+    const dureeText = document.getElementById('duree-text');
+    const soldeCongesDiv = document.getElementById('solde-conges');
+
+    // Fonction pour calculer la durée entre deux dates (jours ouvrables)
+    function calculerDureeConges(dateDebut, dateFin) {
+        if (!dateDebut || !dateFin) return 0;
+        
+        const debut = new Date(dateDebut);
+        const fin = new Date(dateFin);
+        
+        if (debut > fin) return 0;
+        
+        // Calcul du nombre de jours (y compris week-end)
+        const diffTime = fin - debut;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        
+        // Soustraire les weekends (samedi=6, dimanche=0)
+        let joursOuvrables = 0;
+        for (let i = 0; i < diffDays; i++) {
+            const currentDate = new Date(debut);
+            currentDate.setDate(debut.getDate() + i);
+            const dayOfWeek = currentDate.getDay();
+            if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Exclure dimanche (0) et samedi (6)
+                joursOuvrables++;
+            }
+        }
+        
+        return joursOuvrables;
+    }
+
+    // Mettre à jour la durée quand les dates changent
+    function mettreAJourDuree() {
+        const dateDebut = dateDebutInput.value;
+        const dateFin = dateFinInput.value;
+        
+        if (dateDebut && dateFin) {
+            const duree = calculerDureeConges(dateDebut, dateFin);
+            nombreJoursInput.value = duree;
+            
+            if (duree > 0) {
+                dureeText.textContent = `Durée: ${duree} jour(s) ouvrable(s)`;
+                dureeText.parentElement.className = 'alert alert-success';
+            } else {
+                dureeText.textContent = 'La date de fin doit être après la date de début';
+                dureeText.parentElement.className = 'alert alert-danger';
+            }
+        } else {
+            dureeText.textContent = 'Sélectionnez les dates pour calculer la durée';
+            dureeText.parentElement.className = 'alert alert-info';
+        }
+    }
+
+    // Charger le solde de congés de l'employé
+    function chargerSoldeConges(employeId) {
+        if (!employeId) {
+            soldeCongesDiv.innerHTML = `
+                <div class="col-md-12 text-center">
+                    <p class="text-muted">Sélectionnez un employé pour voir son solde de congés</p>
+                </div>
+            `;
+            return;
+        }
+
+        soldeCongesDiv.innerHTML = `
+            <div class="col-md-12 text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Chargement...</span>
+                </div>
+                <p>Chargement du solde...</p>
+            </div>
+        `;
+
+        // Simuler une requête AJAX pour le solde de congés
+        setTimeout(() => {
+            // En production, vous feriez une requête AJAX vers votre API
+            const soldes = {
+                'annuel': 25,
+                'pris': 12,
+                'restant': 13,
+                'exceptionnel': 5,
+                'maladie': 30
+            };
+
+            soldeCongesDiv.innerHTML = `
+                <div class="col-md-4">
+                    <div class="card bg-success text-white text-center mb-2">
+                        <div class="card-body py-2">
+                            <h6 class="card-title">${soldes.annuel}j</h6>
+                            <small>Congés annuels</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-warning text-dark text-center mb-2">
+                        <div class="card-body py-2">
+                            <h6 class="card-title">${soldes.pris}j</h6>
+                            <small>Congés pris</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-info text-white text-center mb-2">
+                        <div class="card-body py-2">
+                            <h6 class="card-title">${soldes.restant}j</h6>
+                            <small>Congés restants</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-secondary text-white text-center mb-2">
+                        <div class="card-body py-2">
+                            <h6 class="card-title">${soldes.exceptionnel}j</h6>
+                            <small>Exceptionnel</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card bg-danger text-white text-center mb-2">
+                        <div class="card-body py-2">
+                            <h6 class="card-title">${soldes.maladie}j</h6>
+                            <small>Maladie</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }, 1000);
+    }
+
+    // Événements
+    if (dateDebutInput && dateFinInput) {
+        dateDebutInput.addEventListener('change', mettreAJourDuree);
+        dateFinInput.addEventListener('change', mettreAJourDuree);
+        
+        // Initialiser la durée si des valeurs existent
+        if (dateDebutInput.value && dateFinInput.value) {
+            mettreAJourDuree();
+        }
+    }
+
+    if (employeSelect) {
+        employeSelect.addEventListener('change', function() {
+            chargerSoldeConges(this.value);
+        });
+        
+        // Charger le solde si un employé est déjà sélectionné
+        if (employeSelect.value) {
+            chargerSoldeConges(employeSelect.value);
+        }
+    }
+
+    // Validation du formulaire
+    const form = document.getElementById('conge-form');
+    form.addEventListener('submit', function(e) {
+        const dateDebut = dateDebutInput.value;
+        const dateFin = dateFinInput.value;
+        
+        if (dateDebut && dateFin) {
+            const duree = calculerDureeConges(dateDebut, dateFin);
+            if (duree <= 0) {
+                e.preventDefault();
+                alert('La date de fin doit être après la date de début');
+                dateFinInput.focus();
+            }
+        }
+        
+        if (!nombreJoursInput.value || nombreJoursInput.value <= 0) {
+            e.preventDefault();
+            alert('Veuillez sélectionner des dates valides');
+        }
+    });
+});
+</script>
+
+<style>
+.card .card-header {
+    border-bottom: 1px solid rgba(0,0,0,.125);
+    background-color: #f8f9fa;
+}
+
+.form-control:read-only {
+    background-color: #f8f9fa;
+}
+
+.alert {
+    border: none;
+    border-left: 4px solid;
+}
+
+.alert-info {
+    border-left-color: #17a2b8;
+}
+
+.alert-success {
+    border-left-color: #28a745;
+}
+
+.alert-danger {
+    border-left-color: #dc3545;
+}
+
+#solde-conges .card {
+    transition: transform 0.2s;
+}
+
+#solde-conges .card:hover {
+    transform: translateY(-2px);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,595 @@
+{# ventes/devis/liste.html #}
+
+{% extends 'base.html' %}
+{% load humanize %}
+{% load static %}
+{% load custom_filters %}
+{% load crispy_forms_tags %}
+{% load ventes_extras %}
+{% block title %}Liste des Devis{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/devis-list.css' %}">
+<style>
+    :root {
+        --primary-color: #6c5ce7;
+        --secondary-color: #a29bfe;
+        --dark-bg: #1a1a2e;
+        --darker-bg: #16213e;
+        --card-bg: #0f3460;
+        --text-light: #e6e6e6;
+        --text-lighter: #ffffff;
+        --success-color: #00b894;
+        --warning-color: #fdcb6e;
+        --danger-color: #ff7675;
+        --info-color: #0984e3;
+    }
+
+    body {
+        background-color: var(--dark-bg);
+        color: var(--text-light);
+        transition: all 0.3s ease;
+    }
+
+    .card {
+        background-color: var(--card-bg);
+        border: none;
+        border-radius: 10px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+    }
+
+    .card-header {
+        background-color: var(--darker-bg);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-primary {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .btn-primary:hover {
+        background-color: #5649d1;
+        border-color: #5649d1;
+    }
+
+    .table {
+        color: var(--text-light);
+    }
+
+    .table-striped tbody tr:nth-of-type(odd) {
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .badge {
+        font-weight: 500;
+        padding: 5px 10px;
+        border-radius: 20px;
+    }
+
+    .bg-success {
+        background-color: var(--success-color) !important;
+    }
+
+    .bg-warning {
+        background-color: var(--warning-color) !important;
+        color: #333;
+    }
+
+    .bg-info {
+        background-color: var(--info-color) !important;
+    }
+
+    .bg-danger {
+        background-color: var(--danger-color) !important;
+    }
+
+    /* View mode switcher */
+    .view-mode-switcher {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .view-mode-btn {
+        background: var(--darker-bg);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--text-light);
+        padding: 8px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .view-mode-btn.active {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .view-mode-btn:hover {
+        background: rgba(108, 92, 231, 0.5);
+    }
+
+    /* Grid view */
+    .grid-view {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+    }
+
+    .devis-card {
+        background: var(--card-bg);
+        border-radius: 10px;
+        padding: 20px;
+        transition: all 0.3s ease;
+        animation: fadeIn 0.5s ease forwards;
+        opacity: 0;
+    }
+
+    @keyframes fadeIn {
+        to {
+            opacity: 1;
+        }
+    }
+
+    .devis-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    .devis-card .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .devis-card .card-title {
+        font-size: 1.2rem;
+        margin: 0;
+        color: var(--text-lighter);
+    }
+
+    .devis-card .card-body {
+        margin-bottom: 15px;
+    }
+
+    .devis-card .card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .devis-card .actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    /* Box view */
+    .box-view {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .devis-box {
+        background: var(--card-bg);
+        border-radius: 8px;
+        padding: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: all 0.3s ease;
+    }
+
+    .devis-box:hover {
+        background: rgba(108, 92, 231, 0.1);
+    }
+
+    .devis-box .box-info {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+    }
+
+    /* Info bubble */
+    .info-bubble {
+        position: relative;
+        display: inline-block;
+        cursor: pointer;
+    }
+
+    .info-bubble .bubble-text {
+        visibility: hidden;
+        width: 200px;
+        background-color: var(--darker-bg);
+        color: var(--text-light);
+        text-align: center;
+        border-radius: 6px;
+        padding: 10px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.3s;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        font-size: 0.9rem;
+    }
+
+    .info-bubble:hover .bubble-text {
+        visibility: visible;
+        opacity: 1;
+    }
+
+    /* Animations */
+    @keyframes slideIn {
+        from {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .animate-card {
+        animation: slideIn 0.5s ease forwards;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .grid-view {
+            grid-template-columns: 1fr;
+        }
+        
+        .view-mode-switcher {
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-gradient">
+            <i class="fas fa-file-invoice me-2"></i>Liste des Devis
+        </h2>
+        <a href="{% url 'ventes:devis_create' %}" class="btn btn-primary btn-lg rounded-pill shadow">
+            <i class="fas fa-plus me-2"></i> Nouveau Devis
+        </a>
+    </div>
+
+    {# --- Filter Form --- #}
+    <div class="card shadow-lg mb-4 animate-card" style="animation-delay: 0.1s;">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <button class="btn btn-link p-0 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse" aria-expanded="false" aria-controls="filterCollapse">
+                    <i class="fas fa-filter me-2"></i> Filtres de recherche
+                    <i class="fas fa-chevron-down ms-2 transition-rotate"></i>
+                </button>
+            </h5>
+        </div>
+        <div class="collapse" id="filterCollapse">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    {% for field in filter.form %}
+                        <div class="col-md-4">
+                            {{ field.label_tag }}
+                            {{ field|as_crispy_field }}
+                        </div>
+                    {% endfor %}
+                    <div class="col-12 mt-3">
+                        <button type="submit" class="btn btn-info me-2 rounded-pill">
+                            <i class="fas fa-search me-2"></i> Appliquer les filtres
+                        </button>
+                        <a href="{% url 'ventes:devis_list' %}" class="btn btn-outline-secondary rounded-pill">
+                            <i class="fas fa-times me-2"></i> Réinitialiser
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {# --- End Filter Form --- #}
+
+    {# View Mode Switcher #}
+    <div class="view-mode-switcher">
+        <button class="view-mode-btn active" data-view="list">
+            <i class="fas fa-list me-2"></i>Liste
+        </button>
+        <button class="view-mode-btn" data-view="grid">
+            <i class="fas fa-th-large me-2"></i>Grille
+        </button>
+        <button class="view-mode-btn" data-view="box">
+            <i class="fas fa-th-list me-2"></i>Boîtes
+        </button>
+    </div>
+
+    {# List View (Default) #}
+    <div id="list-view" class="view-content">
+        <div class="card shadow-lg animate-card" style="animation-delay: 0.2s;">
+            <div class="card-body">
+                {% if devis_list %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Numéro</th>
+                                    <th>Client</th>
+                                    <th>Date</th>
+                                    <th>Statut</th>
+                                    <th>Total TTC</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for devis in devis_list %}
+                               <tr class="animate-card" style="animation-delay: {{ forloop.counter|add:2|div:10 }}s">
+                                    <td>
+                                        <a href="{% url 'ventes:devis_detail' devis.pk %}" class="text-primary fw-bold">
+                                            {{ devis.numero }}
+                                        </a>
+                                    </td>
+                                    <td>{{ devis.client.nom }}</td>
+                                    <td>{{ devis.date|date:"d/m/Y" }}</td>
+                                    <td>
+                                        {% if devis.statut == 'annule' %}
+                                            <span class="badge bg-warning">{{ devis.get_statut_display }}</span>
+                                        {% elif devis.statut == 'accepte' %}
+                                            <span class="badge bg-success">{{ devis.get_statut_display }}</span>
+                                        {% else %}
+                                            <span class="badge bg-info">{{ devis.get_statut_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ devis.total_ttc|intcomma }} {{ devise_principale_symbole }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'ventes:devis_detail' devis.pk %}" class="btn btn-sm btn-info" title="Détail">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'ventes:devis_update' devis.pk %}" class="btn btn-sm btn-warning" title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'ventes:devis_delete' devis.pk %}" class="btn btn-sm btn-danger" title="Supprimer">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </a>
+                                            {% if devis.statut == 'accepte' %}
+                                                <a href="{% url 'ventes:commande_create' %}?devis={{ devis.pk }}" class="btn btn-sm btn-success" title="Convertir en Commande">
+                                                    <i class="fas fa-shopping-cart"></i>
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {# --- Pagination --- #}
+                    {% if is_paginated %}
+                        <nav aria-label="Page navigation" class="mt-4">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                
+                                {% for i in paginator.page_range %}
+                                    {% if page_obj.number == i %}
+                                        <li class="page-item active">
+                                            <a class="page-link" href="#">{{ i }}</a>
+                                        </li>
+                                    {% else %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                                
+                                {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                    {% endif %}
+                    {# --- End Pagination --- #}
+
+                {% else %}
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle me-2"></i> Aucun devis trouvé pour le moment.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# Grid View (Hidden by default) #}
+    <div id="grid-view" class="view-content" style="display: none;">
+        <div class="grid-view">
+            {% for devis in devis_list %}
+            <div class="devis-card animate-card" style="animation-delay: {{ forloop.counter|div:10 }}s">
+                <div class="card-header">
+                    <h5 class="card-title">{{ devis.numero }}</h5>
+                    {% if devis.statut == 'annule' %}
+                        <span class="badge bg-warning">{{ devis.get_statut_display }}</span>
+                    {% elif devis.statut == 'accepte' %}
+                        <span class="badge bg-success">{{ devis.get_statut_display }}</span>
+                    {% else %}
+                        <span class="badge bg-info">{{ devis.get_statut_display }}</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    <p><strong>Client:</strong> {{ devis.client.nom }}</p>
+                    <p><strong>Date:</strong> {{ devis.date|date:"d/m/Y" }}</p>
+                    <p><strong>Total TTC:</strong> {{ devis.total_ttc|intcomma }} {{ devise_principale_symbole }}</p>
+                </div>
+                <div class="card-footer">
+                    <small class="text-muted">Créé le {{ devis.created_at|date:"d/m/Y" }}</small>
+                    <div class="actions">
+                        <a href="{% url 'ventes:devis_detail' devis.pk %}" class="btn btn-sm btn-info" title="Détail">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="{% url 'ventes:devis_update' devis.pk %}" class="btn btn-sm btn-warning" title="Modifier">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info text-center">
+                    <i class="fas fa-info-circle me-2"></i> Aucun devis trouvé pour le moment.
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {# Box View (Hidden by default) #}
+    <div id="box-view" class="view-content" style="display: none;">
+        {% if devis_list %}
+        <div class="box-view">
+            {% for devis in devis_list %}
+            <div class="devis-box animate-card" style="animation-delay: {{ forloop.counter|div:10 }}s">
+                <div class="box-info">
+                    <span class="fw-bold text-primary">{{ devis.numero }}</span>
+                    <span>{{ devis.client.nom }}</span>
+                    <span>{{ devis.date|date:"d/m/Y" }}</span>
+                    {% if devis.statut == 'annule' %}
+                        <span class="badge bg-warning">{{ devis.get_statut_display }}</span>
+                    {% elif devis.statut == 'accepte' %}
+                        <span class="badge bg-success">{{ devis.get_statut_display }}</span>
+                    {% else %}
+                        <span class="badge bg-info">{{ devis.get_statut_display }}</span>
+                    {% endif %}
+                    <span class="fw-bold">{{ devis.total_ttc|intcomma }} {{ devise_principale_symbole }}</span>
+                </div>
+                <div class="box-actions">
+                    <div class="btn-group" role="group">
+                        <a href="{% url 'ventes:devis_detail' devis.pk %}" class="btn btn-sm btn-info" title="Détail">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="{% url 'ventes:devis_update' devis.pk %}" class="btn btn-sm btn-warning" title="Modifier">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <a href="{% url 'ventes:devis_delete' devis.pk %}" class="btn btn-sm btn-danger" title="Supprimer">
+                            <i class="fas fa-trash-alt"></i>
+                        </a>
+                        {% if devis.statut == 'accepte' %}
+                            <a href="{% url 'ventes:commande_create' %}?devis={{ devis.pk }}" class="btn btn-sm btn-success" title="Convertir en Commande">
+                                <i class="fas fa-shopping-cart"></i>
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle me-2"></i> Aucun devis trouvé pour le moment.
+        </div>
+        {% endif %}
+    </div>
+
+    {# Info Bubble for Features Explanation #}
+    <div class="mt-4 text-center">
+        <div class="info-bubble d-inline-block">
+            <button class="btn btn-secondary rounded-pill">
+                <i class="fas fa-info-circle me-2"></i> Fonctionnalités disponibles
+            </button>
+            <div class="bubble-text">
+                <h6>Fonctionnalités du module Devis</h6>
+                <ul class="text-start">
+                    <li><strong>3 modes d'affichage</strong>: Liste, Grille et Boîtes</li>
+                    <li><strong>Filtres avancés</strong>: Recherche précise par statut, date, client</li>
+                    <li><strong>Actions rapides</strong>: Visualiser, modifier, supprimer</li>
+                    <li><strong>Conversion</strong>: Transformez les devis acceptés en commandes</li>
+                    <li><strong>Dark Mode</strong>: Confort visuel optimisé</li>
+                    <li><strong>Animations fluides</strong>: Expérience utilisateur moderne</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // View mode switcher
+        const viewModeBtns = document.querySelectorAll('.view-mode-btn');
+        const viewContents = document.querySelectorAll('.view-content');
+        
+        viewModeBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const view = this.getAttribute('data-view');
+                
+                // Update active button
+                viewModeBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Show selected view
+                viewContents.forEach(content => {
+                    content.style.display = 'none';
+                });
+                document.getElementById(`${view}-view`).style.display = 'block';
+            });
+        });
+
+        // Animate elements on scroll
+        const animateOnScroll = function() {
+            const elements = document.querySelectorAll('.animate-card');
+            elements.forEach(element => {
+                const elementPosition = element.getBoundingClientRect().top;
+                const screenPosition = window.innerHeight / 1.2;
+                
+                if (elementPosition < screenPosition) {
+                    element.style.animationPlayState = 'running';
+                }
+            });
+        };
+        
+        window.addEventListener('scroll', animateOnScroll);
+        animateOnScroll(); // Run once on load
+
+        // Collapse filter animation
+        const filterCollapse = document.getElementById('filterCollapse');
+        const filterIcon = document.querySelector('[data-bs-target="#filterCollapse"] i.fa-chevron-down');
+        
+        filterCollapse.addEventListener('show.bs.collapse', function() {
+            filterIcon.classList.add('fa-chevron-up');
+            filterIcon.classList.remove('fa-chevron-down');
+        });
+        
+        filterCollapse.addEventListener('hide.bs.collapse', function() {
+            filterIcon.classList.add('fa-chevron-down');
+            filterIcon.classList.remove('fa-chevron-up');
+        });
+    });
+</script>
+{% endblock %}

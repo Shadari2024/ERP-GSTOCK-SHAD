@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Retour - Commande n°{{ commande.id }}</h2>
+
+<form id="retourForm">
+    <input type="hidden" name="commande_id" value="{{ commande.id }}">
+
+    <label><strong>Type de retour :</strong></label><br>
+    <label><input type="radio" name="remboursement" value="true"> Remboursement</label>
+    <label><input type="radio" name="remboursement" value="false" checked> Avoir</label><br><br>
+
+    <label>Commentaire :</label><br>
+    <textarea name="commentaire" rows="2" style="width: 300px;"></textarea><br><br>
+
+    <table border="1" cellpadding="5">
+        <thead>
+            <tr>
+                <th>Article</th>
+                <th>Qté achetée</th>
+                <th>Qté à retourner</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in commande.lignes.all %}
+            <tr>
+                <td>{{ ligne.produit.nom }}</td>
+                <td>{{ ligne.quantite }}</td>
+                <td>
+                    <input type="number" name="quantite_{{ ligne.produit.id }}" min="0" max="{{ ligne.quantite }}" value="0">
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table><br>
+
+    <button type="submit">Valider le retour</button>
+</form>
+
+<div id="retourMessage" style="margin-top: 20px;"></div>
+
+<script>
+document.getElementById('retourForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const lignes = [];
+    {% for ligne in commande.lignes.all %}
+        const qte = parseInt(form["quantite_{{ ligne.produit.id }}"].value);
+        if (qte > 0) {
+            lignes.push({
+                produit_id: {{ ligne.produit.id }},
+                quantite: qte
+            });
+        }
+    {% endfor %}
+
+    const payload = {
+        commande_id: {{ commande.id }},
+        remboursement: form.remboursement.value === "true",
+        commentaire: form.commentaire.value,
+        lignes: lignes
+    };
+
+    const res = await fetch("{% url 'enregistrer_retour' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (data.success) {
+        document.getElementById('retourMessage').innerHTML = `<p style="color: green;">Retour enregistré. Montant : ${data.montant} {{ parametres.devise }}</p>`;
+    } else {
+        document.getElementById('retourMessage').innerHTML = `<p style="color: red;">Erreur : ${data.error || 'Échec de l\'enregistrement'}</p>`;
+    }
+});
+</script>
+{% endblock %}

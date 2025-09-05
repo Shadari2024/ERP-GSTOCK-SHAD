@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow-lg">
+        <div class="card-header bg-success text-white">
+            <h2><i class="fas fa-file-invoice-dollar"></i> Rapport de clôture</h2>
+        </div>
+        
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h4 class="mb-3">Informations</h4>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <strong>Date :</strong> {{ cloture.date_jour|date:"d/m/Y" }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Vendeur :</strong> {{ cloture.vendeur.get_full_name }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Heure :</strong> {{ cloture.date_cloture|date:"H:i" }}
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="col-md-6">
+                    <h4 class="mb-3">Totaux</h4>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <strong>Total ventes :</strong> {{ cloture.montant_total|floatformat:2 }} €
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Nombre ventes :</strong> {{ cloture.nombre_ventes }}
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Espèces :</strong> {{ cloture.montant_espece|floatformat:2 }} €
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Carte :</strong> {{ cloture.montant_carte|floatformat:2 }} €
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            {% if cloture.commentaire %}
+            <div class="mt-4">
+                <h4>Commentaire</h4>
+                <div class="card">
+                    <div class="card-body">
+                        {{ cloture.commentaire|linebreaks }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="mt-4 text-center">
+                <button onclick="window.print()" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-print me-2"></i>Imprimer
+                </button>
+                <a href="{% url 'dashboard' %}" class="btn btn-primary">
+                    <i class="fas fa-home me-2"></i>Retour à l'accueil
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

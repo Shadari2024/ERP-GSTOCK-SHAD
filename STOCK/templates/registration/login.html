@@ -1,0 +1,621 @@
+
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <!-- En-tête avec logo -->
+        <div class="auth-header">
+            {% comment %} <img src="{% static 'images/logo-entreprise.png' %}" alt="Logo Entreprise" class="auth-logo"> {% endcomment %}
+            <h2>Connexion Sécurisée</h2>
+            <p>Accès à votre espace professionnel</p>
+        </div>
+        
+        <!-- Formulaire principal -->
+        <form method="post" class="auth-form">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="username">Identifiant</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-user-shield"></i>
+                    <input type="text" id="username" name="username" required class="form-input" placeholder="Saisissez votre identifiant">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Mot de passe</label>
+                <div class="input-with-icon">
+                    <i class="fas fa-key"></i>
+                    <input type="password" id="password" name="password" required class="form-input" placeholder="Votre mot de passe">
+                    <i class="fas fa-eye toggle-password" onclick="togglePassword()"></i>
+                </div>
+            </div>
+            
+            <div class="form-options">
+                <label class="remember-me">
+                    <input type="checkbox"> Maintenir la connexion
+                </label>
+                <a href="#" class="forgot-password">Identifiant oublié ?</a>
+            </div>
+            
+            <button type="submit" class="submit-btn">
+                <i class="fas fa-sign-in-alt"></i> Se connecter
+            </button>
+            
+            <!-- Options biométriques -->
+            <div class="biometric-options">
+                <div class="divider">ou</div>
+                
+                <div class="biometric-buttons">
+                    <button type="button" class="bio-btn face-recognition" onclick="initFaceRecognition()">
+                        <i class="fas fa-user-circle"></i> Reconnaissance faciale
+                    </button>
+                    
+                    <button type="button" class="bio-btn fingerprint" onclick="initFingerprint()">
+                        <i class="fas fa-fingerprint"></i> Empreinte digitale
+                    </button>
+                </div>
+            </div>
+            
+            {% if form.errors %}
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Authentification échouée. Veuillez réessayer.</span>
+                </div>
+            {% endif %}
+        </form>
+        
+        <div class="auth-footer">
+            <p>Nouvel utilisateur ? <a href="#">Demander un accès</a></p>
+            <p class="security-info">
+                <i class="fas fa-lock"></i> Connexion sécurisée par chiffrement SSL
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour la reconnaissance faciale -->
+<div id="faceModal" class="bio-modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <h3><i class="fas fa-camera"></i> Reconnaissance Faciale</h3>
+        <div class="camera-feed">
+            <video id="videoFeed" width="320" height="240" autoplay></video>
+            <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+        </div>
+        <button class="capture-btn" onclick="captureFace()">Capturer</button>
+        <div class="processing-status" id="faceStatus"></div>
+    </div>
+</div>
+
+<!-- Modal pour l'empreinte digitale -->
+<div id="fingerprintModal" class="bio-modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <h3><i class="fas fa-fingerprint"></i> Authentification par Empreinte</h3>
+        <div class="fingerprint-sensor">
+            <div class="fingerprint-icon">
+                <i class="fas fa-fingerprint active-scan"></i>
+            </div>
+            <p>Placez votre doigt sur le capteur</p>
+        </div>
+        <div class="processing-status" id="fingerprintStatus"></div>
+    </div>
+</div>
+
+<style>
+    /* Base stylistique */
+    :root {
+        --primary-color: #2c5f94;
+        --secondary-color: #4b8bc9;
+        --accent-color: #ff7e33;
+        --dark-color: #1a365d;
+        --light-color: #f8f9fa;
+        --danger-color: #e63946;
+        --success-color: #2a9d8f;
+        --text-dark: #2d3748;
+        --text-light: #f8f9fa;
+        --border-radius: 10px;
+        --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Structure principale */
+    .auth-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 2rem;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ed 100%);
+    }
+    
+    .auth-card {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        width: 100%;
+        max-width: 450px;
+        padding: 2.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .auth-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 5px;
+        background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    }
+    
+    /* En-tête */
+    .auth-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .auth-logo {
+        height: 70px;
+        margin-bottom: 1rem;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    }
+    
+    .auth-header h2 {
+        color: var(--primary-color);
+        font-size: 1.75rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .auth-header p {
+        color: var(--text-dark);
+        opacity: 0.8;
+        font-size: 0.9rem;
+    }
+    
+    /* Formulaire */
+    .auth-form {
+        margin-top: 1.5rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.25rem;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--text-dark);
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+    
+    .input-with-icon {
+        position: relative;
+    }
+    
+    .input-with-icon i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--primary-color);
+        font-size: 1rem;
+    }
+    
+    .input-with-icon .toggle-password {
+        left: auto;
+        right: 15px;
+        cursor: pointer;
+    }
+    
+    .form-input {
+        width: 100%;
+        padding: 12px 15px 12px 40px;
+        border: 1px solid #e2e8f0;
+        border-radius: var(--border-radius);
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        background-color: var(--light-color);
+    }
+    
+    .form-input:focus {
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 3px rgba(75, 139, 201, 0.2);
+        outline: none;
+        background-color: white;
+    }
+    
+    /* Options */
+    .form-options {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 1.5rem 0;
+        font-size: 0.85rem;
+    }
+    
+    .remember-me {
+        display: flex;
+        align-items: center;
+        color: var(--text-dark);
+        opacity: 0.8;
+    }
+    
+    .remember-me input {
+        margin-right: 8px;
+    }
+    
+    .forgot-password {
+        color: var(--secondary-color);
+        text-decoration: none;
+        transition: color 0.3s;
+    }
+    
+    .forgot-password:hover {
+        color: var(--primary-color);
+        text-decoration: underline;
+    }
+    
+    /* Bouton principal */
+    .submit-btn {
+        width: 100%;
+        padding: 12px;
+        background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border: none;
+        border-radius: var(--border-radius);
+        font-size: 1rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+    
+    .submit-btn:hover {
+        background: linear-gradient(90deg, var(--dark-color), var(--primary-color));
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(44, 95, 148, 0.3);
+    }
+    
+    /* Options biométriques */
+    .biometric-options {
+        margin: 2rem 0 1rem;
+    }
+    
+    .divider {
+        display: flex;
+        align-items: center;
+        margin: 1.5rem 0;
+        color: var(--text-dark);
+        opacity: 0.7;
+        font-size: 0.85rem;
+    }
+    
+    .divider::before, .divider::after {
+        content: "";
+        flex: 1;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .divider::before {
+        margin-right: 1rem;
+    }
+    
+    .divider::after {
+        margin-left: 1rem;
+    }
+    
+    .biometric-buttons {
+        display: flex;
+        gap: 15px;
+    }
+    
+    .bio-btn {
+        flex: 1;
+        padding: 12px;
+        background-color: white;
+        border: 1px solid #e2e8f0;
+        border-radius: var(--border-radius);
+        color: var(--text-dark);
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+    }
+    
+    .bio-btn:hover {
+        border-color: var(--secondary-color);
+        color: var(--primary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+    
+    .bio-btn i {
+        font-size: 1.1rem;
+    }
+    
+    .face-recognition i {
+        color: #4b8bc9;
+    }
+    
+    .fingerprint i {
+        color: #2a9d8f;
+    }
+    
+    /* Pied de page */
+    .auth-footer {
+        margin-top: 2rem;
+        text-align: center;
+        font-size: 0.85rem;
+        color: var(--text-dark);
+        opacity: 0.8;
+    }
+    
+    .auth-footer a {
+        color: var(--secondary-color);
+        text-decoration: none;
+        transition: color 0.3s;
+    }
+    
+    .auth-footer a:hover {
+        color: var(--primary-color);
+        text-decoration: underline;
+    }
+    
+    .security-info {
+        margin-top: 0.5rem;
+        font-size: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+    }
+    
+    .security-info i {
+        color: var(--success-color);
+    }
+    
+    /* Messages d'erreur */
+    .error-message {
+        display: flex;
+        align-items: center;
+        margin-top: 1.5rem;
+        padding: 12px;
+        background-color: #fde8e8;
+        border-radius: var(--border-radius);
+        color: var(--danger-color);
+        font-size: 0.85rem;
+        gap: 10px;
+    }
+    
+    .error-message i {
+        font-size: 1.1rem;
+    }
+    
+    /* Modals biométriques */
+    .bio-modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+    }
+    
+    .modal-content {
+        background-color: white;
+        margin: 5% auto;
+        padding: 2rem;
+        border-radius: var(--border-radius);
+        width: 90%;
+        max-width: 400px;
+        box-shadow: var(--box-shadow);
+        position: relative;
+    }
+    
+    .close-modal {
+        position: absolute;
+        right: 20px;
+        top: 15px;
+        color: #aaa;
+        font-size: 1.5rem;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    
+    .close-modal:hover {
+        color: var(--text-dark);
+    }
+    
+    .modal-content h3 {
+        color: var(--primary-color);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .camera-feed {
+        margin: 1rem 0;
+        display: flex;
+        justify-content: center;
+    }
+    
+    .fingerprint-sensor {
+        text-align: center;
+        margin: 1.5rem 0;
+    }
+    
+    .fingerprint-icon {
+        font-size: 4rem;
+        color: var(--success-color);
+        margin-bottom: 1rem;
+        position: relative;
+    }
+    
+    .active-scan {
+        animation: pulse 2s infinite;
+    }
+    
+    .capture-btn {
+        width: 100%;
+        padding: 12px;
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: var(--border-radius);
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        margin-top: 1rem;
+    }
+    
+    .capture-btn:hover {
+        background-color: var(--dark-color);
+    }
+    
+    .processing-status {
+        margin-top: 1rem;
+        padding: 10px;
+        border-radius: var(--border-radius);
+        font-size: 0.85rem;
+        text-align: center;
+    }
+    
+    /* Animation */
+    @keyframes pulse {
+        0% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.1); opacity: 0.8; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    
+    /* Responsive */
+    @media (max-width: 576px) {
+        .auth-card {
+            padding: 1.5rem;
+        }
+        
+        .biometric-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+
+<script>
+    // Fonction pour basculer la visibilité du mot de passe
+    function togglePassword() {
+        const passwordInput = document.getElementById('password');
+        const toggleIcon = document.querySelector('.toggle-password');
+        
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+            toggleIcon.classList.replace('fa-eye', 'fa-eye-slash');
+        } else {
+            passwordInput.type = 'password';
+            toggleIcon.classList.replace('fa-eye-slash', 'fa-eye');
+        }
+    }
+    
+    // Gestion des modals biométriques
+    function initFaceRecognition() {
+        document.getElementById('faceModal').style.display = 'block';
+        startVideo();
+    }
+    
+    function initFingerprint() {
+        document.getElementById('fingerprintModal').style.display = 'block';
+        simulateFingerprintScan();
+    }
+    
+    function closeModal() {
+        document.getElementById('faceModal').style.display = 'none';
+        document.getElementById('fingerprintModal').style.display = 'none';
+        stopVideo();
+    }
+    
+    // Simulation reconnaissance faciale
+    function startVideo() {
+        const video = document.getElementById('videoFeed');
+        
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    video.srcObject = stream;
+                })
+                .catch(err => {
+                    document.getElementById('faceStatus').innerHTML = 
+                        '<div class="error-message"><i class="fas fa-exclamation-circle"></i> Erreur d\'accès à la caméra</div>';
+                });
+        }
+    }
+    
+    function captureFace() {
+        const video = document.getElementById('videoFeed');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = canvas.toDataURL('image/png');
+        
+        document.getElementById('faceStatus').innerHTML = 
+            '<div style="color: var(--success-color)"><i class="fas fa-spinner fa-spin"></i> Vérification en cours...</div>';
+        
+        // Simulation de traitement
+        setTimeout(() => {
+            document.getElementById('faceStatus').innerHTML = 
+                '<div style="color: var(--success-color)"><i class="fas fa-check-circle"></i> Authentification réussie</div>';
+            
+            // Redirection après authentification réussie
+            setTimeout(() => {
+                window.location.href = '/dashboard'; // Modifier l'URL de redirection
+            }, 1000);
+        }, 2000);
+    }
+    
+    function stopVideo() {
+        const video = document.getElementById('videoFeed');
+        const stream = video.srcObject;
+        
+        if (stream) {
+            const tracks = stream.getTracks();
+            tracks.forEach(track => track.stop());
+            video.srcObject = null;
+        }
+    }
+    
+    // Simulation empreinte digitale
+    function simulateFingerprintScan() {
+        const statusElement = document.getElementById('fingerprintStatus');
+        
+        statusElement.innerHTML = 
+            '<div style="color: var(--success-color)"><i class="fas fa-fingerprint"></i> En attente de scan...</div>';
+        
+        // Simulation de scan
+        setTimeout(() => {
+            statusElement.innerHTML = 
+                '<div style="color: var(--success-color)"><i class="fas fa-spinner fa-spin"></i> Vérification de l\'empreinte...</div>';
+            
+            setTimeout(() => {
+                statusElement.innerHTML = 
+                    '<div style="color: var(--success-color)"><i class="fas fa-check-circle"></i> Empreinte reconnue</div>';
+                
+                // Redirection après authentification réussie
+                setTimeout(() => {
+                    window.location.href = '/dashboard'; // Modifier l'URL de redirection
+                }, 1000);
+            }, 1500);
+        }, 1000);
+    }
+</script>
+{% endblock %}

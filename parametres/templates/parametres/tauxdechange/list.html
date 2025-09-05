@@ -1,0 +1,215 @@
+{% extends 'parametres/base.html' %}
+{% load i18n crispy_forms_tags %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="bg-white rounded shadow-sm">
+                <!-- Header -->
+                <div class="d-flex justify-content-between align-items-center border-bottom p-3">
+                    <h2 class="mb-0">
+                        <i class="bi bi-graph-up text-primary me-2"></i>
+                        {% trans "Taux de change" %}
+                    </h2>
+                    <div class="d-flex gap-2">
+                        {% if perms.parametres.add_tauxchange %}
+                        <a href="{% url 'parametres:tauxchange_create' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-1"></i> {% trans "Ajouter" %}
+                        </a>
+                        {% endif %}
+                        <a href="#convertisseur" class="btn btn-outline-primary">
+                            <i class="bi bi-calculator me-1"></i> {% trans "Convertisseur" %}
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Currency Converter -->
+                <div id="convertisseur" class="p-4 border-bottom">
+                    <div class="card border-0 shadow-none">
+                        <div class="card-body p-0">
+                            <h5 class="mb-3"><i class="bi bi-calculator text-primary me-2"></i> {% trans "Convertisseur de devises" %}</h5>
+                            <form id="convert-form" class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">{% trans "Montant" %}</label>
+                                    <input type="number" class="form-control" name="montant" step="0.01" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">{% trans "De" %}</label>
+                                    <select class="form-select" name="devise_source" required>
+                                        {% for devise in devises %}
+                                        <option value="{{ devise.id }}">{{ devise.code }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">{% trans "À" %}</label>
+                                    <select class="form-select" name="devise_cible" required>
+                                        {% for devise in devises %}
+                                        <option value="{{ devise.id }}">{{ devise.code }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-3 d-flex align-items-end">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="bi bi-arrow-repeat me-1"></i> {% trans "Convertir" %}
+                                    </button>
+                                </div>
+                            </form>
+                            <div class="mt-3">
+                                <h5>{% trans "Résultat" %}: <span id="conversion-result" class="fw-bold">0.00</span></h5>
+                                <div id="taux-special" class="text-muted small" style="display: none;">
+                                    <i class="bi bi-info-circle"></i> 
+                                    <span>{% trans "Taux spécial appliqué : 1 USD = 2850 FC" %}</span>
+                                </div>
+                                <div id="taux-normal" class="text-muted small">
+                                    <span id="taux-date"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Exchange Rates Table -->
+                <div class="p-3">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">{% trans "Devise source" %}</th>
+                                    <th>{% trans "Devise cible" %}</th>
+                                    <th>{% trans "Taux" %}</th>
+                                    <th>{% trans "Date" %}</th>
+                                    <th>{% trans "Source" %}</th>
+                                    <th>{% trans "Statut" %}</th>
+                                    <th class="text-end pe-3">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for taux in taux_list %}
+                                <tr>
+                                    <td class="ps-3">
+                                        <span class="fw-semibold">{{ taux.devise_source.code }}</span>
+                                        <small class="text-muted">({{ taux.devise_source.symbole }})</small>
+                                    </td>
+                                    <td>
+                                        <span class="fw-semibold">{{ taux.devise_cible.code }}</span>
+                                        <small class="text-muted">({{ taux.devise_cible.symbole }})</small>
+                                    </td>
+                                    <td>1 {{ taux.devise_source.code }} = {{ taux.taux }} {{ taux.devise_cible.code }}</td>
+                                    <td>{{ taux.date_application|date:"d/m/Y" }}</td>
+                                    <td>{{ taux.get_source_display }}</td>
+                                    <td>
+                                        <span class="badge rounded-pill bg-{% if taux.est_actif %}success{% else %}secondary{% endif %}-subtle text-{% if taux.est_actif %}success{% else %}secondary{% endif %}">
+                                            {% if taux.est_actif %}{% trans "Actif" %}{% else %}{% trans "Inactif" %}{% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="text-end pe-3">
+                                        <div class="d-flex justify-content-end gap-2">
+                                            {% if perms.parametres.change_tauxchange %}
+                                            <a href="{% url 'parametres:tauxchange_update' taux.pk %}" 
+                                               class="btn btn-icon btn-sm btn-outline-primary rounded-circle"
+                                               data-bs-toggle="tooltip" 
+                                               title="{% trans 'Modifier' %}">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            {% endif %}
+                                            {% if perms.parametres.delete_tauxchange %}
+                                            <a href="{% url 'parametres:tauxchange_delete' taux.pk %}" 
+                                               class="btn btn-icon btn-sm btn-outline-danger rounded-circle"
+                                               data-bs-toggle="tooltip" 
+                                               title="{% trans 'Supprimer' %}">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center py-5">
+                                        <div class="py-5">
+                                            <i class="bi bi-graph-up fs-1 text-muted"></i>
+                                            <h5 class="mt-3">{% trans "Aucun taux de change enregistré" %}</h5>
+                                            {% if perms.parametres.add_tauxchange %}
+                                            <a href="{% url 'parametres:tauxchange_create' %}" class="btn btn-primary mt-3">
+                                                <i class="bi bi-plus-circle me-2"></i> {% trans "Ajouter un taux" %}
+                                            </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Enable tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+
+    // Currency conversion
+    const convertForm = document.getElementById('convert-form');
+    if (convertForm) {
+        convertForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(convertForm);
+            const deviseSource = convertForm.querySelector('[name="devise_source"]');
+            const deviseCible = convertForm.querySelector('[name="devise_cible"]');
+            
+            fetch("{% url 'parametres:convertir_devise' %}?" + new URLSearchParams(formData), {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    document.getElementById('conversion-result').textContent = data.montant;
+                    
+                    if (data.special) {
+                        document.getElementById('taux-special').style.display = 'block';
+                        document.getElementById('taux-normal').style.display = 'none';
+                    } else {
+                        document.getElementById('taux-special').style.display = 'none';
+                        document.getElementById('taux-normal').style.display = 'block';
+                        document.getElementById('taux-normal').innerHTML = 
+                            `<i class="bi bi-info-circle"></i> Taux: 1 ${deviseSource.options[deviseSource.selectedIndex].text} = ${data.taux} ${deviseCible.options[deviseCible.selectedIndex].text} (${data.date})`;
+                    }
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    }
+});
+</script>
+
+<style>
+    .btn-icon {
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .table-hover tbody tr {
+        transition: all 0.2s;
+    }
+    .table-light {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}

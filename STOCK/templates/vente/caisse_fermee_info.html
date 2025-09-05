@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Caisse Clôturée{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-danger text-white text-center">
+                    <h3 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i> Caisse Clôturée pour Aujourd'hui</h3>
+                </div>
+                <div class="card-body">
+                    <p class="lead text-center text-danger">
+                        **{{ message }}**
+                    </p>
+                    <p class="text-center text-muted">
+                        La caisse pour l'entreprise **{{ current_entreprise.nom }}** a déjà été fermée et validée pour la journée du **{{ cloture_info.date_jour|date:"d/m/Y" }}**.
+                    </p>
+                    {% if cloture_info %}
+                    <ul class="list-group list-group-flush mb-4">
+                        <li class="list-group-item"><strong>Clôturée par:</strong> {{ cloture_info.vendeur.get_full_name|default:cloture_info.vendeur.username }}</li>
+                        <li class="list-group-item"><strong>Date et Heure de clôture:</strong> {{ cloture_info.date_cloture|date:"d/m/Y H:i" }}</li>
+                        <li class="list-group-item"><strong>Montant Total Déclaré:</strong> {{ cloture_info.montant_total }} {{ current_entreprise.config_saas.devise_principale.symbole }}</li>
+                        <li class="list-group-item"><strong>Nombre de Ventes:</strong> {{ cloture_info.nombre_ventes }}</li>
+                        {% if cloture_info.commentaire %}
+                        <li class="list-group-item"><strong>Commentaire:</strong> {{ cloture_info.commentaire }}</li>
+                        {% endif %}
+                    </ul>
+                    {% endif %}
+
+                    <div class="text-center">
+                        <a href="{% url 'vente:vente_au_comptoir' %}" class="btn btn-primary me-2">
+                            <i class="fas fa-arrow-left me-2"></i> Retour à la Vente (si la caisse est rouverte ou pour le lendemain)
+                        </a>
+                        {# Vous pouvez ajouter un lien vers la page d'accueil ou de support #}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+{% load ventes_filters %}
+
+{% block title %}{% trans "Détail de la Vente" %} {{ vente.numero }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-receipt me-2"></i>
+                    {% trans "Détail de la Vente" %} {{ vente.numero }}
+                </h1>
+                <div>
+                    <a href="{% url 'ventes:historique_pos' pk=vente.session.point_de_vente.id %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        {% trans "Retour" %}
+                    </a>
+                    <a href="{% url 'ventes:impression_ticket' vente_id=vente.id %}"
+                       target="_blank"
+                       class="btn btn-primary ms-2">
+                        <i class="fas fa-print me-2"></i>
+                        {% trans "Imprimer" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        {% trans "Informations de la vente" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>{% trans "Date:" %}</strong><br>
+                            {{ vente.date|date:"d/m/Y H:i" }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>{% trans "Point de vente:" %}</strong><br>
+                            {{ vente.session.point_de_vente.nom }}
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>{% trans "Client:" %}</strong><br>
+                            {{ vente.client.nom|default:"Non renseigné" }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>{% trans "Caissier:" %}</strong><br>
+                            {{ vente.session.utilisateur.get_full_name }}
+                        </div>
+                    </div>
+                    {% if vente.notes %}
+                    <hr>
+                    <strong>{% trans "Notes:" %}</strong><br>
+                    {{ vente.notes }}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        {% trans "Articles" %} ({{ vente.items.count }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Produit" %}</th>
+                                    <th>{% trans "Qté" %}</th>
+                                    <th>{% trans "Prix unit." %}</th>
+                                    <th>{% trans "Total HT" %}</th>
+                                    <th>{% trans "TVA" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in vente.items.all %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ item.produit.nom }}</strong>
+                                        {% if item.produit.code %}
+                                        <br><small class="text-muted">{{ item.produit.code }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.quantite }}</td>
+                                    <td>{{ item.prix_unitaire }} {{ devise_symbole }}</td>
+                                    <td>{{ item.montant_ht }} {{ devise_symbole }}</td>
+                                    <td>{{ item.montant_tva }} {{ devise_symbole }} ({{ item.taux_tva }}%)</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-credit-card me-2"></i>
+                        {% trans "Paiements" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if vente.paiementpos_set.all %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Mode" %}</th>
+                                    <th>{% trans "Montant" %}</th>
+                                    <th>{% trans "Référence" %}</th>
+                                    <th>{% trans "Date" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for paiement in vente.paiementpos_set.all %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-{% if paiement.mode_paiement == 'espece' %}success{% elif paiement.mode_paiement == 'carte' %}info{% else %}secondary{% endif %}">
+                                            {{ paiement.get_mode_paiement_display }}
+                                        </span>
+                                    </td>
+                                    <td>{{ paiement.montant }} {{ devise_symbole }}</td>
+                                    <td>{{ paiement.reference|default:"-" }}</td>
+                                    <td>{{ paiement.date|date:"H:i" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">{% trans "Aucun paiement enregistré" %}</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-calculator me-2"></i>
+                        {% trans "Totaux" %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-2">
+                        <div class="col-6">{% trans "Total HT:" %}</div>
+                        <div class="col-6 text-end">{{ total_ht|floatformat:2 }} {{ devise_symbole }}</div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col-6">{% trans "Total TVA:" %}</div>
+                        <div class="col-6 text-end">{{ total_tva|floatformat:2 }} {{ devise_symbole }}</div>
+                    </div>
+                    {% if vente.remise > 0 %}
+                    <div class="row mb-2">
+                        <div class="col-6">{% trans "Remise:" %}</div>
+                        <div class="col-6 text-end text-success">-{{ vente.remise|floatformat:2 }} {{ devise_symbole }}</div>
+                    </div>
+                    {% endif %}
+                    <hr>
+                    <div class="row mb-2 fw-bold fs-5">
+                        <div class="col-6">{% trans "Total TTC:" %}</div>
+                        <div class="col-6 text-end text-primary">{{ total_ttc|floatformat:2 }} {{ devise_symbole }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">{% trans "Total payé:" %}</div>
+                        <div class="col-6 text-end">
+                            {{ total_paye|floatformat:2 }} {{ devise_symbole }}
+                            {% if total_paye < total_ttc %}
+                            <span class="badge bg-warning">{% trans "Impayé" %}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

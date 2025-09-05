@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Facture #{{ paiement.id }}</title>
+    <style>
+        /* Style global */
+        body {
+            font-family: monospace;
+            font-size: 12px;
+            margin: 0 auto;
+            padding: 10px;
+            max-width: 80mm;
+            background: white;
+            color: black;
+        }
+
+        .logo {
+            max-width: 120px;
+            display: block;
+            margin: 0 auto 8px auto;
+        }
+
+        h2, h3, h4 {
+            text-align: center;
+            margin: 4px 0;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .divider {
+            border-bottom: 1px dashed #000;
+            margin: 8px 0;
+        }
+
+        .section p {
+            margin: 2px 0;
+        }
+
+        .highlight {
+            font-weight: bold;
+            color: green;
+        }
+
+        .text-danger {
+            color: red;
+        }
+
+        .text-success {
+            color: green;
+        }
+
+        .status {
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 10px;
+            margin-top: 10px;
+        }
+
+        .print-button {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        /* Styles spécifiques à l'impression */
+        @media print {
+            .print-button {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- En-tête entreprise -->
+    <div class="header">
+        {% if entreprise.logo_url %}
+            <img src="{{ entreprise.logo_url }}" alt="Logo" class="logo" />
+        {% endif %}
+        <h2>{{ entreprise.nom|upper }}</h2>
+        <p>{{ entreprise.adresse }}</p>
+        <p>Tél: {{ entreprise.telephone|default:"N/A" }}</p>
+        <p>Email: {{ entreprise.email|default:"contact@votreentreprise.com" }}</p>
+        {% if entreprise.registre_commerce %}
+            <p>RC: {{ entreprise.registre_commerce }}</p>
+        {% endif %}
+        {% if entreprise.nif %}
+            <p>NIF: {{ entreprise.nif }}</p>
+        {% endif %}
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Titre de la facture -->
+    <div class="invoice-title">
+        <h3>FACTURE DE PAIEMENT</h3>
+        <p>N°: {{ paiement.id }}</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Informations client -->
+    <div class="section">
+        <h4>CLIENT</h4>
+        <p><strong>Nom:</strong> {{ dette.client.nom}}</p>
+        <p><strong>Tel:</strong> {{ dette.client.telephone|default:"N/A" }}</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Détails du paiement -->
+    <div class="section">
+        <h4>PAIEMENT</h4>
+        <p><strong>Date:</strong> {{ paiement.date_paiement|date:"d/m/Y H:i" }}</p>
+        <p><strong>Mode:</strong> {{ paiement.mode_paiement|capfirst }}</p>
+        <p><strong>Dette:</strong> #{{ dette.id }}</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Montants -->
+    <div class="section">
+        <h4>MONTANTS</h4>
+        <p>Total dette: {{ montant_total_dette_formatted }}</p>
+        <p>Paiements avant: {{ montant_paye_avant_ce_paiement_formatted }}</p>
+        <p class="highlight">Paiement actuel: {{ paiement.montant_paiement_formatted }}</p>
+        <p>Restant dû:
+            <span class="{% if montant_du_apres_paiement > 0 %}text-danger{% else %}text-success{% endif %}">
+                {{ montant_du_apres_paiement_formatted }}
+            </span>
+        </p>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Statut de la dette -->
+    <div class="status">
+        <p>Status dette:
+            {% if dette.est_soldee %}
+                <strong>SOLDÉE</strong>
+            {% else %}
+                <strong>NON SOLDÉE</strong>
+            {% endif %}
+        </p>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Pied de page -->
+    <div class="footer">
+        <p>Merci pour votre confiance !</p>
+        <p>Impression: {{ date_impression }}</p>
+        <p>{{ entreprise.nom }}</p>
+    </div>
+
+    <!-- Bouton imprimer -->
+    <div class="print-button">
+        <button onclick="window.print()">🖨️ Imprimer Facture</button>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facture {{ facture.numero }} - {{ facture.entreprise.nom }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1cm;
+            @top-center {
+                content: "{{ facture.entreprise.nom }}";
+                font-size: 12pt;
+                font-weight: bold;
+            }
+            @bottom-center {
+                content: "Page " counter(page) " sur " counter(pages);
+                font-size: 10pt;
+            }
+        }
+        
+        body {
+            font-family: 'DejaVu Sans', Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 21cm;
+            margin: 0 auto;
+            padding: 0.5cm;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1cm;
+            border-bottom: 2px solid #333;
+            padding-bottom: 0.5cm;
+        }
+        
+        .entreprise-info {
+            flex: 1;
+        }
+        
+        .facture-info {
+            flex: 1;
+            text-align: right;
+        }
+        
+        .logo {
+            max-width: 150px;
+            max-height: 80px;
+            margin-bottom: 0.5cm;
+        }
+        
+        .client-info {
+            margin: 1cm 0;
+            padding: 0.5cm;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+        }
+        
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1cm 0;
+        }
+        
+        .table th {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        .table td {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+        }
+        
+        .table-totals {
+            width: 50%;
+            margin-left: auto;
+            border: 1px solid #dee2e6;
+        }
+        
+        .table-totals td {
+            padding: 5px 10px;
+        }
+        
+        .table-totals tr.total-row td {
+            font-weight: bold;
+            border-top: 2px solid #333;
+        }
+        
+        .signature {
+            margin-top: 2cm;
+            display: flex;
+            justify-content: space-between;
+            page-break-inside: avoid;
+        }
+        
+        .signature-box {
+            width: 45%;
+            padding-top: 20px;
+            text-align: center;
+            border-top: 1px solid #000;
+        }
+        
+        .signature-image {
+            max-height: 70px;
+            max-width: 220px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #000;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .signature-placeholder {
+            height: 70px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #000;
+        }
+        
+        .footer {
+            margin-top: 1cm;
+            padding-top: 0.5cm;
+            border-top: 1px solid #ddd;
+            font-size: 9pt;
+            text-align: center;
+            color: #666;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        .text-bold {
+            font-weight: bold;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 9pt;
+            font-weight: bold;
+        }
+        
+        .badge-success { background-color: #d4edda; color: #155724; }
+        .badge-warning { background-color: #fff3cd; color: #856404; }
+        .badge-danger { background-color: #f8d7da; color: #721c24; }
+        .badge-info { background-color: #d1ecf1; color: #0c5460; }
+        .badge-primary { background-color: #cce5ff; color: #004085; }
+        
+        .page-break {
+            page-break-before: always;
+        }
+        
+        .notes {
+            margin-top: 1cm;
+            padding: 0.5cm;
+            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+            font-size: 9pt;
+        }
+        
+        .conditions {
+            margin-top: 0.5cm;
+            font-size: 8pt;
+            color: #666;
+        }
+
+        /* Pour éviter que les signatures ne se coupent entre les pages */
+        @media print {
+            .signature {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- En-tête -->
+        <div class="header">
+            <div class="entreprise-info">
+                {% if facture.entreprise.logo %}
+                <img src="{{ facture.entreprise.logo.url }}" alt="Logo {{ facture.entreprise.nom }}" class="logo">
+                {% endif %}
+                <h2>{{ facture.entreprise.nom }}</h2>
+                <p>
+                    {% if facture.entreprise.adresse %}{{ facture.entreprise.adresse }}<br>{% endif %}
+                    {% if facture.entreprise.telephone %}Tél: {{ facture.entreprise.telephone }}<br>{% endif %}
+                    {% if facture.entreprise.email %}Email: {{ facture.entreprise.email }}<br>{% endif %}
+                    {% if facture.entreprise.site_web %}Site: {{ facture.entreprise.site_web }}{% endif %}
+                </p>
+                {% if facture.entreprise.numero_fiscal %}
+                <p>Numéro fiscal: {{ facture.entreprise.numero_fiscal }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="facture-info">
+                <h1>FACTURE</h1>
+                <p class="text-bold">N° {{ facture.numero }}</p>
+                <p>Date: {{ facture.date|date:"d/m/Y" }}</p>
+                <p>Échéance: {{ facture.echeance|date:"d/m/Y" }}</p>
+                <p>
+                    Statut: 
+                    <span class="badge badge-{{ facture.get_status_badge_class }}">
+                        {{ facture.get_statut_display }}
+                    </span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Informations client -->
+        <div class="client-info">
+            <h3>CLIENT</h3>
+            <p>
+                <strong>{{ facture.client.nom }}</strong><br>
+                {% if facture.client.adresse %}{{ facture.client.adresse }}<br>{% endif %}
+                {% if facture.client.telephone %}Tél: {{ facture.client.telephone }}<br>{% endif %}
+                {% if facture.client.email %}Email: {{ facture.client.email }}{% endif %}
+            </p>
+            {% if facture.reference_client %}
+            <p>Référence client: {{ facture.reference_client }}</p>
+            {% endif %}
+        </div>
+
+        <!-- Documents liés -->
+        {% if facture.devis or facture.commande or facture.bon_livraison %}
+        <div style="margin: 0.5cm 0; padding: 0.3cm; border: 1px solid #eee; background-color: #fafafa;">
+            <strong>Documents liés:</strong>
+            {% if facture.devis %}Devis: {{ facture.devis.numero }}{% endif %}
+            {% if facture.commande %} | Commande: {{ facture.commande.numero }}{% endif %}
+            {% if facture.bon_livraison %} | BL: {{ facture.bon_livraison.numero }}{% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Articles -->
+        <h3>DÉTAIL DE LA FACTURE</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Désignation</th>
+                    <th width="10%">Quantité</th>
+                    <th width="15%">Prix unitaire HT</th>
+                    <th width="10%">TVA</th>
+                    <th width="15%">Montant HT</th>
+                    <th width="15%">Montant TVA</th>
+                    <th width="15%">Total TTC</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in facture.items.all %}
+                <tr>
+                    <td>{{ item.produit.nom }}</td>
+                    <td>{{ item.quantite|floatformat:2 }}</td>
+                    <td class="text-right">{{ item.prix_unitaire|floatformat:2 }} {{ devise_principale_symbole }}</td>
+                    <td class="text-right">{{ item.taux_tva|floatformat:2 }}%</td>
+                    <td class="text-right">{{ item.montant_ht|floatformat:2 }} {{ devise_principale_symbole }}</td>
+                    <td class="text-right">{{ item.montant_tva|floatformat:2 }} {{ devise_principale_symbole }}</td>
+                    <td class="text-right">{{ item.montant_ttc|floatformat:2 }} {{ devise_principale_symbole }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Totaux -->
+        <table class="table-totals">
+            <tr>
+                <td>Total HT:</td>
+                <td class="text-right">{{ facture.total_ht|floatformat:2 }} {{ devise_principale_symbole }}</td>
+            </tr>
+            <tr>
+                <td>Total TVA:</td>
+                <td class="text-right">{{ facture.total_tva|floatformat:2 }} {{ devise_principale_symbole }}</td>
+            </tr>
+            {% if facture.remise > 0 %}
+            <tr>
+                <td>Remise ({{ facture.remise }}%):</td>
+                <td class="text-right">- {{ facture.total_remise|floatformat:2 }} {{ devise_principale_symbole }}</td>
+            </tr>
+            {% endif %}
+            <tr class="total-row">
+                <td><strong>TOTAL TTC:</strong></td>
+                <td class="text-right"><strong>{{ facture.total_ttc|floatformat:2 }} {{ devise_principale_symbole }}</strong></td>
+            </tr>
+        </table>
+
+        <!-- État des paiements -->
+        {% if facture.paiements.exists %}
+        <div style="margin-top: 1cm;">
+            <h4>ÉTAT DES PAIEMENTS</h4>
+            <table class="table" style="width: 60%;">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Montant</th>
+                        <th>Mode</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for paiement in facture.paiements.all %}
+                    <tr>
+                        <td>{{ paiement.date|date:"d/m/Y" }}</td>
+                        <td class="text-right">{{ paiement.montant|floatformat:2 }} {{ devise_principale_symbole }}</td>
+                        <td>{{ paiement.get_mode_paiement_display }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td><strong>Total payé:</strong></td>
+                        <td class="text-right"><strong>{{ facture.montant_paye|floatformat:2 }} {{ devise_principale_symbole }}</strong></td>
+                        <td></td>
+                    </tr>
+                    <tr class="total-row">
+                        <td><strong>Reste à payer:</strong></td>
+                        <td class="text-right"><strong>{{ facture.montant_restant|floatformat:2 }} {{ devise_principale_symbole }}</strong></td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Notes et conditions -->
+        {% if facture.notes %}
+        <div class="notes">
+            <h4>NOTES</h4>
+            {{ facture.notes|linebreaks }}
+        </div>
+        {% endif %}
+
+        {% if facture.conditions_paiement %}
+        <div class="conditions">
+            <h4>CONDITIONS DE PAIEMENT</h4>
+            {{ facture.conditions_paiement|linebreaks }}
+        </div>
+        {% endif %}
+
+        <!-- Signatures -->
+        <div class="signature">
+            <div class="signature-box">
+                <!-- Signature de l'entreprise -->
+                {% if user_signature %}
+                <img src="{{ user_signature }}" 
+                     alt="Signature de {{ user_full_name }}" 
+                     class="signature-image"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <div class="signature-placeholder" style="display: none;"></div>
+                {% else %}
+                <div class="signature-placeholder"></div>
+                {% endif %}
+                
+                <div>
+                    <strong>{{ user_full_name }}</strong><br>
+                    {% if user_position %}{{ user_position }}{% endif %}<br>
+                    Pour {{ facture.entreprise.nom }}<br>
+                    Le {{ current_date|date:"d/m/Y" }}
+                </div>
+            </div>
+            
+            <div class="signature-box">
+                <!-- Signature du client -->
+                {% if client_signature %}
+                <img src="{{ client_signature }}" 
+                     alt="Signature client" 
+                     class="signature-image"
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <div class="signature-placeholder" style="display: none;"></div>
+                {% else %}
+                <div class="signature-placeholder"></div>
+                {% endif %}
+                
+                <div>
+                    <strong>{{ facture.client.nom }}</strong><br>
+                    Client<br>
+                    Bon pour accord<br>
+                    Le ___________________
+                </div>
+            </div>
+        </div>
+
+        <!-- Pied de page -->
+        <div class="footer">
+            <p>
+                {{ facture.entreprise.nom }}
+                {% if facture.entreprise.numero_fiscal %} - N° fiscal: {{ facture.entreprise.numero_fiscal }}{% endif %}
+                {% if facture.entreprise.telephone %} - Tél: {{ facture.entreprise.telephone }}{% endif %}
+            </p>
+            <p>Facture générée le {% now "d/m/Y à H:i" %}</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,59 @@
+{% extends 'parametres/base.html' %}
+{% load i18n crispy_forms_tags %}
+
+{% block content %}
+<div class="card border-0 shadow">
+    <div class="card-header bg-primary text-white">
+        <h3 class="card-title mb-0">
+            <i class="bi bi-currency-exchange me-2"></i>
+            {% trans "Modifier le taux de change" %}
+        </h3>
+    </div>
+    
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 border-end">
+                    <h5 class="mb-4"><i class="bi bi-info-circle"></i> {% trans "Informations actuelles" %}</h5>
+                    <div class="mb-3">
+                        <label class="form-label">{% trans "Devise source" %}</label>
+                        {{ form.devise_source|as_crispy_field }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{% trans "Devise cible" %}</label>
+                        {{ form.devise_cible|as_crispy_field }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{% trans "Taux" %}</label>
+                        {{ form.taux|as_crispy_field }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="mb-4"><i class="bi bi-calendar-range"></i> {% trans "Dates et statut" %}</h5>
+                    <div class="mb-3">
+                        <label class="form-label">{% trans "Date d'application" %}</label>
+                        {{ form.date_application|as_crispy_field }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{% trans "Source" %}</label>
+                        {{ form.source|as_crispy_field }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{% trans "Actif" %}</label>
+                        {{ form.est_actif|as_crispy_field }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer bg-light d-flex justify-content-between">
+            <a href="{% url 'parametres:tauxchange_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> {% trans "Annuler" %}
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> {% trans "Enregistrer" %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

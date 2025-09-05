@@ -1,0 +1,476 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Sélecteur de devise -->
+   
+
+    <!-- Filtres -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0">
+                    <h6 class="m-0 font-weight-bold">
+                        <i class="fas fa-filter me-2 text-primary"></i> FILTRES
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <input type="hidden" name="devise" value="{{ devise_cible }}">
+                        <div class="col-md-3">
+                            <label class="form-label">Période</label>
+                            <select class="form-select" name="period">
+                                <option value="today" {% if active_filters.period == 'today' %}selected{% endif %}>Aujourd'hui</option>
+                                <option value="week" {% if active_filters.period == 'week' %}selected{% endif %}>Cette semaine</option>
+                                <option value="month" {% if not active_filters.period or active_filters.period == 'month' %}selected{% endif %}>Ce mois</option>
+                                <option value="year" {% if active_filters.period == 'year' %}selected{% endif %}>Cette année</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Statut</label>
+                            <select class="form-select" name="status">
+                                <option value="">Tous</option>
+                                {% for statut in statuts %}
+                                <option value="{{ statut.statut }}" {% if active_filters.status == statut.statut %}selected{% endif %}>
+                                    {{ statut.statut }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Type de vente</label>
+                            <select class="form-select" name="sale_type">
+                                <option value="">Tous</option>
+                                <option value="comptoir" {% if active_filters.sale_type == 'comptoir' %}selected{% endif %}>Comptoir</option>
+                                <option value="normal" {% if active_filters.sale_type == 'normal' %}selected{% endif %}>Normale</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100 me-2">
+                                <i class="fas fa-filter me-1"></i> Appliquer
+                            </button>
+                            <a href="?export=csv&{{ request.GET.urlencode }}" class="btn btn-success w-100">
+                                <i class="fas fa-file-export me-1"></i> Export
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cartes de synthèse -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-dark text-white border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h2 class="mb-0"><i class="fas fa-chart-line me-2"></i> Statistiques des Commandes</h2>
+                        <span class="badge bg-light text-dark">
+                            <i class="fas fa-building me-1"></i> {{ entreprise.nom }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Première ligne de cartes -->
+                    <div class="row">
+                        <!-- Carte Total Commandes -->
+                        <div class="col-xl-3 col-md-6 mb-4">
+                            <div class="card border-0 h-100 bg-gradient-primary">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0 bg-white-10 rounded-circle p-3 me-3">
+                                            <i class="fas fa-shopping-cart fa-2x text-white"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1 text-white-70">COMMANDES TOTALES</h6>
+                                            <h3 class="mb-0 text-white">{{ total_commandes }}</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Carte CA Total -->
+                        <div class="col-xl-3 col-md-6 mb-4">
+                            <div class="card border-0 h-100 bg-gradient-success">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0 bg-white-10 rounded-circle p-3 me-3">
+                                            <i class="{{ devise_principale.symbole_classe|default:'fas fa-euro-sign' }} fa-2x text-white"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1 text-white-70">CHIFFRE D'AFFAIRES</h6>
+                                            <h3 class="mb-0 text-white">{{ total_montant_formatted }}</h3>
+                                            <small class="text-white-50">({{ total_montant_source_formatted }} en {{ devise_principale.code }})</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Carte Commandes Annulées -->
+                        <div class="col-xl-3 col-md-6 mb-4">
+                            <div class="card border-0 h-100 bg-gradient-danger">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0 bg-white-10 rounded-circle p-3 me-3">
+                                            <i class="fas fa-times-circle fa-2x text-white"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1 text-white-70">COMMANDES ANNULÉES</h6>
+                                            <h3 class="mb-0 text-white">{{ commandes_annulees }}</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Carte Taux de change -->
+                        <div class="col-xl-3 col-md-6 mb-4">
+                            <div class="card border-0 h-100 bg-gradient-info">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-shrink-0 bg-white-10 rounded-circle p-3 me-3">
+                                            <i class="fas fa-exchange-alt fa-2x text-white"></i>
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1 text-white-70">TAUX DE CHANGE</h6>
+                                            <h3 class="mb-0 text-white">1 {{ devise_principale.code }} = {{ taux_change }} {{ devise_cible }}</h3>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Graphiques -->
+                    <div class="row mt-4">
+                        <!-- Graphique évolution mensuelle -->
+                        <div class="col-lg-6 mb-4">
+                            <div class="card border-0 h-100">
+                                <div class="card-header bg-white border-0">
+                                    <h6 class="m-0 font-weight-bold">
+                                        <i class="fas fa-chart-bar me-2 text-primary"></i> ÉVOLUTION MENSUELLE
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="monthlyChart" height="250"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Graphique répartition statuts -->
+                        <div class="col-lg-6 mb-4">
+                            <div class="card border-0 h-100">
+                                <div class="card-header bg-white border-0">
+                                    <h6 class="m-0 font-weight-bold">
+                                        <i class="fas fa-chart-pie me-2 text-primary"></i> RÉPARTITION PAR STATUT
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="statusChart" height="250"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tableaux de données -->
+                    <div class="row mt-4">
+                        <!-- Meilleurs clients -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card border-0 h-100">
+                                <div class="card-header bg-white border-0">
+                                    <h6 class="m-0 font-weight-bold">
+                                        <i class="fas fa-users me-2 text-primary"></i> MEILLEURS CLIENTS
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Client</th>
+                                                    <th class="text-end">Commandes</th>
+                                                    <th class="text-end">CA ({{ devise_cible }})</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for client in top_clients %}
+                                                <tr>
+                                                    <td>{{ client.client__nom }}</td>
+                                                    <td class="text-end">{{ client.commandes }}</td>
+                                                    <td class="text-end">{{ client.montant_formatted }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Meilleurs produits -->
+                        <div class="col-md-6 mb-4">
+                            <div class="card border-0 h-100">
+                                <div class="card-header bg-white border-0">
+                                    <h6 class="m-0 font-weight-bold">
+                                        <i class="fas fa-star me-2 text-primary"></i> MEILLEURS PRODUITS
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Produit</th>
+                                                    <th class="text-end">Quantité</th>
+                                                    <th class="text-end">CA ({{ devise_cible }})</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for produit in top_produits %}
+                                                <tr>
+                                                    <td>{{ produit.produit__nom }}</td>
+                                                    <td class="text-end">{{ produit.quantite }}</td>
+                                                    <td class="text-end">{{ produit.montant_formatted }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dernières commandes -->
+                        <div class="col-12">
+                            <div class="card border-0">
+                                <div class="card-header bg-white border-0">
+                                    <h6 class="m-0 font-weight-bold">
+                                        <i class="fas fa-history me-2 text-primary"></i> DERNIÈRES COMMANDES
+                                    </h6>
+                                </div>
+                                <div class="card-body px-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover">
+                                            <thead class="bg-light">
+                                                <tr>
+                                                    <th class="ps-4">N°</th>
+                                                    <th>Client</th>
+                                                    <th>Date</th>
+                                                    <th class="text-end">Montant ({{ devise_cible }})</th>
+                                                    <th>Statut</th>
+                                                    <th class="pe-4">Type</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for commande in recent_orders %}
+                                                <tr>
+                                                    <td class="ps-4">#{{ commande.id }}</td>
+                                                    <td>{{ commande.client.nom }}</td>
+                                                    <td>{{ commande.date_commande|date:"d/m/Y H:i" }}</td>
+                                                    <td class="text-end">{{ commande.montant_formatted }}</td>
+                                                    <td>
+                                                        <span class="badge 
+                                                            {% if commande.statut == 'annulee' %}bg-danger
+                                                            {% elif commande.statut == 'livree' %}bg-success
+                                                            {% elif commande.statut == 'expediee' %}bg-info
+                                                            {% elif commande.statut == 'confirmee' %}bg-primary
+                                                            {% else %}bg-warning text-dark{% endif %}">
+                                                            {{ commande.statut }}
+                                                        </span>
+                                                    </td>
+                                                    <td class="pe-4">
+                                                        {% if commande.vente_au_comptoir %}
+                                                        <i class="fas fa-cash-register text-success"></i> Comptoir
+                                                        {% else %}
+                                                        <i class="fas fa-truck text-primary"></i> Normale
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scripts JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Gestion du changement de devise
+    document.getElementById('devise-select').addEventListener('change', function() {
+        const url = new URL(window.location.href);
+        url.searchParams.set('devise', this.value);
+        window.location.href = url.toString();
+    });
+    
+    // Graphique d'évolution mensuelle
+    const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+    new Chart(monthlyCtx, {
+        type: 'line',
+        data: {
+            labels: {{ monthly_labels|safe }},
+            datasets: [{
+                label: 'Nombre de commandes',
+                data: {{ monthly_totals|safe }},
+                backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                borderColor: 'rgba(78, 115, 223, 1)',
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true
+            }, {
+                label: `CA ({{ devise_cible }})`,
+                data: {{ monthly_amounts|safe }},
+                backgroundColor: 'rgba(28, 200, 138, 0.05)',
+                borderColor: 'rgba(28, 200, 138, 1)',
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label.includes('CA')) {
+                                return `${label}: ${context.parsed.y.toFixed(2)}`;
+                            }
+                            return `${label}: ${context.parsed.y}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Nombre de commandes'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: `CA ({{ devise_cible }})`
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    }
+                }
+            }
+        }
+    });
+
+    // Graphique des statuts
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [
+                {% for statut in statuts %}
+                    '{{ statut.statut }}',
+                {% endfor %}
+            ],
+            datasets: [{
+                data: [
+                    {% for statut in statuts %}
+                        {{ statut.total }},
+                    {% endfor %}
+                ],
+                backgroundColor: [
+                    '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const value = context.raw || 0;
+                            const percentage = Math.round((value / total) * 100);
+                            return `${context.label}: ${value} (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            cutout: '70%'
+        }
+    });
+</script>
+
+<style>
+    /* Styles personnalisés */
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+    }
+    .bg-gradient-success {
+        background: linear-gradient(135deg, #1cc88a 0%, #168d6a 100%);
+    }
+    .bg-gradient-danger {
+        background: linear-gradient(135deg, #e74a3b 0%, #be2617 100%);
+    }
+    .bg-gradient-info {
+        background: linear-gradient(135deg, #36b9cc 0%, #258391 100%);
+    }
+    .bg-white-10 {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+    .text-white-70 {
+        color: rgba(255, 255, 255, 0.7);
+    }
+    .text-white-50 {
+        color: rgba(255, 255, 255, 0.5);
+    }
+    .card {
+        border-radius: 0.35rem;
+        border: none;
+        overflow: hidden;
+    }
+    .progress {
+        border-radius: 0.25rem;
+    }
+    .table thead th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+    .badge {
+        font-weight: 500;
+        letter-spacing: 0.5px;
+    }
+</style>
+{% endblock %}

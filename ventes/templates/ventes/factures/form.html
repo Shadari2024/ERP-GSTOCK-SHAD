@@ -1,0 +1,312 @@
+<!-- facture_form.html -->
+{% extends 'base.html' %}
+{% load static i18n %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">
+                        {% if form.instance.pk %}
+                            {% trans "Modifier la facture" %} #{{ form.instance.numero }}
+                        {% else %}
+                            {% trans "Créer une nouvelle facture" %}
+                        {% endif %}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="facture-form" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.client.id_for_label }}" class="form-label">
+                                        {{ form.client.label }}
+                                        {% if form.client.field.required %}<span class="text-danger">*</span>{% endif %}
+                                    </label>
+                                    {{ form.client }}
+                                    {% if form.client.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.client.errors.as_text }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="card mb-3">
+                                    <div class="card-header">
+                                        <h5 class="card-title">{% trans "Documents liés" %}</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="alert alert-info">
+                                            <small>
+                                                <strong>Debug Info:</strong><br>
+                                                Devis disponibles: {{ form.devis.queryset.count }}<br>
+                                                Commandes disponibles: {{ form.commande.queryset.count }}<br>
+                                                BL disponibles: {{ form.bon_livraison.queryset.count }}
+                                            </small>
+                                        </div>
+                                        
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.devis.id_for_label }}" class="form-label">
+                                                {{ form.devis.label }}
+                                            </label>
+                                            {{ form.devis }}
+                                            {% if form.devis.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.devis.errors.as_text }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.commande.id_for_label }}" class="form-label">
+                                                {{ form.commande.label }}
+                                            </label>
+                                            {{ form.commande }}
+                                            {% if form.commande.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.commande.errors.as_text }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.bon_livraison.id_for_label }}" class="form-label">
+                                                {{ form.bon_livraison.label }}
+                                            </label>
+                                            {{ form.bon_livraison }}
+                                            {% if form.bon_livraison.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.bon_livraison.errors.as_text }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.date.id_for_label }}" class="form-label">
+                                                {{ form.date.label }}
+                                                {% if form.date.field.required %}<span class="text-danger">*</span>{% endif %}
+                                            </label>
+                                            {{ form.date }}
+                                            {% if form.date.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.date.errors.as_text }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group mb-3">
+                                            <label for="{{ form.echeance.id_for_label }}" class="form-label">
+                                                {{ form.echeance.label }}
+                                            </label>
+                                            {{ form.echeance }}
+                                            {% if form.echeance.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {{ form.echeance.errors.as_text }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.mode_paiement.id_for_label }}" class="form-label">
+                                        {{ form.mode_paiement.label }}
+                                    </label>
+                                    {{ form.mode_paiement }}
+                                    {% if form.mode_paiement.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.mode_paiement.errors.as_text }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.notes.id_for_label }}" class="form-label">
+                                        {{ form.notes.label }}
+                                    </label>
+                                    {{ form.notes }}
+                                    {% if form.notes.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {{ form.notes.errors.as_text }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Section des articles CORRIGÉE -->
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <h5 class="card-title">{% trans "Articles" %}</h5>
+                            </div>
+                            <div class="card-body">
+                                {{ formset.management_form }}
+                                <div id="lignes-facture">
+                                    {% for form_line in formset %}
+                                        <div class="row ligne-facture mb-3">
+                                            <div class="col-md-5">
+                                                <label class="form-label">{% trans "Article" %}</label>
+                                                {{ form_line.produit }}  <!-- CORRECTION: produit au lieu de article -->
+                                                {% if form_line.produit.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {{ form_line.produit.errors.as_text }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label">{% trans "Quantité" %}</label>
+                                                {{ form_line.quantite }}
+                                                {% if form_line.quantite.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {{ form_line.quantite.errors.as_text }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label">{% trans "Prix unitaire" %}</label>
+                                                {{ form_line.prix_unitaire }}
+                                                {% if form_line.prix_unitaire.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {{ form_line.prix_unitaire.errors.as_text }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-2">
+                                                <label class="form-label">{% trans "TVA (%)" %}</label>
+                                                {{ form_line.taux_tva }}
+                                                {% if form_line.taux_tva.errors %}
+                                                    <div class="invalid-feedback d-block">
+                                                        {{ form_line.taux_tva.errors.as_text }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="col-md-1 d-flex align-items-end">
+                                                {% if formset.can_delete %}
+                                                    {{ form_line.DELETE }}
+                                                    <label class="form-check-label ms-2">{% trans "Suppr." %}</label>
+                                                {% endif %}
+                                                {{ form_line.id }}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                
+                                <button type="button" id="add-ligne" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-plus"></i> {% trans "Ajouter une ligne" %}
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'ventes:facture_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> {% trans "Retour" %}
+                            </a>
+                            <div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> 
+                                    {% if form.instance.pk %}
+                                        {% trans "Enregistrer" %}
+                                    {% else %}
+                                        {% trans "Créer la facture" %}
+                                    {% endif %}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script src="{% static 'js/select2.min.js' %}"></script>
+<script>
+$(document).ready(function() {
+    // Initialisation de Select2
+    $('.select2').select2({
+        theme: 'bootstrap-5',
+        width: '100%'
+    });
+    
+    $('.select2-documents').select2({
+        theme: 'bootstrap-5',
+        width: '100%'
+    });
+    
+    // Fonction pour ajouter une ligne
+    $('#add-ligne').click(function() {
+        const totalForms = $('#id_items-TOTAL_FORMS');
+        const formIdx = parseInt(totalForms.val());
+        const newForm = $('.ligne-facture:first').clone(true);
+        
+        // Mise à jour des IDs et noms
+        newForm.find(':input').each(function() {
+            const name = $(this).attr('name').replace(/-\d+-/, '-' + formIdx + '-');
+            const id = $(this).attr('id').replace(/-\d+-/, '-' + formIdx + '-');
+            $(this).attr({'name': name, 'id': id}).val('').removeAttr('checked');
+        });
+        
+        // Réinitialiser les valeurs
+        newForm.find('input, select').val('');
+        newForm.find('.select2').remove();
+        newForm.find('select').removeClass('select2-hidden-accessible');
+        
+        $('#lignes-facture').append(newForm);
+        totalForms.val(formIdx + 1);
+        
+        // Réinitialiser Select2 pour le nouveau champ
+        newForm.find('select').select2({
+            theme: 'bootstrap-5',
+            width: '100%'
+        });
+    });
+    
+    function calculerTotaux() {
+        let totalHT = 0;
+        let totalTVA = 0;
+        
+        $('.ligne-facture').each(function() {
+            if (!$(this).find('[name$="-DELETE"]').is(':checked')) {
+                const qte = parseFloat($(this).find('[name$="-quantite"]').val()) || 0;
+                const pu = parseFloat($(this).find('[name$="-prix_unitaire"]').val()) || 0;
+                const tva = parseFloat($(this).find('[name$="-taux_tva"]').val()) || 0;
+                
+                const montantHT = qte * pu;
+                const montantTVA = montantHT * (tva / 100);
+                
+                totalHT += montantHT;
+                totalTVA += montantTVA;
+            }
+        });
+        
+        $('#total-ht').text(totalHT.toFixed(2) + ' €');
+        $('#total-tva').text(totalTVA.toFixed(2) + ' €');
+        $('#total-ttc').text((totalHT + totalTVA).toFixed(2) + ' €');
+    }
+    
+    $(document).on('change keyup', '[name$="-quantite"], [name$="-prix_unitaire"], [name$="-taux_tva"], [name$="-DELETE"]', calculerTotaux);
+    calculerTotaux();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'parametres/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Supprimer plan tarifaire" %}{% endblock %}
+
+{% block content %}
+<div class="card border-danger">
+    <div class="card-header bg-danger text-white">
+        <h3 class="card-title">
+            <i class="bi bi-exclamation-triangle"></i> {% trans "Confirmation de suppression" %}
+        </h3>
+    </div>
+    <div class="card-body">
+        <p>{% trans "Êtes-vous sûr de vouloir supprimer ce plan tarifaire ?" %}</p>
+        <div class="alert alert-warning">
+            <strong>{{ object.nom }}</strong> - {{ object.get_niveau_display }}
+            <br>
+            <small class="text-muted">{{ object.utilisateurs_inclus }} utilisateurs - {{ object.stockage_go }} Go</small>
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <div class="d-flex justify-content-between">
+                <a href="{% url 'parametres:plantarification_list' %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left"></i> {% trans "Annuler" %}
+                </a>
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash"></i> {% trans "Confirmer la suppression" %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

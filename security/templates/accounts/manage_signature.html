@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/1.5.3/signature-pad.min.css">
+<style>
+    .signature-container {
+        border: 1px solid #ddd;
+        margin-bottom: 20px;
+    }
+    #signature-pad {
+        background-color: white;
+        width: 100%;
+        height: 300px;
+        cursor: crosshair;
+    }
+    .signature-actions {
+        margin-top: 10px;
+    }
+    .tab-content {
+        padding: 15px 0;
+    }
+    .nav-tabs .nav-link.active {
+        font-weight: bold;
+    }
+    .signature-preview {
+        max-width: 100%;
+        max-height: 300px;
+        border: 1px solid #eee;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4><i class="fas fa-signature me-2"></i>Gestion de signature</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="signature-form">
+                        {% csrf_token %}
+                        
+                        <ul class="nav nav-tabs" id="signatureTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="draw-tab" data-bs-toggle="tab" 
+                                        data-bs-target="#draw" type="button" role="tab">
+                                    Dessiner
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="upload-tab" data-bs-toggle="tab" 
+                                        data-bs-target="#upload" type="button" role="tab">
+                                    Uploader
+                                </button>
+                            </li>
+                        </ul>
+                        
+                        <div class="tab-content" id="signatureTabContent">
+                            <!-- Onglet Dessin -->
+                            <div class="tab-pane fade show active" id="draw" role="tabpanel">
+                                <div class="signature-container">
+                                    <canvas id="signature-pad"></canvas>
+                                </div>
+                                <div class="signature-actions">
+                                    <button type="button" id="clear-signature" class="btn btn-outline-danger">
+                                        <i class="fas fa-eraser me-2"></i>Effacer
+                                    </button>
+                                    <input type="hidden" id="signature-data" name="signature_data">
+                                    {{ form.method }}
+                                </div>
+                            </div>
+                            
+                            <!-- Onglet Upload -->
+                            <div class="tab-pane fade" id="upload" role="tabpanel">
+                                <div class="mb-3">
+                                    <label class="form-label">Sélectionnez une image de signature</label>
+                                    {{ form.signature_image }}
+                                    <div class="form-text">
+                                        Formats acceptés: JPG, PNG (max 1MB)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Enregistrer
+                            </button>
+                            <a href="{% url 'security:user_profile' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>Annuler
+                            </a>
+                        </div>
+                    </form>
+                    
+                    {% if signature_url %}
+                    <div class="mt-4 border p-3">
+                        <h5>Signature actuelle</h5>
+                        <img src="{{ signature_url }}" 
+                             alt="Signature de {{ request.user.username }}"
+                             class="signature-preview">
+                        <p class="mt-2 text-muted">
+                            <small>Date d'enregistrement: {{ profile.signature_date|date:"d/m/Y" }}</small>
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/1.5.3/signature_pad.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialisation du canvas de signature
+    const canvas = document.getElementById('signature-pad');
+    const signaturePad = new SignaturePad(canvas, {
+        backgroundColor: 'rgb(255, 255, 255)',
+        penColor: 'rgb(0, 0, 0)'
+    });
+    
+    // Gestion des onglets
+    const signatureTabs = document.getElementById('signatureTabs');
+    const signatureMethodInput = document.querySelector('input[name="method"]');
+    
+    signatureTabs.addEventListener('click', function(e) {
+        if (e.target.id === 'draw-tab') {
+            signatureMethodInput.value = 'draw';
+        } else if (e.target.id === 'upload-tab') {
+            signatureMethodInput.value = 'upload';
+        }
+    });
+    
+    // Effacer la signature
+    document.getElementById('clear-signature').addEventListener('click', function() {
+        signaturePad.clear();
+    });
+    
+    // Soumission du formulaire
+    document.getElementById('signature-form').addEventListener('submit', function(e) {
+        if (signatureMethodInput.value === 'draw' && !signaturePad.isEmpty()) {
+            document.getElementById('signature-data').value = signaturePad.toDataURL('image/svg+xml');
+        }
+    });
+    
+    // Redimensionnement du canvas
+    function resizeCanvas() {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = canvas.offsetWidth * ratio;
+        canvas.height = canvas.offsetHeight * ratio;
+        canvas.getContext('2d').scale(ratio, ratio);
+        signaturePad.clear(); // Efface la signature après redimensionnement
+    }
+    
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card">
+        <div class="card-header bg-warning">
+            <h2>{% translate "Paiement annulé" %}</h2>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <h4 class="alert-heading">{% translate "Paiement non complété" %}</h4>
+                <p>
+                    {% if methode %}
+                        {% blocktranslate %}Votre paiement via {{ methode }} a été annulé.{% endblocktranslate %}
+                    {% else %}
+                        {% translate "Le processus de paiement a été interrompu." %}
+                    {% endif %}
+                </p>
+                <hr>
+                <p class="mb-0">
+                    {% translate "Vous pouvez réessayer ou choisir une autre méthode de paiement." %}
+                </p>
+            </div>
+            
+            <div class="d-flex gap-2">
+                <a href="{% url 'parametres:abonnement_list' %}" class="btn btn-outline-secondary">
+                    {% translate "Retour" %}
+                </a>
+                {% if abonnement_id %}
+                <a href="{% url 'parametres:abonnement_update' abonnement_id %}" class="btn btn-primary">
+                    {% translate "Réessayer" %}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

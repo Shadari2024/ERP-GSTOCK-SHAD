@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module de Vente - XSEEN LITE</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #4A90E2;
+            --secondary-color: #6B7280;
+            --background-color: #F3F4F6;
+            --card-background: #FFFFFF;
+            --border-color: #E5E7EB;
+            --text-color: #1F2937;
+            --text-light: #6B7280;
+            --font-family: 'Inter', sans-serif;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        /* --- Layout de la page --- */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            height: 100vh;
+        }
+
+        /* --- Barre de navigation latérale (Sidebar) --- */
+        .sidebar {
+            background-color: var(--card-background);
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border-color);
+        }
+
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+
+        .sidebar-menu {
+            list-style: none;
+            flex-grow: 1;
+        }
+
+        .sidebar-menu-item {
+            margin-bottom: 0.75rem;
+        }
+
+        .sidebar-menu-link {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            color: var(--text-light);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .sidebar-menu-link:hover,
+        .sidebar-menu-link.active {
+            background-color: var(--primary-color);
+            color: var(--card-background);
+            transform: translateX(5px);
+            box-shadow: var(--shadow);
+        }
+
+        .sidebar-menu-link i {
+            margin-right: 1rem;
+            font-size: 1.1rem;
+        }
+
+        /* --- En-tête de la page (Header) --- */
+        .main-content {
+            padding: 2rem 3rem;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .header-title {
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+        }
+
+        .header-actions .btn {
+            background-color: var(--primary-color);
+            color: var(--card-background);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+
+        .header-actions .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .header-actions .btn i {
+            margin-right: 0.5rem;
+        }
+
+        /* --- Section des statistiques (Stats) --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background-color: var(--card-background);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            color: var(--primary-color);
+            width: 4rem;
+            height: 4rem;
+            border-radius: 50%;
+            background-color: rgba(74, 144, 226, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .stat-info {
+            flex-grow: 1;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        /* --- Tableau des commandes (Table) --- */
+        .recent-orders {
+            background-color: var(--card-background);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: var(--shadow);
+        }
+
+        .recent-orders-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .recent-orders-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .recent-orders-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .recent-orders-table th,
+        .recent-orders-table td {
+            text-align: left;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .recent-orders-table th {
+            color: var(--text-light);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.8rem;
+        }
+
+        .recent-orders-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-paid {
+            background-color: #D1FAE5;
+            color: #065F46;
+        }
+
+        .status-pending {
+            background-color: #FEF9C3;
+            color: #854F2E;
+        }
+
+        .status-shipped {
+            background-color: #DBEAFE;
+            color: #1E40AF;
+        }
+
+        /* --- Responsivité --- */
+        @media (max-width: 1024px) {
+            .dashboard-container {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: -250px;
+                height: 100%;
+                z-index: 10;
+                transition: transform 0.3s ease-in-out;
+            }
+
+            .sidebar.show {
+                transform: translateX(250px);
+            }
+
+            .main-content {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <h1 class="sidebar-logo">XSEEN LITE</h1>
+            <ul class="sidebar-menu">
+                <li class="sidebar-menu-item">
+                    <a href="#" class="sidebar-menu-link active">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a href="#" class="sidebar-menu-link">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>Commandes</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a href="#" class="sidebar-menu-link">
+                        <i class="fas fa-users"></i>
+                        <span>Clients</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a href="#" class="sidebar-menu-link">
+                        <i class="fas fa-box"></i>
+                        <span>Produits</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a href="#" class="sidebar-menu-link">
+                        <i class="fas fa-file-invoice"></i>
+                        <span>Factures</span>
+                    </a>
+                </li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <header class="header">
+                <h2 class="header-title">Dashboard de Vente</h2>
+                <div class="header-actions">
+                    <a href="#" class="btn"><i class="fas fa-plus"></i>Nouvelle Commande</a>
+                </div>
+            </header>
+
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-euro-sign"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-label">Chiffre d'affaires</div>
+                        <div class="stat-value">€124,567</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-truck"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-label">Commandes en cours</div>
+                        <div class="stat-value">42</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-user-plus"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-label">Nouveaux clients</div>
+                        <div class="stat-value">18</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-shopping-basket"></i>
+                    </div>
+                    <div class="stat-info">
+                        <div class="stat-label">Panier moyen</div>
+                        <div class="stat-value">€295</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="recent-orders">
+                <div class="recent-orders-header">
+                    <h3 class="recent-orders-title">Commandes récentes</h3>
+                    <a href="#" class="btn btn-secondary">Voir tout</a>
+                </div>
+                <table class="recent-orders-table">
+                    <thead>
+                        <tr>
+                            <th>ID Commande</th>
+                            <th>Client</th>
+                            <th>Date</th>
+                            <th>Total</th>
+                            <th>Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>#00101</td>
+                            <td>Marie Dubois</td>
+                            <td>21/08/2025</td>
+                            <td>€450.00</td>
+                            <td><span class="status-badge status-paid">Payé</span></td>
+                        </tr>
+                        <tr>
+                            <td>#00100</td>
+                            <td>Jean Dupont</td>
+                            <td>20/08/2025</td>
+                            <td>€120.50</td>
+                            <td><span class="status-badge status-pending">En attente</span></td>
+                        </tr>
+                        <tr>
+                            <td>#00099</td>
+                            <td>Alice Martin</td>
+                            <td>19/08/2025</td>
+                            <td>€890.00</td>
+                            <td><span class="status-badge status-shipped">Expédié</span></td>
+                        </tr>
+                        <tr>
+                            <td>#00098</td>
+                            <td>Paul Bernard</td>
+                            <td>19/08/2025</td>
+                            <td>€335.20</td>
+                            <td><span class="status-badge status-paid">Payé</span></td>
+                        </tr>
+                        <tr>
+                            <td>#00097</td>
+                            <td>Sophie Laurent</td>
+                            <td>18/08/2025</td>
+                            <td>€67.90</td>
+                            <td><span class="status-badge status-shipped">Expédié</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

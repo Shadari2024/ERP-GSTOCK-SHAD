@@ -1,0 +1,269 @@
+{% extends "comptabilite/base.html" %}
+{% load static %}
+
+{% block title %}
+    {% if object %}Modifier le compte{% else %}Nouveau compte{% endif %}
+{% endblock %}
+
+{% block breadcrumb %}
+    {% if object %}
+        <li class="breadcrumb-item"><a href="{% url 'comptabilite:compte_auxiliaire_list' %}">Comptes Auxiliaires</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Modifier {{ object.code }}</li>
+    {% else %}
+        <li class="breadcrumb-item"><a href="{% url 'comptabilite:compte_auxiliaire_list' %}">Comptes Auxiliaires</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Nouveau compte</li>
+    {% endif %}
+{% endblock %}
+
+{% block page_title %}
+    {% if object %}
+        Modifier le compte {{ object.code }}
+    {% else %}
+        Nouveau compte auxiliaire
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">
+                    <i class="fas {% if object %}fa-edit{% else %}fa-plus-circle{% endif %} me-2"></i>
+                    {% if object %}Modification du compte{% else %}Création d'un nouveau compte{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.code.id_for_label }}" class="form-label">
+                                    {{ form.code.label }} *
+                                </label>
+                                {{ form.code }}
+                                {% if form.code.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.code.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">Code unique du compte auxiliaire</small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-group mb-3">
+                                <label for="{{ form.type_compte.id_for_label }}" class="form-label">
+                                    {{ form.type_compte.label }} *
+                                </label>
+                                {{ form.type_compte }}
+                                {% if form.type_compte.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.type_compte.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="{{ form.intitule.id_for_label }}" class="form-label">
+                            {{ form.intitule.label }} *
+                        </label>
+                        {{ form.intitule }}
+                        {% if form.intitule.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.intitule.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Nom complet du compte auxiliaire</small>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="{{ form.compte_general.id_for_label }}" class="form-label">
+                            {{ form.compte_general.label }} *
+                        </label>
+                        {{ form.compte_general }}
+                        {% if form.compte_general.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.compte_general.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Compte général associé</small>
+                    </div>
+                    
+                    <div class="form-group mb-4">
+                        <div class="form-check form-switch">
+                            {{ form.actif }}
+                            <label class="form-check-label" for="{{ form.actif.id_for_label }}">
+                                {{ form.actif.label }}
+                            </label>
+                        </div>
+                        {% if form.actif.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.actif.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">Désactivez pour archiver le compte</small>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'comptabilite:compte_auxiliaire_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i> Retour
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            {% if object %}Modifier{% else %}Créer{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Aide sur les types de comptes -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Types de comptes
+                </h6>
+            </div>
+            <div class="card-body">
+                <h6>Types disponibles:</h6>
+                <ul class="list-unstyled small">
+                    <li><span class="badge bg-info">Client</span> Comptes clients (compte général 411...)</li>
+                    <li><span class="badge bg-warning">Fournisseur</span> Comptes fournisseurs (compte général 401...)</li>
+                    <li><span class="badge bg-secondary">Autre</span> Autres comptes tiers</li>
+                </ul>
+                
+                <h6 class="mt-3">Conseils:</h6>
+                <ul class="list-unstyled small">
+                    <li>Utilisez des codes significatifs</li>
+                    <li>Chaque code doit être unique</li>
+                    <li>Associez le bon compte général selon le type</li>
+                    <li>Désactivez les comptes que vous n'utilisez plus</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Validation -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-check-circle me-2"></i>Validation
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="validation-info">
+                    <p class="small text-muted">Le compte général doit correspondre au type sélectionné:</p>
+                    <ul class="small">
+                        <li>Clients → Comptes 411xxx</li>
+                        <li>Fournisseurs → Comptes 401xxx</li>
+                        <li>Autre → Comptes 40xxxx ou 41xxxx</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Ajouter des classes Bootstrap aux champs
+        $('input, select, textarea').addClass('form-control');
+        $('input[type="checkbox"]').removeClass('form-control').addClass('form-check-input');
+        
+        // Filtrer les comptes généraux selon le type
+        function filtrerComptesGeneraux() {
+            const type = $('#id_type_compte').val();
+            const compteGeneralSelect = $('#id_compte_general');
+            const options = compteGeneralSelect.find('option');
+            
+            // Afficher tous les options d'abord
+            options.show();
+            
+            if (type === 'client') {
+                options.not('[value*=""]').filter(function() {
+                    return !$(this).text().includes('411');
+                }).hide();
+                // Sélectionner automatiquement le premier compte 411 si aucun n'est sélectionné
+                if (!compteGeneralSelect.val()) {
+                    const firstClientAccount = options.filter(function() {
+                        return $(this).text().includes('411');
+                    }).first();
+                    if (firstClientAccount.length) {
+                        compteGeneralSelect.val(firstClientAccount.val());
+                    }
+                }
+            } else if (type === 'fournisseur') {
+                options.not('[value*=""]').filter(function() {
+                    return !$(this).text().includes('401');
+                }).hide();
+                // Sélectionner automatiquement le premier compte 401 si aucun n'est sélectionné
+                if (!compteGeneralSelect.val()) {
+                    const firstFournisseurAccount = options.filter(function() {
+                        return $(this).text().includes('401');
+                    }).first();
+                    if (firstFournisseurAccount.length) {
+                        compteGeneralSelect.val(firstFournisseurAccount.val());
+                    }
+                }
+            } else if (type === 'autre') {
+                options.not('[value*=""]').filter(function() {
+                    const text = $(this).text();
+                    return !text.includes('40') && !text.includes('41');
+                }).hide();
+            }
+            
+            // S'assurer qu'une valeur est sélectionnée
+            if (!compteGeneralSelect.val() && compteGeneralSelect.find('option:visible').length > 0) {
+                compteGeneralSelect.val(compteGeneralSelect.find('option:visible').first().val());
+            }
+        }
+        
+        // Appliquer le filtrage au chargement
+        filtrerComptesGeneraux();
+        
+        // Appliquer le filtrage quand le type change
+        $('#id_type_compte').change(filtrerComptesGeneraux);
+        
+        // Validation avant soumission
+        $('form').on('submit', function(e) {
+            const type = $('#id_type_compte').val();
+            const compteGeneral = $('#id_compte_general').val();
+            
+            if (!compteGeneral) {
+                e.preventDefault();
+                alert('Veuillez sélectionner un compte général.');
+                return false;
+            }
+            
+            // Validation supplémentaire côté client
+            if (type === 'client' && !$('#id_compte_general option:selected').text().includes('411')) {
+                e.preventDefault();
+                alert('Pour un compte client, le compte général doit commencer par 411.');
+                return false;
+            }
+            
+            if (type === 'fournisseur' && !$('#id_compte_general option:selected').text().includes('401')) {
+                e.preventDefault();
+                alert('Pour un compte fournisseur, le compte général doit commencer par 401.');
+                return false;
+            }
+        });
+    });
+</script>
+{% endblock %}

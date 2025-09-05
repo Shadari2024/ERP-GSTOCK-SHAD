@@ -1,0 +1,265 @@
+{% extends "achats/base_achats.html" %}
+{% block page_title %}Détails du Fournisseur{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'achats:modifier_fournisseur' object.pk %}" class="erp-btn erp-btn-warning" data-tooltip="Modifier les informations de ce fournisseur.">
+    <i class="bi bi-pencil"></i> Modifier
+</a>
+<a href="{% url 'achats:supprimer_fournisseur' object.pk %}" class="erp-btn erp-btn-danger" data-tooltip="Supprimer définitivement ce fournisseur.">
+    <i class="bi bi-trash"></i> Supprimer
+</a>
+<a href="{% url 'achats:liste_fournisseurs' %}" class="erp-btn erp-btn-secondary" data-tooltip="Retourner à la liste complète des fournisseurs.">
+    <i class="bi bi-arrow-left"></i> Retour
+</a>
+{% endblock %}
+
+{% block achats_content %}
+<style>
+    /* Custom styles for the dark theme details view */
+    .erp-detail-card {
+        background-color: var(--card-background); /* Card background for details */
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        margin-bottom: 2rem;
+        animation: fadeIn 0.6s ease-out; /* Fade in animation */
+    }
+
+    .erp-detail-card-header {
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid var(--border-color); /* Subtle border */
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .erp-detail-card-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text-color-light); /* Light text for title */
+        margin: 0;
+    }
+
+    .erp-detail-card-body {
+        padding: 2rem;
+        color: var(--text-color-light); /* Light text for body content */
+    }
+
+    .erp-detail-card-body strong {
+        color: var(--accent-color); /* Accent color for labels/strong text */
+        font-weight: 600;
+    }
+
+    .erp-detail-section {
+        margin-bottom: 1.5rem; /* Space between sections */
+    }
+
+    .erp-detail-section-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--primary-color); /* Primary color for section titles */
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    .erp-detail-info p {
+        margin-bottom: 0.75rem; /* Space between info lines */
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .erp-detail-info p:last-child {
+        margin-bottom: 0;
+    }
+
+    .erp-detail-info .info-label {
+        min-width: 120px; /* Align labels */
+        font-weight: 600;
+        color: var(--text-color-dark); /* Slightly darker for labels */
+    }
+    
+    .erp-detail-info .info-value {
+        flex-grow: 1;
+        word-break: break-word; /* Ensure long text wraps */
+    }
+
+    .erp-actions-footer {
+        padding: 1.5rem 2rem;
+        border-top: 1px solid var(--border-color); /* Subtle top border */
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-start; /* Align buttons to start */
+        flex-wrap: wrap; /* Allow buttons to wrap */
+    }
+
+    /* General ERP button styles (re-applied for consistency) */
+    .erp-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: var(--border-radius);
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        transition: var(--transition);
+        border: none;
+    }
+
+    .erp-btn-primary {
+        background-color: var(--primary-color);
+        color: white;
+        box-shadow: 0 4px 12px rgba(var(--primary-color-rgb), 0.3);
+    }
+    .erp-btn-primary:hover {
+        background-color: var(--secondary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(var(--primary-color-rgb), 0.5);
+    }
+
+    /* Specific button colors for details page */
+    .erp-btn-warning {
+        background-color: #ffc107; /* Odoo-like warning yellow */
+        color: var(--dark-color); /* Dark text for warning button */
+        box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
+    }
+    .erp-btn-warning:hover {
+        background-color: #e0a800; /* Darker yellow on hover */
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(255, 193, 7, 0.3);
+    }
+
+    .erp-btn-danger {
+        background-color: #dc3545; /* Odoo-like danger red */
+        color: white;
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
+    }
+    .erp-btn-danger:hover {
+        background-color: #c82333; /* Darker red on hover */
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(220, 53, 69, 0.3);
+    }
+
+    .erp-btn-secondary {
+        background-color: var(--background-body); /* Body background for secondary */
+        color: var(--text-color-light);
+        border: 1px solid var(--border-color);
+        box-shadow: none;
+    }
+    .erp-btn-secondary:hover {
+        background-color: var(--dark-color); /* Darker on hover */
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    /* Tooltip styles (re-declared for local clarity, but usually in base_achats.html) */
+    .erp-btn[data-tooltip]::after {
+        content: attr(data-tooltip);
+        visibility: hidden;
+        opacity: 0;
+        background-color: var(--tooltip-bg); /* Tooltip background */
+        color: var(--tooltip-color); /* Tooltip text color */
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px 10px;
+        position: absolute;
+        z-index: 1001; /* Above other elements */
+        top: 120%; /* Position below button */
+        left: 50%;
+        transform: translateX(-50%) translateY(5px);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        white-space: nowrap;
+        font-size: 0.85rem;
+        pointer-events: none;
+        box-shadow: var(--box-shadow); /* Tooltip shadow */
+    }
+
+    .erp-btn[data-tooltip]:hover::after {
+        visibility: visible;
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+    
+    /* Ensure RGB values are accessible for rgba() */
+    :root {
+        --primary-color-rgb: 91, 33, 182; /* RGB for #5b21b6 */
+        --accent-color-rgb: 124, 58, 237; /* RGB for #7c3aed */
+        /* You might want to define RGB for #ffc107 (255, 193, 7) and #dc3545 (220, 53, 69) if you use them with rgba() */
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .erp-detail-card-header {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 1rem;
+        }
+        .erp-detail-card-title {
+            font-size: 1.5rem;
+        }
+        .erp-detail-card-body {
+            padding: 1.5rem;
+        }
+        .erp-detail-info p {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.2rem;
+        }
+        .erp-detail-info .info-label {
+            min-width: unset; /* Remove fixed width on small screens */
+        }
+        .erp-actions-footer {
+            flex-direction: column;
+            gap: 0.75rem;
+            padding: 1rem;
+        }
+        .erp-actions-footer .erp-btn {
+            width: 100%; /* Full width buttons on small screens */
+        }
+    }
+</style>
+
+<div class="erp-detail-card">
+    <div class="erp-detail-card-header">
+        <h2 class="erp-detail-card-title">
+            Détails du Fournisseur: {{ object.nom }}
+            {% if object.code %}({{ object.code }}){% endif %}
+        </h2>
+    </div>
+    <div class="erp-detail-card-body">
+        <div class="row">
+            <div class="col-md-6 erp-detail-section">
+                <h3 class="erp-detail-section-title">Informations de Contact</h3>
+                <div class="erp-detail-info">
+                    <p><span class="info-label">Nom:</span> <span class="info-value">{{ object.nom }}</span></p>
+                    <p><span class="info-label">Code:</span> <span class="info-value">{{ object.code }}</span></p>
+                    <p><span class="info-label">Email:</span> <span class="info-value">{{ object.email }}</span></p>
+                    <p><span class="info-label">Téléphone:</span> <span class="info-value">{{ object.telephone }}</span></p>
+                </div>
+            </div>
+            <div class="col-md-6 erp-detail-section">
+                <h3 class="erp-detail-section-title">Informations Additionnelles</h3>
+                <div class="erp-detail-info">
+                    <p><span class="info-label">Adresse:</span> <span class="info-value">{{ object.adresse|linebreaksbr }}</span></p>
+                    <p><span class="info-label">Créé le:</span> <span class="info-value">{{ object.created_at|date:"d/m/Y H:i" }}</span></p>
+                    <p><span class="info-label">Dernière mise à jour:</span> <span class="info-value">{{ object.updated_at|date:"d/m/Y H:i" }}</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="erp-actions-footer">
+        {#
+        <a href="{% url 'achats:modifier_fournisseur' object.pk %}" class="erp-btn erp-btn-warning" data-tooltip="Modifier les informations de ce fournisseur.">
+            <i class="bi bi-pencil"></i> Modifier
+        </a>
+        <a href="{% url 'achats:supprimer_fournisseur' object.pk %}" class="erp-btn erp-btn-danger" data-tooltip="Supprimer définitivement ce fournisseur.">
+            <i class="bi bi-trash"></i> Supprimer
+        </a>
+        <a href="{% url 'achats:liste_fournisseurs' %}" class="erp-btn erp-btn-secondary" data-tooltip="Retourner à la liste complète des fournisseurs.">
+            <i class="bi bi-arrow-left"></i> Retour à la liste
+        </a>
+        #}
+    </div>
+</div>
+{% endblock achats_content %}

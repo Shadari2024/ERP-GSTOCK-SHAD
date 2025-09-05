@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Clôturer Caisse{% endblock %}
+
+{% block content %}
+<div class="odoo-view">
+    <div class="o_control_panel d-flex justify-content-between align-items-center mb-4">
+        <div class="o_cp_left">
+            <h1 class="text-white mb-0">Clôturer Caisse</h1>
+        </div>
+    </div>
+
+    <div class="o_content">
+        <div class="card o_form_sheet p-4">
+            <div class="card-body">
+                <h4 class="card-title text-white mb-4">Détails de la Caisse à Clôturer</h4>
+                <dl class="row mb-4">
+                    <dt class="col-sm-4 text-end text-white-50">Montant d'Ouverture :</dt>
+                    <dd class="col-sm-8 text-white">{{ caisse.montant_ouverture|floatformat:2 }} FCFA</dd>
+
+                    <dt class="col-sm-4 text-end text-white-50">Date d'Ouverture :</dt>
+                    <dd class="col-sm-8 text-white">{{ caisse.date_ouverture|date:"d M Y H:i" }}</dd>
+
+                    <dt class="col-sm-4 text-end text-white-50">Utilisateur :</dt>
+                    <dd class="col-sm-8 text-white">{{ caisse.utilisateur.username }}</dd>
+
+                    <dt class="col-sm-4 text-end text-white-50">Total Paiements Espèces :</dt>
+                    <dd class="col-sm-8 text-white">
+                        {# Assuming total_paiements_espece is passed in context or calculated directly #}
+                        {% if caisse.paiement_set.filter %}
+                            {{ caisse.paiement_set.filter.total_paiements_espece|floatformat:2 }} FCFA {# This needs to be calculated in views and passed #}
+                        {% else %}
+                            0.00 FCFA
+                        {% endif %}
+                    </dd>
+
+                    <dt class="col-sm-4 text-end text-white-50">Montant Théorique de Fermeture :</dt>
+                    <dd class="col-sm-8 text-white">
+                        {# This should be the calculation caisse.montant_ouverture + total_paiements_espece #}
+                        {% if form.initial.montant_fermeture %}
+                            {{ form.initial.montant_fermeture|floatformat:2 }} FCFA
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </dd>
+                </dl>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3 row">
+                        <label for="{{ form.montant_fermeture.id_for_label }}" class="col-sm-4 col-form-label text-end">Montant Réel de Fermeture :</label>
+                        <div class="col-sm-8">
+                            {{ form.montant_fermeture }}
+                            {% if form.montant_fermeture.errors %}
+                                <div class="text-danger mt-1">{{ form.montant_fermeture.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label for="{{ form.commentaire.id_for_label }}" class="col-sm-4 col-form-label text-end">Commentaire (facultatif) :</label>
+                        <div class="col-sm-8">
+                            {{ form.commentaire }}
+                            {% if form.commentaire.errors %}
+                                <div class="text-danger mt-1">{{ form.commentaire.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger mt-3">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-end mt-4">
+                        <button type="submit" class="btn btn-primary me-2">Clôturer la Caisse</button>
+                        <a href="{% url 'ventes:etat_caisse' %}" class="btn btn-outline-secondary">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

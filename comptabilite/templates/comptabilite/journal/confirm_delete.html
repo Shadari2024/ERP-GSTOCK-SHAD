@@ -1,0 +1,113 @@
+{% extends "comptabilite/base.html" %}
+{% load i18n %}
+
+{% block title %}Supprimer le journal {{ object.code }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{% url 'comptabilite:journal_list' %}">Journaux</a></li>
+<li class="breadcrumb-item active" aria-current="page">Supprimer {{ object.code }}</li>
+{% endblock %}
+
+{% block page_title %}Supprimer le journal: {{ object.code }} - {{ object.intitule }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirmation de suppression
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-exclamation-circle me-2"></i>Attention!
+                    </h6>
+                    <p class="mb-0">Vous êtes sur le point de supprimer définitivement ce journal comptable.</p>
+                </div>
+
+                <div class="border rounded p-3 mb-4">
+                    <h6>Détails du journal:</h6>
+                    <table class="table table-borderless table-sm">
+                        <tr>
+                            <th width="30%">Code:</th>
+                            <td><strong>{{ object.code }}</strong></td>
+                        </tr>
+                        <tr>
+                            <th>Intitulé:</th>
+                            <td>{{ object.intitule }}</td>
+                        </tr>
+                        <tr>
+                            <th>Type:</th>
+                            <td>
+                                {% if object.type_journal == 'achat' %}
+                                    <span class="badge bg-info">Achats</span>
+                                {% elif object.type_journal == 'vente' %}
+                                    <span class="badge bg-success">Ventes</span>
+                                {% elif object.type_journal == 'banque' %}
+                                    <span class="badge bg-primary">Banque</span>
+                                {% elif object.type_journal == 'caisse' %}
+                                    <span class="badge bg-warning">Caisse</span>
+                                {% elif object.type_journal == 'divers' %}
+                                    <span class="badge bg-secondary">Divers</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Statut:</th>
+                            <td>
+                                {% if object.actif %}
+                                    <span class="badge bg-success">Actif</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactif</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Écritures associées:</th>
+                            <td>
+                                <span class="badge {% if object.ecriturecomptable_set.exists %}bg-danger{% else %}bg-success{% endif %}">
+                                    {{ object.ecriturecomptable_set.count }} écriture(s)
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                {% if object.ecriturecomptable_set.exists %}
+                <div class="alert alert-warning">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-warning me-2"></i>Impossible de supprimer
+                    </h6>
+                    <p class="mb-0">
+                        Ce journal a {{ object.ecriturecomptable_set.count }} écriture(s) associée(s). 
+                        Vous devez d'abord supprimer ou transférer ces écritures avant de pouvoir supprimer le journal.
+                    </p>
+                </div>
+                {% endif %}
+
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'comptabilite:journal_list' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Annuler
+                    </a>
+                    
+                    {% if not object.ecriturecomptable_set.exists %}
+                    <form method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i> Confirmer la suppression
+                        </button>
+                    </form>
+                    {% else %}
+                    <a href="{% url 'comptabilite:ecriture_list' %}?journal={{ object.code }}" 
+                       class="btn btn-warning">
+                        <i class="fas fa-list me-1"></i> Voir les écritures
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

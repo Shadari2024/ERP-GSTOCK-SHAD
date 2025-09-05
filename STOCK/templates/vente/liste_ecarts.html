@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2><i class="fas fa-exclamation-triangle"></i> Historique des écarts de caisse</h2>
+    
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Date</th>
+                            <th>Clôture</th>
+                            <th>Type</th>
+                            <th>Montant</th>
+                            <th>Vendeur</th>
+                            <th>Contact</th>
+                            <th>Notification</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ecart in ecarts %}
+                        <tr class="{% if ecart.type_ecart == 'manquant' %}table-danger{% else %}table-success{% endif %}">
+                            <td>{{ ecart.date_decouverte|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <a href="{% url 'rapport_cloture' pk=ecart.cloture.id %}" class="badge bg-primary">
+                                    #{{ ecart.cloture.id }}
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if ecart.type_ecart == 'manquant' %}danger{% else %}success{% endif %}">
+                                    {{ ecart.get_type_ecart_display }}
+                                </span>
+                            </td>
+                            <td><strong>{{ ecart.montant|floatformat:2 }} €</strong></td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm me-2">
+                                        <span class="avatar-title bg-light text-dark rounded-circle">
+                                            {{ ecart.cloture.vendeur.first_name|first }}{{ ecart.cloture.vendeur.last_name|first }}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        {{ ecart.cloture.vendeur.get_full_name|default:ecart.cloture.vendeur.username }}
+                                        <small class="d-block text-muted">@{{ ecart.cloture.vendeur.username }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                {% if ecart.cloture.vendeur.email %}
+                                <a href="mailto:{{ ecart.cloture.vendeur.email }}" class="text-primary">
+                                    <i class="fas fa-envelope"></i> {{ ecart.cloture.vendeur.email }}
+                                </a>
+                                {% else %}
+                                <span class="text-muted">Non renseigné</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if ecart.notifie_admin %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle"></i> Notifié le {{ ecart.date_decouverte|date:"d/m/Y" }}
+                                </span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-exclamation-circle"></i> Non notifié
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#detailEcart{{ ecart.id }}">
+                                    <i class="fas fa-eye"></i> Détails
+                                </button>
+                            </td>
+                        </tr>
+                        
+                        <!-- Modal pour les détails -->
+                        <div class="modal fade" id="detailEcart{{ ecart.id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header bg-{% if ecart.type_ecart == 'manquant' %}danger{% else %}success{% endif %} text-white">
+                                        <h5 class="modal-title">Détails de l'écart #{{ ecart.id }}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <h6>Informations clôture</h6>
+                                                <ul class="list-group list-group-flush">
+                                                    <li class="list-group-item">
+                                                        <strong>Date:</strong> {{ ecart.cloture.date_jour|date:"d/m/Y" }}
+                                                    </li>
+                                                    <li class="list-group-item">
+                                                        <strong>Total vendu:</strong> {{ ecart.cloture.montant_total|floatformat:2 }} €
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <h6>Détails vendeur</h6>
+                                                <ul class="list-group list-group-flush">
+                                                    <li class="list-group-item">
+                                                        <strong>Nom:</strong> {{ ecart.cloture.vendeur.get_full_name }}
+                                                    </li>
+                                                    <li class="list-group-item">
+                                                        <strong>Dernière connexion:</strong> 
+                                                        {% if ecart.cloture.vendeur.last_login %}
+                                                            {{ ecart.cloture.vendeur.last_login|timesince }}
+                                                        {% else %}
+                                                            Jamais
+                                                        {% endif %}
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <h6>Commentaire</h6>
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    {{ ecart.commentaire|default:"Aucun commentaire"|linebreaks }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                                        {% if not ecart.notifie_admin %}
+                                        <a href="{% url 'notifier_ecart' ecart.id %}" class="btn btn-primary">
+                                            <i class="fas fa-paper-plane"></i> Notifier maintenant
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-4">
+                                <i class="fas fa-check-circle fa-2x text-success mb-3"></i>
+                                <h5>Aucun écart enregistré</h5>
+                                <p class="text-muted">Toutes les clôtures correspondent aux ventes enregistrées</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,257 @@
+from django.db import models
+from django.contrib.auth.models import AbstractUser, Group, Permission
+from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import ValidationError
+from django.conf import settings
+import os
+from django.utils import timezone
+import os
+import re
+from io import BytesIO
+from django.db import models
+from django.conf import settings
+from django.core.files.base import ContentFile
+import cairosvg
+import base64
+import re
+
+
+class UtilisateurPersonnalise(AbstractUser):
+    ROLES = (
+        ('ADMIN', 'Administrateur'),
+        ('MANAGER', 'Manager'),
+        ('CAISSIER', 'Caissier'),
+        ('VENDEUR', 'Vendeur'),
+        ('STOCK', 'Gestionnaire de Stock'),
+    )
+    
+    role = models.CharField(max_length=20, choices=ROLES, default='ADMIN')
+    telephone = models.CharField(max_length=20, blank=True, null=True)
+    est_actif = models.BooleanField(default=True)
+    entreprise = models.ForeignKey(
+        'parametres.Entreprise', # <-- CORRECTION ICI
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='utilisateurs',
+        verbose_name=_("Entreprise associée")
+    )
+ # Champ pour les admins SaaS
+    is_saas_admin = models.BooleanField(
+        default=False,
+        verbose_name="Administrateur SaaS",
+        help_text="Accès complet à toutes les entreprises"
+    )
+    class Meta(AbstractUser.Meta):
+        verbose_name = _('Utilisateur')
+        verbose_name_plural = _('Utilisateurs')
+        permissions = [
+            # Permissions générales
+            ('acces_dashboard', 'Accès au tableau de bord'),
+            ('gerer_utilisateurs', 'Peut gérer les utilisateurs'),
+            ('voir_statistiques', 'Peut voir les statistiques'),
+            ('gerer_stock', 'Peut gérer le stock'),
+            ('effectuer_vente', 'Peut effectuer des ventes'),
+            ('historique_vente', 'Peut voir historique des ventes'),
+            
+            # Permissions pour les modèles STOCK
+            # Clients
+            ('view_client', 'Peut voir les clients'),
+            ('add_client', 'Peut ajouter des clients'),
+            ('change_client', 'Peut modifier des clients'),
+            ('delete_client', 'Peut supprimer des clients'),
+            
+            ('view_entreprise', 'Voir les entreprises'),
+            ('change_abonnement', 'Modifier les abonnements'),
+            
+            # Produits
+            ('view_produit', 'Peut voir les produits'),
+            ('add_produit', 'Peut ajouter des produits'),
+            ('change_produit', 'Peut modifier des produits'),
+            ('delete_produit', 'Peut supprimer des produits'),
+            
+            # Catégories
+            ('view_categorie', 'Peut voir les catégories'),
+            ('add_categorie', 'Peut ajouter des catégories'),
+            ('change_categorie', 'Peut modifier des catégories'),
+            ('delete_categorie', 'Peut supprimer des catégories'),
+            
+            # Commandes
+            ('add_commande', 'Créer des commandes'),
+            ('view_commande', 'Voir les commandes'),
+            ('change_commande', 'Modifier les commandes'),
+            ('delete_commande', 'Supprimer des commandes'),
+            ('valider_commande', 'Valider des commandes'),
+            
+            ('gerer_caisse', 'Gérer la caisse'),
+            ('export_commande', 'Exporter des commandes'),
+                
+            # Fournisseurs
+            ('view_fournisseur', 'Peut voir les fournisseurs'),
+            ('add_fournisseur', 'Peut ajouter des fournisseurs'),
+            ('change_fournisseur', 'Peut modifier des fournisseurs'),
+            ('delete_fournisseur', 'Peut supprimer des fournisseurs'),
+            
+            # Achats
+            ('view_achat', 'Peut voir les achats'),
+            ('add_achat', 'Peut enregistrer des achats'),
+            ('change_achat', 'Peut modifier des achats'),
+            ('delete_achat', 'Peut supprimer des achats'),
+            
+            # Inventaires
+            ('view_inventaire', 'Peut voir les inventaires'),
+            ('add_inventaire', 'Peut créer des inventaires'),
+            ('change_inventaire', 'Peut modifier des inventaires'),
+            ('confirm_inventaire', 'Peut confirmer des inventaires'),
+            
+            # Paramètres
+            ('view_parametre', 'Peut voir les paramètres'),
+            ('change_parametre', 'Peut modifier les paramètres'),
+            
+            # Rapports
+            ('view_rapport', 'Peut voir les rapports'),
+            ('generate_rapport', 'Peut générer des rapports'),
+            
+            # Trésorerie
+            ('view_tresorerie', 'Peut voir la trésorerie'),
+            ('manage_tresorerie', 'Peut gérer la trésorerie'),
+            
+            # Sauvegardes
+            ('view_backup', 'Peut voir les sauvegardes'),
+            ('create_backup', 'Peut créer des sauvegardes'),
+            ('restore_backup', 'Peut restaurer des sauvegardes'),
+            
+            # Promotions
+            ('view_promotion', 'Peut voir les promotions'),
+            ('add_promotion', 'Peut ajouter des promotions'),
+            ('change_promotion', 'Peut modifier des promotions'),
+            ('delete_promotion', 'Peut supprimer des promotions'),
+            ('apply_promotion', 'Peut appliquer des promotions'),
+            
+            # Notifications
+            ('view_notification', 'Peut voir les notifications'),
+            ('manage_notification', 'Peut gérer les notifications'),
+            
+            # Permissions supplémentaires spécifiques
+            ('can_manage_promotions', 'Peut gérer les promotions'),
+        ]
+  
+    def __str__(self):
+        # Afficher l'entreprise dans la représentation de l'utilisateur
+        if self.entreprise:
+            return f"{self.get_full_name()} ({self.get_role_display()}) - {self.entreprise.nom}"
+        return f"{self.get_full_name()} ({self.get_role_display()})"
+    def __str__(self):
+            if self.is_saas_admin:
+                return f"[SAAS] {self.get_full_name()}"
+            return f"{self.get_full_name()} ({self.entreprise.nom if self.entreprise else 'Sans entreprise'})"
+
+    def save(self, *args, **kwargs):
+            """S'assure que le rôle correspond au statut admin SaaS"""
+            if self.is_saas_admin:
+                self.role = 'SAAS_ADMIN'
+            super().save(*args, **kwargs)
+
+class ProfilUtilisateur(models.Model):
+    utilisateur = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='profil'
+    )
+    photo = models.ImageField(
+        upload_to='profils/%Y/%m/%d/',
+        blank=True,
+        null=True
+    )
+    poste = models.CharField(max_length=100, blank=True, default='')
+    date_embauche = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True, null=True)
+
+    signature = models.ImageField(
+        upload_to='signatures/%Y/%m/%d/',
+        blank=True,
+        null=True,
+        help_text="Signature numérique de l'utilisateur (format image)"
+    )
+    signature_svg = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Signature au format SVG (dessin)"
+    )
+    signature_date = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Date de création de la signature"
+    )
+
+    def __str__(self):
+        return f"Profil de {self.utilisateur.username}"
+
+    def save(self, *args, **kwargs):
+        # Assigner le poste automatiquement si vide
+        if not self.poste and hasattr(self.utilisateur, 'get_role_display'):
+            self.poste = self.utilisateur.get_role_display()
+
+        # Sauvegarde initiale
+        is_new_svg = self.signature_svg and not self.signature
+        super().save(*args, **kwargs)
+
+        # Générer la signature PNG si nécessaire
+        if is_new_svg:
+            self.convert_svg_to_png()
+            super().save(update_fields=['signature'])
+
+    def convert_svg_to_png(self):
+        """
+        Convertit le contenu SVG (encodé en base64) en PNG et le stocke dans le champ 'signature'.
+        """
+        try:
+            svg_data = self.signature_svg
+
+            # Vérifie et extrait le contenu base64
+            if svg_data.startswith('data:image/svg+xml;base64,'):
+                base64_data = svg_data.split(',')[1]
+                decoded_svg = base64.b64decode(base64_data).decode('utf-8')
+            else:
+                decoded_svg = svg_data  # au cas où on stocke le XML brut
+
+            # Nettoyage du SVG (facultatif)
+            cleaned_svg = re.sub(r'width="[^"]*"', '', decoded_svg)
+            cleaned_svg = re.sub(r'height="[^"]*"', '', cleaned_svg)
+
+            # Conversion en PNG
+            png_data = cairosvg.svg2png(bytestring=cleaned_svg.encode('utf-8'))
+
+            # Sauvegarde dans le champ ImageField
+            filename = f"signature_{self.utilisateur.username}.png"
+            self.signature.save(filename, ContentFile(png_data), save=False)
+
+        except Exception as e:
+            print(f"Erreur lors de la conversion SVG -> PNG : {e}")
+
+    
+
+class JournalActivite(models.Model):
+    ACTION_TYPES = (
+        ('CONNEXION', 'Connexion'),
+        ('DECONNEXION', 'Déconnexion'),
+        ('CREATION', 'Création'),
+        ('MODIFICATION', 'Modification'),
+        ('SUPPRESSION', 'Suppression'),
+        ('ACCES', 'Accès'),
+    )
+    
+    utilisateur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    action = models.CharField(max_length=20, choices=ACTION_TYPES)
+    details = models.TextField()
+    ip_address = models.GenericIPAddressField()
+    date_heure = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = _('Journal d\'activité')
+        verbose_name_plural = _('Journaux d\'activité')
+        ordering = ['-date_heure']
+    
+    def __str__(self):
+        return f"{self.utilisateur} - {self.get_action_display()} - {self.date_heure}"
+    

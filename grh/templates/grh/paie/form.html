@@ -1,0 +1,421 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">
+                        <i class="fas fa-file-invoice-dollar me-2"></i>
+                        {% if object %}
+                            {% trans "Modifier le bulletin de paie" %}
+                        {% else %}
+                            {% trans "Nouveau bulletin de paie" %}
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="bulletin-form">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-primary mb-3">{% trans "Informations de base" %}</h6>
+                                {{ form.employe|as_crispy_field }}
+                                {{ form.contrat|as_crispy_field }}
+                                {{ form.periode|as_crispy_field }}
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        {{ form.jours_travailles|as_crispy_field }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.heures_travaillees|as_crispy_field }}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6 class="text-primary mb-3">{% trans "Montants" %}</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        {{ form.salaire_brut|as_crispy_field }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.total_cotisations|as_crispy_field }}
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        {{ form.salaire_net|as_crispy_field }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        {{ form.net_a_payer|as_crispy_field }}
+                                    </div>
+                                </div>
+                                
+                                <h6 class="text-primary mb-3 mt-4">{% trans "Document" %}</h6>
+                                {{ form.fichier_bulletin|as_crispy_field }}
+                                
+                                {% if object and object.fichier_bulletin %}
+                                <div class="mt-2">
+                                    <small class="text-muted">{% trans "Fichier actuel" %}:</small>
+                                    <br>
+                                    <a href="{{ object.fichier_bulletin.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-download me-1"></i> {% trans "Télécharger" %}
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Lignes du bulletin -->
+                        <h6 class="text-primary mb-3 mt-4">{% trans "Détail des gains et retenues" %}</h6>
+                        {{ formset.management_form }}
+                        <div id="formset-container">
+                            {% for form in formset %}
+                            <div class="row formset-row mb-2">
+                                <div class="col-md-3">
+                                    {{ form.type_ligne|as_crispy_field }}
+                                </div>
+                                <div class="col-md-4">
+                                    {{ form.libelle|as_crispy_field }}
+                                </div>
+                                <div class="col-md-3">
+                                    {{ form.montant|as_crispy_field }}
+                                </div>
+                                <div class="col-md-2">
+                                    {{ form.ordre|as_crispy_field }}
+                                    {% if form.DELETE %}
+                                    <div class="mt-4">
+                                        {{ form.DELETE|as_crispy_field }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <button type="button" id="add-form" class="btn btn-sm btn-outline-secondary mt-2">
+                            <i class="fas fa-plus me-1"></i> {% trans "Ajouter une ligne" %}
+                        </button>
+                        
+                        <!-- Bouton de calcul automatique -->
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <button type="button" class="btn btn-outline-primary mb-3" onclick="calculerPaie()">
+                                    <i class="fas fa-calculator me-2"></i>{% trans "Calculer automatiquement" %}
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>
+                                {% if object %}{% trans "Modifier" %}{% else %}{% trans "Créer" %}{% endif %}
+                            </button>
+                            <a href="{% url 'grh:bulletin_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times me-2"></i>{% trans "Annuler" %}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Fonction pour afficher des messages toast
+function showToast(message, type = 'info') {
+    // Supprimer les anciens toasts
+    document.querySelectorAll('.alert-toast').forEach(toast => toast.remove());
+    
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} alert-dismissible fade show alert-toast`;
+    toast.style.position = 'fixed';
+    toast.style.top = '20px';
+    toast.style.right = '20px';
+    toast.style.zIndex = '1060';
+    toast.style.minWidth = '300px';
+    
+    let icon = 'info-circle';
+    if (type === 'success') icon = 'check-circle';
+    if (type === 'error') icon = 'exclamation-circle';
+    if (type === 'warning') icon = 'exclamation-triangle';
+    
+    toast.innerHTML = `
+        <i class="fas fa-${icon} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.remove();
+        }
+    }, 5000);
+}
+
+// Fonction pour réinitialiser les champs
+function reinitialiserChampsPaie() {
+    const champs = ['salaire_brut', 'total_cotisations', 'salaire_net', 'net_a_payer', 'jours_travailles', 'heures_travaillees'];
+    champs.forEach(champ => {
+        const element = document.getElementById(`id_${champ}`);
+        if (element) element.value = '';
+    });
+}
+
+// Fonction pour générer les lignes du bulletin
+function genererLignesBulletin(lignes) {
+    const formsetContainer = document.getElementById('formset-container');
+    const totalForms = document.getElementById('id_form-TOTAL_FORMS');
+    const formPrefix = 'form';
+    
+    if (!formsetContainer || !totalForms) return;
+    
+    // Vider les lignes existantes (sauf le template)
+    const existingRows = formsetContainer.querySelectorAll('.formset-row');
+    for (let i = 0; i < existingRows.length; i++) {
+        existingRows[i].remove();
+    }
+    
+    // Mettre à jour le nombre total de forms
+    totalForms.value = lignes.length;
+    
+    // Ajouter les nouvelles lignes
+    lignes.forEach((ligne, index) => {
+        const newRow = document.createElement('div');
+        newRow.className = 'row formset-row mb-2';
+        newRow.innerHTML = `
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label>Type ligne</label>
+                    <select name="${formPrefix}-${index}-type_ligne" class="form-control">
+                        <option value="GAINS" ${ligne.type_ligne === 'GAINS' ? 'selected' : ''}>Gains</option>
+                        <option value="RETENUES" ${ligne.type_ligne === 'RETENUES' ? 'selected' : ''}>Retenues</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-group">
+                    <label>Libellé</label>
+                    <input type="text" name="${formPrefix}-${index}-libelle" value="${ligne.libelle}" class="form-control">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label>Montant</label>
+                    <input type="number" name="${formPrefix}-${index}-montant" value="${parseFloat(ligne.montant).toFixed(2)}" step="0.01" class="form-control">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <div class="form-group">
+                    <label>Ordre</label>
+                    <input type="number" name="${formPrefix}-${index}-ordre" value="${ligne.ordre}" class="form-control">
+                </div>
+                <input type="hidden" name="${formPrefix}-${index}-id">
+                <input type="hidden" name="${formPrefix}-${index}-DELETE">
+            </div>
+        `;
+        formsetContainer.appendChild(newRow);
+    });
+}
+
+// Fonction pour calculer automatiquement la paie
+async function calculerPaie() {
+    const employeId = document.getElementById('id_employe').value;
+    const periode = document.getElementById('id_periode').value;
+    
+    if (!employeId || !periode) {
+        showToast('Veuillez sélectionner un employé et une période', 'warning');
+        return;
+    }
+    
+    try {
+        // Afficher un indicateur de chargement
+        const boutonCalcul = document.querySelector('button[onclick="calculerPaie()"]');
+        const texteOriginal = boutonCalcul.innerHTML;
+        boutonCalcul.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Calcul en cours...';
+        boutonCalcul.disabled = true;
+        
+        // Appeler l'API pour calculer la paie
+        const response = await fetch(`/grh/api/calculer-paie/?employe=${employeId}&periode=${periode}`);
+        
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP! statut: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Réponse API:', data);
+        
+        if (data.success) {
+            // Remplir automatiquement les champs avec 2 décimales
+            document.getElementById('id_salaire_brut').value = parseFloat(data.salaire_brut).toFixed(2);
+            document.getElementById('id_total_cotisations').value = parseFloat(data.total_cotisations).toFixed(2);
+            document.getElementById('id_salaire_net').value = parseFloat(data.salaire_net).toFixed(2);
+            document.getElementById('id_net_a_payer').value = parseFloat(data.net_a_payer).toFixed(2);
+            document.getElementById('id_jours_travailles').value = data.jours_travailles;
+            document.getElementById('id_heures_travaillees').value = parseFloat(data.heures_travaillees).toFixed(2);
+            
+            // Sélectionner automatiquement le contrat
+            if (data.contrat_id) {
+                document.getElementById('id_contrat').value = data.contrat_id;
+            }
+            
+            // Générer automatiquement les lignes détaillées
+            if (data.lignes && data.lignes.length > 0) {
+                genererLignesBulletin(data.lignes);
+            }
+            
+            // Afficher un message de succès
+            showToast(data.message || 'Calcul effectué avec succès: ' + parseFloat(data.salaire_brut).toFixed(2) + ' €', 'success');
+            
+        } else {
+            // Afficher le message d'erreur
+            showToast(data.message || 'Erreur lors du calcul', 'error');
+            reinitialiserChampsPaie();
+        }
+        
+    } catch (error) {
+        console.error('Erreur calcul paie:', error);
+        showToast('Erreur de connexion lors du calcul automatique', 'error');
+        reinitialiserChampsPaie();
+    } finally {
+        // Restaurer le bouton
+        const boutonCalcul = document.querySelector('button[onclick="calculerPaie()"]');
+        if (boutonCalcul) {
+            boutonCalcul.innerHTML = '<i class="fas fa-calculator me-2"></i>Calculer automatiquement';
+            boutonCalcul.disabled = false;
+        }
+    }
+}
+
+// Gestion du formulaire dynamique
+function setupFormset() {
+    const addButton = document.getElementById('add-form');
+    const totalForms = document.getElementById('id_form-TOTAL_FORMS');
+    const formsetContainer = document.getElementById('formset-container');
+    
+    if (addButton && totalForms && formsetContainer) {
+        addButton.addEventListener('click', function() {
+            const formCount = parseInt(totalForms.value);
+            const formPrefix = 'form';
+            const newRow = document.createElement('div');
+            newRow.className = 'row formset-row mb-2';
+            
+            newRow.innerHTML = `
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>Type ligne</label>
+                        <select name="${formPrefix}-${formCount}-type_ligne" class="form-control">
+                            <option value="GAINS">Gains</option>
+                            <option value="RETENUES">Retenues</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label>Libellé</label>
+                        <input type="text" name="${formPrefix}-${formCount}-libelle" class="form-control">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="form-group">
+                        <label>Montant</label>
+                        <input type="number" name="${formPrefix}-${formCount}-montant" step="0.01" class="form-control">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label>Ordre</label>
+                        <input type="number" name="${formPrefix}-${formCount}-ordre" value="${formCount}" class="form-control">
+                    </div>
+                    <input type="hidden" name="${formPrefix}-${formCount}-id">
+                    <input type="hidden" name="${formPrefix}-${formCount}-DELETE">
+                </div>
+            `;
+            
+            formsetContainer.appendChild(newRow);
+            totalForms.value = formCount + 1;
+        });
+    }
+}
+
+// Initialisation au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    // Forcer le type month sur le champ période
+    const periodeInput = document.getElementById('id_periode');
+    if (periodeInput) {
+        periodeInput.type = 'month';
+    }
+    
+    // Écouter les changements sur les champs employé et période
+    const employeSelect = document.getElementById('id_employe');
+    if (employeSelect) {
+        employeSelect.addEventListener('change', function() {
+            if (this.value && periodeInput && periodeInput.value) {
+                calculerPaie();
+            }
+        });
+    }
+    
+    if (periodeInput) {
+        periodeInput.addEventListener('change', function() {
+            if (this.value && employeSelect && employeSelect.value) {
+                calculerPaie();
+            }
+        });
+    }
+    
+    // Configurer le formulaire dynamique
+    setupFormset();
+    
+    // Calcul automatique si des valeurs sont pré-remplies
+    if (employeSelect && employeSelect.value && periodeInput && periodeInput.value) {
+        setTimeout(calculerPaie, 1000);
+    }
+});
+</script>
+
+<style>
+.formset-row {
+    border: 1px solid #e9ecef;
+    padding: 15px;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+}
+
+.formset-row + .formset-row {
+    margin-top: 10px;
+}
+
+.alert {
+    border-left: 4px solid;
+}
+
+.alert-success {
+    border-left-color: #28a745;
+}
+
+.alert-error {
+    border-left-color: #dc3545;
+}
+
+.alert-warning {
+    border-left-color: #ffc107;
+}
+
+.alert-info {
+    border-left-color: #17a2b8;
+}
+</style>
+{% endblock %}

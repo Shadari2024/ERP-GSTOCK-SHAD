@@ -1,0 +1,383 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="chatbot-app">
+    <!-- Sidebar avec fonctionnalités -->
+    <div class="chatbot-sidebar">
+        <div class="sidebar-header">
+            <h3>Fonctionnalités</h3>
+        </div>
+        
+        <div class="features-categories">
+            <div class="category">
+                <h4>📦 Gestion de Stock</h4>
+                <button class="feature-btn" data-question="Liste des produits en rupture de stock">
+                    Ruptures de stock
+                </button>
+                <button class="feature-btn" data-question="Produits à réapprovisionner">
+                    Réapprovisionnement
+                </button>
+                <button class="feature-btn" data-question="Niveaux de stock par catégorie">
+                    Stock par catégorie
+                </button>
+            </div>
+            
+            <div class="category">
+                <h4>💰 Analyse Commerciale</h4>
+                <button class="feature-btn" data-question="Top 5 ventes ce mois">
+                    Meilleures ventes
+                </button>
+                <button class="feature-btn" data-question="Produits les plus rentables">
+                    Rentabilité
+                </button>
+                <button class="feature-btn" data-question="Chiffre d'affaires mensuel">
+                    Performance
+                </button>
+            </div>
+            
+            <div class="category">
+                <h4>👥 Gestion Clients</h4>
+                <button class="feature-btn" data-question="Clients avec impayés">
+                    Impayés
+                </button>
+                <button class="feature-btn" data-question="Meilleurs clients cette année">
+                    Clients fidèles
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Zone de conversation principale -->
+    <div class="chatbot-main">
+        <div class="chat-header">
+            <div class="header-content">
+                <h2>Assistant Intelligent</h2>
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span>En ligne</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-messages" id="chatMessages">
+            <div class="welcome-message">
+                <div class="bot-message">
+                    <strong>🤖 Assistant:</strong> Bonjour {{ user.username }}! Je suis votre assistant pour la gestion de stock et ventes. Posez-moi vos questions ou sélectionnez une fonctionnalité à gauche.
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-input-container">
+            <form id="chatForm" method="post">
+                {% csrf_token %}
+                <div class="input-group">
+                    <input type="text" id="userInput" placeholder="Posez votre question ici..." autocomplete="off">
+                    <button type="submit" class="send-btn">
+                        <i class="fas fa-paper-plane"></i> Envoyer
+                    </button>
+                </div>
+                <div class="suggestions">
+                    <small>Exemples: "Ventes du produit X", "Stock actuel", "Clients en retard de paiement"</small>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+:root {
+    --primary-color: #4361ee;
+    --secondary-color: #3f37c9;
+    --accent-color: #4cc9f0;
+    --dark-color: #2b2d42;
+    --light-color: #f8f9fa;
+    --success-color: #4caf50;
+    --warning-color: #ff9800;
+    --danger-color: #f44336;
+    --border-radius: 8px;
+    --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.chatbot-app {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    height: calc(100vh - 80px);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Sidebar Styles */
+.chatbot-sidebar {
+    background-color: white;
+    border-right: 1px solid #e0e0e0;
+    overflow-y: auto;
+    padding: 1rem;
+}
+
+.sidebar-header {
+    padding: 1rem 0;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 1rem;
+}
+
+.sidebar-header h3 {
+    margin: 0;
+    color: var(--dark-color);
+    font-size: 1.2rem;
+}
+
+.features-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.category h4 {
+    margin: 0 0 0.8rem 0;
+    color: var(--secondary-color);
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.feature-btn {
+    width: 100%;
+    padding: 0.7rem;
+    margin-bottom: 0.5rem;
+    background-color: var(--light-color);
+    border: 1px solid #e0e0e0;
+    border-radius: var(--border-radius);
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.9rem;
+}
+
+.feature-btn:hover {
+    background-color: #f0f0f0;
+    transform: translateX(3px);
+}
+
+/* Main Chat Area */
+.chatbot-main {
+    display: flex;
+    flex-direction: column;
+    background-color: #f5f7fb;
+}
+
+.chat-header {
+    background-color: white;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    z-index: 10;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-content h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: var(--dark-color);
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.status-dot {
+    width: 10px;
+    height: 10px;
+    background-color: var(--success-color);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.chat-messages {
+    flex: 1;
+    padding: 1.5rem;
+    overflow-y: auto;
+    background-color: #f5f7fb;
+    background-image: radial-gradient(#e3e3e3 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+.message {
+    max-width: 75%;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    line-height: 1.5;
+    position: relative;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.user-message {
+    background-color: var(--primary-color);
+    color: white;
+    margin-left: auto;
+    border-bottom-right-radius: 0;
+}
+
+.bot-message {
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    margin-right: auto;
+    border-bottom-left-radius: 0;
+    box-shadow: var(--box-shadow);
+}
+
+.welcome-message {
+    margin-bottom: 1.5rem;
+}
+
+.chat-input-container {
+    padding: 1rem;
+    background-color: white;
+    border-top: 1px solid #e0e0e0;
+}
+
+.input-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+#userInput {
+    flex: 1;
+    padding: 0.8rem 1rem;
+    border: 1px solid #e0e0e0;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: border 0.2s;
+}
+
+#userInput:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(76, 201, 240, 0.2);
+}
+
+.send-btn {
+    padding: 0 1.5rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.send-btn:hover {
+    background-color: var(--secondary-color);
+}
+
+.suggestions {
+    margin-top: 0.5rem;
+    color: #666;
+    font-size: 0.8rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .chatbot-app {
+        grid-template-columns: 1fr;
+    }
+    
+    .chatbot-sidebar {
+        display: none; /* Ou implémentez un menu mobile */
+    }
+}
+</style>
+
+<!-- Font Awesome pour les icônes -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('userInput');
+    const chatMessages = document.getElementById('chatMessages');
+    const featureBtns = document.querySelectorAll('.feature-btn');
+    
+    // Gestion des boutons de fonctionnalités
+    featureBtns.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const question = this.dataset.question;
+            sendMessage(question);
+        });
+    });
+    
+    // Gestion du formulaire
+    chatForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const message = chatInput.value.trim();
+        if (message) {
+            sendMessage(message);
+        }
+    });
+    
+    function sendMessage(message) {
+        // Afficher le message utilisateur
+        displayMessage(message, 'user');
+        chatInput.value = '';
+        
+        // Envoyer la requête au serveur
+        fetch("{% url 'chatbot_query' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: `query=${encodeURIComponent(message)}`
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Erreur serveur');
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+            displayMessage(data.response, 'bot');
+        })
+        .catch(error => {
+            displayMessage(`Désolé, une erreur est survenue: ${error.message}`, 'error');
+        });
+    }
+    
+    function displayMessage(content, type) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${type}-message`;
+        
+        // Formater les retours à la ligne et les listes
+        let formattedContent = content.replace(/\n/g, '<br>');
+        formattedContent = formattedContent.replace(/- (.*?)(<br>|$)/g, '• $1<br>');
+        
+        msgDiv.innerHTML = formattedContent;
+        chatMessages.appendChild(msgDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+});
+</script>
+{% endblock %}

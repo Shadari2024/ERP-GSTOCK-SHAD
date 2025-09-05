@@ -1,0 +1,463 @@
+def statistiques(request):
+    aujourd_hui = now().date()
+
+    # Montant total des ventes du jour
+    ventes_du_jour = Commande.objects.filter(date_commande__date=aujourd_hui)
+    total_journalier = ventes_du_jour.aggregate(total=Sum('montant_total'))['total'] or 0
+
+    # Nombre total de transactions
+    total_transactions = ventes_du_jour.count()
+
+    # Produits les plus vendus aujourd’hui (avec CA et part de marché)
+    produits_stats = (
+        LigneCommande.objects
+        .filter(commande__date_commande__date=aujourd_hui)
+        .values(nom=F('produit__nom'))
+        .annotate(
+            qte_totale=Sum('quantite'),
+            ca_produit=Sum(F('quantite') * F('prix_unitaire'))
+        )
+        .order_by('-qte_totale')[:5]
+    )
+
+    total_produits_vendus = sum([p['qte_totale'] for p in produits_stats]) or 1  # éviter division par 0
+
+    for produit in produits_stats:
+        produit['part_market'] = (produit['qte_totale'] / total_produits_vendus) * 100
+        produit['reference'] = ''  # Ajoute ici si besoin
+
+    # Nombre total de produits vendus
+    total_produits = sum([p['qte_totale'] for p in produits_stats])
+
+    # Performance des vendeurs (CA, nb transactions, %)
+    vendeurs_stats = (
+        ventes_du_jour
+        .values(nom=F('vendeur__username'))
+        .annotate(
+            total_vendeur=Sum('montant_total'),
+            nb_ventes=Count('id')
+        )
+        .order_by('-total_vendeur')
+    )
+
+    for vendeur in vendeurs_stats:
+        vendeur['performance'] = (vendeur['total_vendeur'] / total_journalier * 100) if total_journalier > 0 else 0
+        if vendeur['performance'] >= 50:
+            vendeur['perf_color'] = 'success'
+            vendeur['perf_icon'] = 'arrow-up'
+        elif vendeur['performance'] >= 20:
+            vendeur['perf_color'] = 'warning'
+            vendeur['perf_icon'] = 'arrow-right'
+        else:
+            vendeur['perf_color'] = 'danger'
+            vendeur['perf_icon'] = 'arrow-down'
+
+    return render(request, 'stat/statistiquesVente.html', {
+        'total_journalier': total_journalier,
+        'total_transactions': total_transactions,
+        'total_produits': total_produits,
+        'produits_populaires': produits_stats,
+        'performance_vendeurs': vendeurs_stats,
+        'now': now(),
+    })
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    {% extends "base.html" %}
+{% load custom_filters %}
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête avec sélecteur de devise -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">
+            <i class="fas fa-shopping-cart text-primary me-2"></i>Historique des Achats
+        </h2>
+        <div class="d-flex align-items-center">
+            <div class="input-group input-group-sm me-3" style="width: 150px;">
+                <span class="input-group-text bg-white"><i class="fas fa-coins"></i></span>
+                <select id="select-devise" class="form-select border-start-0">
+                    {% for devise in devises_disponibles %}
+                        <option value="{{ devise }}" {% if devise == devise_affichee %}selected{% endif %}>
+                            {{ devise }} ({{ devise_symbols|get_dict_item:devise }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <a href="{% url 'achat_create' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus me-1"></i> Nouvel achat
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-body p-3">
+            <form method="get" class="row g-2" id="filter-form">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted mb-1">Date début</label>
+                    <input type="date" name="date_debut" class="form-control form-control-sm" 
+                           value="{{ date_debut }}" id="date-debut">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted mb-1">Date fin</label>
+                    <input type="date" name="date_fin" class="form-control form-control-sm" 
+                           value="{{ date_fin }}" id="date-fin">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small text-muted mb-1">Fournisseur</label>
+                    <select name="fournisseur" class="form-select form-select-sm" id="select-fournisseur">
+                        <option value="">Tous les fournisseurs</option>
+                        {% for f in fournisseurs %}
+                        <option value="{{ f.id }}" 
+                                {% if selected_fournisseur == f.id|stringformat:"s" %}selected{% endif %}>
+                            {{ f.nom }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                        <i class="fas fa-filter me-1"></i> Filtrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Cartes indicateurs -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-2">Total Achats</h6>
+                            <h4 class="mb-0 text-primary" id="total-achats">{{ total_achats|floatformat:2 }} {{ devise_symbols|get_dict_item:devise_affichee }}</h4>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-receipt text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-2">Quantité Totale</h6>
+                            <h4 class="mb-0 text-success">{{ total_quantite }}</h4>
+                        </div>
+                        <div class="bg-success bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-boxes text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-2">Nombre d'Achats</h6>
+                            <h4 class="mb-0 text-info">{{ achats_count }}</h4>
+                        </div>
+                        <div class="bg-info bg-opacity-10 p-3 rounded">
+                            <i class="fas fa-list text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau des achats -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Date</th>
+                            <th>Fournisseur</th>
+                            <th>Produit</th>
+                            <th class="text-end">Quantité</th>
+                            <th class="text-end">Prix unitaire</th>
+                            <th class="text-end pe-4">Total</th>
+                            <th class="text-center" style="width: 120px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for achat in achats %}
+                        <tr class="achat-row" data-devise="{{ achat.devise }}" 
+                            data-prix="{{ achat.prix_unitaire }}" 
+                            data-total="{{ achat.total_achat }}">
+                            <td class="ps-4">{{ achat.date_achat|date:"d/m/Y" }}</td>
+                            <td>{{ achat.fournisseur.nom }}</td>
+                            <td>{{ achat.produit.nom }}</td>
+                            <td class="text-end">{{ achat.quantite }}</td>
+                            <td class="text-end prix-cell">
+                                {% if achat.devise != devise_affichee %}
+                                    <span class="text-muted original">{{ achat.prix_unitaire|floatformat:2 }} {{ devise_symbols|get_dict_item:achat.devise }}</span>
+                                    <div class="fw-bold converted">{{ achat.prix_unitaire_converti|floatformat:2|default:achat.prix_unitaire }} {{ devise_symbols|get_dict_item:devise_affichee }}</div>
+                                {% else %}
+                                    {{ achat.prix_unitaire|floatformat:2 }} {{ devise_symbols|get_dict_item:devise_affichee }}
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4 total-cell">
+                                {% if achat.devise != devise_affichee %}
+                                    <span class="text-muted original">{{ achat.total_achat|floatformat:2 }} {{ devise_symbols|get_dict_item:achat.devise }}</span>
+                                    <div class="fw-bold converted">{{ achat.total_converti|floatformat:2|default:achat.total_achat }} {{ devise_symbols|get_dict_item:devise_affichee }}</div>
+                                {% else %}
+                                    {{ achat.total_achat|floatformat:2 }} {{ devise_symbols|get_dict_item:devise_affichee }}
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                            id="dropdownMenuButton{{ forloop.counter }}" 
+                                            data-bs-toggle="dropdown" 
+                                            aria-expanded="false">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end" 
+                                        aria-labelledby="dropdownMenuButton{{ forloop.counter }}">
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'achat_detail' achat.pk %}">
+                                                <i class="fas fa-eye me-2 text-info"></i> Détails
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'achat_pdf' achat.pk %}" target="_blank">
+                                                <i class="fas fa-file-pdf me-2 text-danger"></i> PDF
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'retour_fournisseur' achat.pk %}">
+                                                <i class="fas fa-undo me-2 text-warning"></i> Retour
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">Aucun achat enregistré</h5>
+                                <p class="text-muted">Commencez par enregistrer un nouvel achat</p>
+                                <a href="{% url 'achat_create' %}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus me-1"></i> Ajouter un achat
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?{% param_replace request page=1 %}" aria-label="Première">
+                    &laquo;
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% param_replace request page=page_obj.previous_page_number %}" aria-label="Précédent">
+                    &lsaquo;
+                </a>
+            </li>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?{% param_replace request page=num %}">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?{% param_replace request page=page_obj.next_page_number %}" aria-label="Suivant">
+                    &rsaquo;
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% param_replace request page=page_obj.paginator.num_pages %}" aria-label="Dernière">
+                    &raquo;
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<style>
+    .card {
+        border-radius: 0.5rem;
+    }
+    .table thead th {
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom-width: 1px;
+    }
+    .table tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    .dropdown-menu {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        border: none;
+    }
+    .bg-primary-light {
+        background-color: rgba(13, 110, 253, 0.1);
+    }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Gestion du changement de devise
+    const selectDevise = document.getElementById("select-devise");
+    const deviseSymbols = JSON.parse('{{ devise_symbols|escapejs }}');
+    
+    async function convertirMontants(deviseCible) {
+        try {
+            // Mettre à jour le symbole dans le total
+            document.getElementById('total-achats').textContent = 
+                '{{ total_achats|floatformat:2 }} ' + deviseSymbols[deviseCible];
+            
+            // Convertir chaque ligne du tableau
+            const rows = document.querySelectorAll('.achat-row');
+            for (const row of rows) {
+                const deviseSource = row.dataset.devise;
+                const prix = parseFloat(row.dataset.prix);
+                const total = parseFloat(row.dataset.total);
+                
+                if (deviseSource === deviseCible) {
+                    // Pas de conversion nécessaire
+                    row.querySelector('.prix-cell').innerHTML = 
+                        prix.toFixed(2) + ' ' + deviseSymbols[deviseCible];
+                    row.querySelector('.total-cell').innerHTML = 
+                        total.toFixed(2) + ' ' + deviseSymbols[deviseCible];
+                    continue;
+                }
+                
+                // Récupérer le taux de change
+                const response = await fetch(`/taux-change/?devise=${deviseCible}`);
+                if (!response.ok) throw new Error('Erreur de conversion');
+                
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                
+                const taux = data.taux;
+                const prixConverti = prix * taux;
+                const totalConverti = total * taux;
+                
+                // Mettre à jour l'affichage
+                row.querySelector('.prix-cell').innerHTML = `
+                    <span class="text-muted original">${prix.toFixed(2)} ${deviseSymbols[deviseSource]}</span>
+                    <div class="fw-bold converted">${prixConverti.toFixed(2)} ${deviseSymbols[deviseCible]}</div>
+                `;
+                
+                row.querySelector('.total-cell').innerHTML = `
+                    <span class="text-muted original">${total.toFixed(2)} ${deviseSymbols[deviseSource]}</span>
+                    <div class="fw-bold converted">${totalConverti.toFixed(2)} ${deviseSymbols[deviseCible]}</div>
+                `;
+            }
+            
+            return true;
+        } catch (error) {
+            console.error("Erreur de conversion:", error);
+            return false;
+        }
+    }
+ document.addEventListener("DOMContentLoaded", function() {
+    const selectDevise = document.getElementById("select-devise");
+    
+    if (selectDevise) {
+        selectDevise.addEventListener("change", function() {
+            const devise = this.value;
+            const formData = new FormData();
+            formData.append('devise', devise);
+            formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+            
+            fetch("{% url 'set_devise' %}", {
+                method: "POST",
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Erreur réseau');
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Rechargement pour appliquer les changements
+                    window.location.reload();
+                } else {
+                    throw new Error(data.message || 'Erreur lors du changement de devise');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                selectDevise.value = '{{ devise_affichee }}';
+                alert("Impossible de changer la devise: " + error.message);
+            });
+        });
+    }
+});
+    }
+});
+</script>
+{% endblock %}
+
+
+
+
+
+
+python manage.py loaddata db_backup_YYYYMMDD_HHMMSS.json

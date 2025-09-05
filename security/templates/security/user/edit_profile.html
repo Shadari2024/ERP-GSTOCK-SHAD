@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load static crispy_forms_tags %}
+
+{% block title %}Modifier mon Profil{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="row justify-content-center">
+        <div class="col-xl-8">
+            <div class="card border-0 shadow-lg rounded-lg mt-4">
+                <div class="card-header bg-gradient-primary-to-secondary text-white py-3">
+                    <h3 class="m-0">
+                        <i class="fas fa-user-edit me-2"></i>
+                        Modifier mon Profil
+                    </h3>
+                </div>
+
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <!-- Colonne gauche - Photo -->
+                            <div class="col-md-4 text-center">
+                                <div class="mb-4">
+                                    <img id="avatarPreview" 
+                                         src="{% if request.user.profil.photo %}{{ request.user.profil.photo.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}" 
+                                         class="img-thumbnail rounded-circle shadow" 
+                                         style="width: 180px; height: 180px; object-fit: cover;" 
+                                         alt="Photo de profil">
+                                </div>
+                                {{ profil_form.photo|as_crispy_field }}
+                            </div>
+                            
+                            <!-- Colonne droite - Formulaire -->
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    {{ form.first_name|as_crispy_field }}
+                                </div>
+                                <div class="mb-3">
+                                    {{ form.last_name|as_crispy_field }}
+                                </div>
+                                <div class="mb-3">
+                                    {{ form.email|as_crispy_field }}
+                                </div>
+                                <div class="mb-3">
+                                    {{ profil_form.telephone|as_crispy_field }}
+                                </div>
+                                <div class="mb-3">
+                                    {{ profil_form.poste|as_crispy_field }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{% url 'security:mon_profil' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary px-4">
+                                <i class="fas fa-save me-1"></i> Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Aperçu de la photo
+    document.getElementById('id_photo').addEventListener('change', function(e) {
+        if (this.files && this.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('avatarPreview').src = e.target.result;
+            }
+            reader.readAsDataURL(this.files[0]);
+        }
+    });
+});
+</script>
+{% endblock %}

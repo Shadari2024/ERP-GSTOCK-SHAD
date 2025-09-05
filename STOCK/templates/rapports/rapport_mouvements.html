@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-gradient-dark text-white border-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-0"><i class="fas fa-exchange-alt me-2"></i> RAPPORT DES MOUVEMENTS</h2>
+                    <p class="mb-0 opacity-75">Historique complet des entrées et sorties de stock</p>
+                </div>
+                <div>
+                    <a href="?export=csv&{{ request.GET.urlencode }}" class="btn btn-sm btn-light me-2">
+                        <i class="fas fa-file-csv me-1"></i> Export CSV
+                    </a>
+                    <a href="?print=1&{{ request.GET.urlencode }}" class="btn btn-sm btn-light me-2" target="_blank">
+                        <i class="fas fa-file-pdf me-1"></i> Version imprimable
+                    </a>
+                    <button onclick="window.print()" class="btn btn-sm btn-light">
+                        <i class="fas fa-print me-1"></i> Imprimer
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="card-body border-bottom">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Date de début</label>
+                    <input type="date" name="date_debut" class="form-control" value="{{ date_debut }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Date de fin</label>
+                    <input type="date" name="date_fin" class="form-control" value="{{ date_fin }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Type de mouvement</label>
+                    <select name="type" class="form-select">
+                        <option value="">Tous types</option>
+                        <option value="entree" {% if type_mouvement == "entree" %}selected{% endif %}>Entrée</option>
+                        <option value="sortie" {% if type_mouvement == "sortie" %}selected{% endif %}>Sortie</option>
+                        <option value="ajustement" {% if type_mouvement == "ajustement" %}selected{% endif %}>Ajustement</option>
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-filter me-1"></i> Filtrer
+                    </button>
+                    <a href="{% url 'rapport_mouvements' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-sync-alt me-1"></i> Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tableau des mouvements -->
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th class="ps-4">DATE</th>
+                            <th>PRODUIT</th>
+                            <th>TYPE</th>
+                            <th class="text-end">QUANTITÉ</th>
+                            <th>UTILISATEUR</th>
+                            <th class="pe-4">COMMENTAIRE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in mouvements %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="d-flex flex-column">
+                                    <span class="fw-bold">{{ m.date_mouvement|date:"d/m/Y" }}</span>
+                                    <small class="text-muted">{{ m.date_mouvement|date:"H:i" }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if m.produit.image %}
+                                    <img src="{{ m.produit.image.url }}" class="rounded me-2" width="30" height="30" style="object-fit: cover;">
+                                    {% endif %}
+                                    <span>{{ m.produit.nom }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                {% if m.type_mouvement == 'entree' %}
+                                <span class="badge bg-success py-1 px-2 rounded-pill">
+                                    <i class="fas fa-arrow-down me-1"></i> {{ m.get_type_mouvement_display }}
+                                </span>
+                                {% elif m.type_mouvement == 'sortie' %}
+                                <span class="badge bg-danger py-1 px-2 rounded-pill">
+                                    <i class="fas fa-arrow-up me-1"></i> {{ m.get_type_mouvement_display }}
+                                </span>
+                                {% else %}
+                                <span class="badge bg-warning text-dark py-1 px-2 rounded-pill">
+                                    <i class="fas fa-adjust me-1"></i> {{ m.get_type_mouvement_display }}
+                                </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end fw-bold">{{ m.quantite }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2" style="width: 30px; height: 30px;">
+                                        {{ m.utilisateur.username|first|upper }}
+                                    </div>
+                                    <span>{{ m.utilisateur.username }}</span>
+                                </div>
+                            </td>
+                            <td class="pe-4 text-truncate" style="max-width: 200px;" title="{{ m.commentaire }}">
+                                {{ m.commentaire|default:"-" }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">Aucun mouvement trouvé</h5>
+                                <p class="text-muted">Essayez de modifier vos critères de recherche</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pied de page -->
+        <div class="card-footer bg-white border-0">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="text-muted">
+                    Affichage de <span class="fw-bold">1</span> à <span class="fw-bold">{{ mouvements|length }}</span> sur <span class="fw-bold">{{ mouvements.count }}</span> mouvements
+                </div>
+                <div class="text-end">
+                    <small class="text-muted">Généré le {% now "d/m/Y à H:i" %}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Styles personnalisés -->
+<style>
+    .bg-gradient-dark {
+        background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+    }
+    
+    .card {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    
+    .table {
+        font-size: 0.9rem;
+    }
+    
+    .table thead th {
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        color: #6c757d;
+        border-bottom-width: 1px;
+    }
+    
+    .table tbody tr {
+        transition: all 0.15s;
+    }
+    
+    .table tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    .badge {
+        font-weight: 500;
+        letter-spacing: 0.5px;
+    }
+    
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        .card, .card * {
+            visibility: visible;
+        }
+        .card {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            border: none;
+            box-shadow: none;
+        }
+        .card-header {
+            background: white !important;
+            color: black !important;
+            border-bottom: 2px solid #dee2e6 !important;
+        }
+        .btn, .form-control, .form-select {
+            display: none !important;
+        }
+        .table {
+            font-size: 0.8rem;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Facture #{{ commande.numero_commande }}</title>
+    <meta charset="utf-8">
+    <style>
+        /* Global & Reset Styles */
+        body {
+            font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            background-color: #fff;
+        }
+        .container {
+            width: 100%;
+            max-width: 21cm;
+            margin: 0 auto;
+            padding: 1.5cm;
+            box-sizing: border-box;
+        }
+
+        /* Header Section */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .company-info {
+            flex: 1;
+        }
+        .company-logo {
+            max-height: 70px;
+            margin-bottom: 10px;
+        }
+        .company-name {
+            font-size: 14pt;
+            font-weight: 700;
+            color: #000;
+            margin-bottom: 5px;
+        }
+        .company-details {
+            font-size: 9pt;
+            color: #555;
+            line-height: 1.4;
+        }
+        .document-title {
+            text-align: right;
+        }
+        .document-title h1 {
+            color: #714B67; /* Odoo purple */
+            font-size: 24pt;
+            margin: 0 0 5px 0;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .document-meta {
+            font-size: 9pt;
+            color: #555;
+        }
+        .document-meta strong {
+            color: #333;
+            font-weight: 500;
+        }
+
+        /* Addresses Section */
+        .addresses {
+            display: flex;
+            margin-bottom: 30px;
+        }
+        .address-block {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            margin-right: 15px;
+            background-color: #f9f9f9;
+        }
+        .address-block:last-child {
+            margin-right: 0;
+        }
+        .address-title {
+            font-size: 10pt;
+            font-weight: 600;
+            color: #714B67;
+            margin: 0 0 8px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .address-content {
+            font-size: 9pt;
+            color: #555;
+        }
+        .address-content strong {
+            color: #333;
+        }
+
+        /* Line Items Table */
+        .line-items {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .line-items thead th {
+            background-color: #f2f2f2;
+            color: #333;
+            font-weight: 600;
+            text-align: left;
+            padding: 8px 10px;
+            border-bottom: 2px solid #e0e0e0;
+            font-size: 9pt;
+            text-transform: uppercase;
+        }
+        .line-items tbody td {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 9pt;
+        }
+        .line-items tbody tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .text-left {
+            text-align: left;
+        }
+
+        /* Totals Section */
+        .totals {
+            width: 40%;
+            float: right;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        .totals th, .totals td {
+            padding: 8px 12px;
+            text-align: right;
+            font-size: 10pt;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .totals th {
+            font-weight: normal;
+            color: #555;
+        }
+        .totals .total-row {
+            font-weight: 600;
+            color: #000;
+        }
+        .totals .grand-total {
+            font-size: 11pt;
+            font-weight: 700;
+            background-color: #f5f5f5;
+            border-top: 2px solid #714B67;
+            border-bottom: none;
+        }
+
+        /* Notes Section */
+        .notes {
+            clear: both;
+            margin-top: 30px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            background-color: #f9f9f9;
+            font-size: 9pt;
+            line-height: 1.4;
+            color: #555;
+            border-radius: 4px;
+        }
+        .notes-title {
+            font-size: 10pt;
+            font-weight: 600;
+            color: #714B67;
+            margin: 0 0 8px 0;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 40px;
+            padding-top: 15px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 8pt;
+            color: #777;
+            text-align: center;
+        }
+
+        /* Print Specific Styles */
+        @page {
+            size: A4;
+            margin: 1.5cm;
+            @bottom {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 8pt;
+                color: #999;
+            }
+        }
+        @media print {
+            body {
+                padding: 0;
+            }
+            .container {
+                padding: 0;
+                max-width: 100%;
+            }
+            .no-print {
+                display: none;
+            }
+        }
+
+        /* Utilities */
+        .clearfix::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header Section -->
+        <div class="header clearfix">
+            <div class="company-info">
+                {% if entreprise.logo %}
+                    <img src="{{ entreprise.logo.url }}" alt="{{ entreprise.nom }}" class="company-logo">
+                {% endif %}
+                <div class="company-name">{{ entreprise.nom }}</div>
+                <div class="company-details">
+                    {{ entreprise.adresse|default_if_none:"" }}<br>
+                    {{ entreprise.code_postal|default_if_none:"" }} {{ entreprise.ville|default_if_none:"" }}<br>
+                    Téléphone: {{ entreprise.telephone|default_if_none:"" }}<br>
+                    Email: {{ entreprise.email|default_if_none:"" }}<br>
+                    {% if entreprise.nif %}NIF: {{ entreprise.nif }}{% endif %}
+                    {% if entreprise.rccm %} | RCCM: {{ entreprise.rccm }}{% endif %}
+                </div>
+            </div>
+            
+            <div class="document-title">
+                <h1>
+                    {% if is_invoice %}
+                        FACTURE
+                    {% else %}
+                        BON DE COMMANDE
+                    {% endif %}
+                </h1>
+                <div class="document-meta">
+                    <div><strong>Numéro:</strong> {{ commande.numero_commande }}</div>
+                    <div><strong>Date:</strong> {{ now|date:"d/m/Y" }}</div>
+                    <div><strong>Date Commande:</strong> {{ commande.date_commande|date:"d/m/Y" }}</div>
+                    {% if commande.date_livraison_prevue %}
+                    <div><strong>Livraison prévue:</strong> {{ commande.date_livraison_prevue|date:"d/m/Y" }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Addresses Section -->
+        <div class="addresses clearfix">
+            <div class="address-block">
+                <div class="address-title">FACTURER À</div>
+                <div class="address-content">
+                    <strong>{{ commande.fournisseur.nom }}</strong><br>
+                    {{ commande.fournisseur.adresse|default:"N/A" }}<br>
+                    {{ commande.fournisseur.code_postal|default_if_none:"" }} {{ commande.fournisseur.ville|default_if_none:"" }}<br>
+                    Téléphone: {{ commande.fournisseur.telephone|default:"N/A" }}<br>
+                    Email: {{ commande.fournisseur.email|default:"N/A" }}<br>
+                    {% if commande.fournisseur.nif %}NIF: {{ commande.fournisseur.nif }}{% endif %}
+                    {% if commande.fournisseur.rccm %}RCCM: {{ commande.fournisseur.rccm }}{% endif %}
+                </div>
+            </div>
+            
+            <!-- Uncomment if you need shipping address
+            <div class="address-block">
+                <div class="address-title">LIVRER À</div>
+                <div class="address-content">
+                    [Shipping address details here]
+                </div>
+            </div>
+            -->
+        </div>
+
+        <!-- Line Items Table -->
+        <table class="line-items">
+            <thead>
+                <tr>
+                    <th class="text-left">Description</th>
+                    <th class="text-center">Qté</th>
+                    <th class="text-right">Prix Unitaire</th>
+                    <th class="text-center">Remise</th>
+                    <th class="text-right">Total HT</th>
+                    <th class="text-center">TVA</th>
+                    <th class="text-right">Montant TVA</th>
+                    <th class="text-right">Total TTC</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ligne in commande.lignes.all %}
+                <tr>
+                    <td class="text-left">{{ ligne.produit.nom }}</td>
+                    <td class="text-center">{{ ligne.quantite|floatformat:2 }}</td>
+                    <td class="text-right">{{ ligne.prix_unitaire|floatformat:2 }} {{ commande.entreprise.config_saas.devise_principale.symbole|default:"" }}</td>
+                    <td class="text-center">{{ ligne.remise|floatformat:2 }}%</td>
+                    <td class="text-right">{{ ligne.total_ht_ligne|floatformat:2 }} {{ commande.entreprise.config_saas.devise_principale.symbole|default:"" }}</td>
+                    <td class="text-center">{{ ligne.taux_tva|floatformat:2 }}%</td>
+                    <td class="text-right">{{ ligne.montant_tva_ligne|floatformat:2 }} {{ commande.entreprise.config_saas.devise_principale.symbole|default:"" }}</td>
+                    <td class="text-right">{{ ligne.total_ttc_ligne|floatformat:2 }} {{ commande.entreprise.config_saas.devise_principale.symbole|default:"" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Totals Section -->
+        <table class="totals">
+            <tr>
+                <th>Sous-total HT:</th>
+                <td>{{ commande.total_ht|floatformat:2 }} {{ commande.entreprise.config_saas.devise_principale.symbole|default:"" }}</td>
+            </tr>
+            <tr>
+                <th>Remise globale:</th>
+                <td>0.00 {{ commande.entreprise.config_saas.devise_principale.symbole|default:"" }}</td>
+            </tr>
+            <tr class="total-row">
+                <th>Total HT:</th>
+                <td>{{ commande.total_ht|floatformat:2 }} {{ commande.entreprise.config_saas.devise_principale.symbole|default:"" }}</td>
+            </tr>
+            {% for tax in taxes %}
+            <tr>
+                <th>TVA ({{ tax.rate|floatformat:2 }}%):</th>
+                <td>{{ tax.amount|floatformat:2 }} {{ commande.entreprise.config_saas.devise_principale.symbole|default:"" }}</td>
+            </tr>
+            {% endfor %}
+            <tr class="grand-total">
+                <th>TOTAL TTC:</th>
+                <td>{{ commande.total_ttc|floatformat:2 }} {{ commande.entreprise.config_saas.devise_principale.symbole|default:"" }}</td>
+            </tr>
+        </table>
+
+        <div class="clearfix"></div>
+
+        <!-- Notes Section -->
+        {% if commande.notes %}
+        <div class="notes">
+            <div class="notes-title">Notes</div>
+            <div>{{ commande.notes|linebreaksbr }}</div>
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Document généré le {{ now|date:"d/m/Y à H:i" }} par {{ commande.created_by.get_full_name|default:commande.created_by.username }}</p>
+            <p>{{ entreprise.nom }} - {{ entreprise.adresse|default_if_none:"" }}, {{ entreprise.code_postal|default_if_none:"" }} {{ entreprise.ville|default_if_none:"" }}</p>
+            <p>Merci pour votre confiance !</p>
+        </div>
+    </div>
+</body>
+</html>

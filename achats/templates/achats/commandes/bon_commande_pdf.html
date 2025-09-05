@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Bon de Commande #{{ commande.numero_commande }}</title>
+    <style>
+        /* Style inspiré Odoo/Devexpress - Optimisé mobile */
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+            margin: 0;
+            padding: 15px;
+            background: #fff;
+        }
+        
+        /* En-tête */
+        .header {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e6e6e6;
+            padding-bottom: 15px;
+        }
+        
+        .company-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        
+        .company-logo {
+            max-height: 60px;
+            max-width: 200px;
+        }
+        
+        .company-info {
+            flex: 1;
+            padding-left: 15px;
+        }
+        
+        .company-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: #714B67; /* Couleur Odoo */
+            margin-bottom: 5px;
+        }
+        
+        .company-details {
+            font-size: 10px;
+            color: #666;
+        }
+        
+        .document-title {
+            text-align: right;
+        }
+        
+        .document-title h1 {
+            color: #714B67;
+            font-size: 18px;
+            margin: 0 0 5px 0;
+            text-transform: uppercase;
+        }
+        
+        .document-ref {
+            font-size: 11px;
+            color: #666;
+        }
+        
+        /* Bloc fournisseur */
+        .partner-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .address-block {
+            flex: 1;
+            min-width: 200px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            border-left: 3px solid #714B67;
+        }
+        
+        .address-title {
+            font-weight: 700;
+            color: #714B67;
+            margin-bottom: 5px;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        
+        /* Tableau des articles */
+        .product-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        .product-table th {
+            background: #f5f5f5;
+            color: #333;
+            font-weight: 700;
+            padding: 8px 5px;
+            text-align: left;
+            font-size: 10px;
+            text-transform: uppercase;
+            border-bottom: 2px solid #e6e6e6;
+        }
+        
+        .product-table td {
+            padding: 8px 5px;
+            border-bottom: 1px solid #f0f0f0;
+            vertical-align: top;
+        }
+        
+        .product-table tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+        
+        .text-right {
+            text-align: right;
+        }
+        
+        .text-center {
+            text-align: center;
+        }
+        
+        /* Totaux */
+        .totals-table {
+            width: 100%;
+            max-width: 300px;
+            margin-left: auto;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+        
+        .totals-table th, 
+        .totals-table td {
+            padding: 8px 10px;
+            text-align: left;
+        }
+        
+        .totals-table th {
+            font-weight: 600;
+        }
+        
+        .grand-total {
+            font-weight: 700;
+            border-top: 2px solid #714B67;
+            border-bottom: 2px solid #714B67;
+        }
+        
+        /* Notes et pied de page */
+        .notes {
+            margin-top: 30px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        
+        .notes-title {
+            font-weight: 700;
+            color: #714B67;
+            margin-bottom: 5px;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            padding-top: 10px;
+            border-top: 1px solid #e6e6e6;
+            font-size: 9px;
+            color: #999;
+            text-align: center;
+        }
+        
+        /* Optimisation mobile */
+        @media (max-width: 600px) {
+            .company-header {
+                flex-direction: column;
+            }
+            
+            .company-info {
+                padding-left: 0;
+                margin-top: 10px;
+            }
+            
+            .document-title {
+                text-align: left;
+                margin-top: 15px;
+            }
+            
+            .product-table {
+                font-size: 10px;
+            }
+            
+            .product-table th,
+            .product-table td {
+                padding: 5px 3px;
+            }
+            
+            .totals-table {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company-header">
+            <div>
+                {% if entreprise.logo %}
+                    <img src="{{ entreprise.logo.path }}" class="company-logo" alt="Logo">
+                {% endif %}
+                <div class="company-info">
+                    <div class="company-name">{{ entreprise.nom }}</div>
+                    <div class="company-details">
+                        {{ entreprise.adresse }}<br>
+                        {{ entreprise.code_postal }} {{ entreprise.ville }}<br>
+                        Tél: {{ entreprise.telephone }} | Email: {{ entreprise.email }}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="document-title">
+                <h1>BON DE COMMANDE</h1>
+                <div class="document-ref">N° {{ commande.numero_commande }}</div>
+                <div class="document-ref">Date: {{ now|date:"d/m/Y" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="partner-info">
+        <div class="address-block">
+            <div class="address-title">FOURNISSEUR</div>
+            <div>
+                <strong>{{ commande.fournisseur.nom }}</strong><br>
+                {{ commande.fournisseur.adresse }}<br>
+                {{ commande.fournisseur.code_postal }} {{ commande.fournisseur.ville }}<br>
+                Tél: {{ commande.fournisseur.telephone|default:"-" }}<br>
+                Email: {{ commande.fournisseur.email|default:"-" }}
+            </div>
+        </div>
+        
+        <div class="address-block">
+            <div class="address-title">INFORMATIONS</div>
+            <div>
+                <strong>Validé par:</strong> {{ user.get_full_name }}<br>
+                <strong>Date validation:</strong> {{ now|date:"d/m/Y H:i" }}<br>
+                <strong>Livraison prévue:</strong> {{ commande.date_livraison_prevue|date:"d/m/Y"|default:"-" }}<br>
+                <strong>Méthode de paiement:</strong> {{ commande.mode_paiement|default:"-" }}
+            </div>
+        </div>
+    </div>
+
+    <table class="product-table">
+        <thead>
+            <tr>
+                <th>Désignation</th>
+                <th class="text-center">Qté</th>
+                <th class="text-right">Prix unitaire</th>
+                <th class="text-center">Remise</th>
+                <th class="text-right">Total HT</th>
+                <th class="text-center">TVA</th>
+                <th class="text-right">Total TTC</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in lignes %}
+            <tr>
+                <td>{{ ligne.produit.nom }}</td>
+                <td class="text-center">{{ ligne.quantite|floatformat:2 }}</td>
+                <td class="text-right">{{ ligne.prix_unitaire|floatformat:2 }} {{ symbole_devise }}</td>
+                <td class="text-center">{{ ligne.remise|floatformat:2 }}%</td>
+                <td class="text-right">{{ ligne.total_ht_ligne|floatformat:2 }} {{ symbole_devise }}</td>
+                <td class="text-center">{{ ligne.taux_tva|floatformat:2 }}%</td>
+                <td class="text-right">{{ ligne.total_ttc_ligne|floatformat:2 }} {{ symbole_devise }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <table class="totals-table">
+        <tr>
+            <th>Total HT:</th>
+            <td class="text-right">{{ total_ht|floatformat:2 }} {{ symbole_devise }}</td>
+        </tr>
+        <tr>
+            <th>Total TVA:</th>
+            <td class="text-right">{{ total_tva|floatformat:2 }} {{ symbole_devise }}</td>
+        </tr>
+        <tr class="grand-total">
+            <th>TOTAL TTC:</th>
+            <td class="text-right">{{ total_ttc|floatformat:2 }} {{ symbole_devise }}</td>
+        </tr>
+    </table>
+
+    {% if commande.notes %}
+    <div class="notes">
+        <div class="notes-title">NOTES</div>
+        <div>{{ commande.notes|linebreaksbr }}</div>
+    </div>
+    {% endif %}
+
+    <div class="footer">
+        Document généré le {{ now|date:"d/m/Y à H:i" }} par {{ user.get_full_name }}<br>
+        {{ entreprise.nom }} - {{ entreprise.adresse }}, {{ entreprise.code_postal }} {{ entreprise.ville }}
+    </div>
+</body>
+</html>

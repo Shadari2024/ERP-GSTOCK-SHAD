@@ -1,0 +1,8 @@
+{% for notif in notifications %}
+    <div class="alert alert-{{ 'warning' if notif.type == 'stock' else 'info' }}">
+        <strong>{{ notif.get_type_display }} :</strong> {{ notif.message }}
+        <small class="text-muted">{{ notif.date_creation|date:"d/m/Y H:i" }}</small>
+    </div>
+{% empty %}
+    <p>Aucune notification.</p>
+{% endfor %}

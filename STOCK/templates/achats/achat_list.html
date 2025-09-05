@@ -1,0 +1,333 @@
+{% extends "base.html" %}
+{% load static %}
+{% load custom_filters %}
+{% load custom_tags %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 py-3 border-bottom">
+        <div>
+            <h2 class="mb-0">
+                <i class="fas fa-shopping-cart text-primary me-2"></i>Historique des Achats
+            </h2>
+            <p class="text-muted mb-0">Gestion complète de vos transactions</p>
+        </div>
+        <div>
+            {% if can_add %}
+            <a href="{% url 'achat_create' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus me-1"></i> Nouvel Achat
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filters Card -->
+    <div class="card shadow-sm mb-4 border-0">
+        <div class="card-body p-3">
+            <form method="get" class="row g-2">
+                <div class="col-md-3">
+                    <label class="form-label small text-muted mb-1"><i class="far fa-calendar-alt me-1"></i> Date début</label>
+                    <input type="date" name="date_debut" value="{{ date_debut }}" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-muted mb-1"><i class="far fa-calendar-alt me-1"></i> Date fin</label>
+                    <input type="date" name="date_fin" value="{{ date_fin }}" class="form-control form-control-sm">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small text-muted mb-1"><i class="fas fa-truck me-1"></i> Fournisseur</label>
+                    <select name="fournisseur" class="form-select form-select-sm">
+                        <option value="">Tous les fournisseurs</option>
+                        {% for f in fournisseurs %}
+                            <option value="{{ f.id }}" {% if f.id|stringformat:"s" == selected_fournisseur %}selected{% endif %}>
+                                {{ f.nom }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                        <i class="fas fa-filter me-1"></i> Filtrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100 hover-scale">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-2">Total Achats</h6>
+                            <h3 class="mb-0 text-primary">{{ total_achats|floatformat:2 }} {{ symbole_devise }}</h3>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 p-3 rounded-circle">
+                            <i class="fas fa-receipt text-primary fa-lg"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="badge bg-primary bg-opacity-10 text-primary">+{{ achats_count }} transactions</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100 hover-scale">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="card-title text-muted mb-2">Quantité Totale</h6>
+                            <h3 class="mb-0 text-success">{{ total_quantite }}</h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 p-3 rounded-circle">
+                            <i class="fas fa-boxes text-success fa-lg"></i>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <span class="badge bg-success bg-opacity-10 text-success">+{{ fournisseurs.count }} fournisseurs</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="card shadow-sm border-0 overflow-hidden">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4"><i class="far fa-calendar me-2"></i>Date</th>
+                            <th><i class="fas fa-box me-2"></i>Produit</th>
+                            <th><i class="fas fa-truck me-2"></i>Fournisseur</th>
+                            <th class="text-end"><i class="fas fa-cubes me-2"></i>Quantité</th>
+                            <th class="text-end"><i class="fas fa-tag me-2"></i>Prix Unitaire</th>
+                            <th class="text-end pe-4"><i class="fas fa-money-bill-wave me-2"></i>Total</th>
+                            <th class="text-center"><i class="fas fa-exchange-alt me-2"></i>Transaction</th>
+                            <th class="text-center" style="width: 50px;"><i class="fas fa-cog"></i></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for achat in achats %}
+                        <tr class="hover-shadow">
+                            <td class="ps-4">{{ achat.date_achat|date:"d/m/Y" }}</td>
+                            <td>{{ achat.produit.nom }}</td>
+                            <td>{{ achat.fournisseur.nom }}</td>
+                            <td class="text-end">{{ achat.quantite }}</td>
+                            <td class="text-end">
+                                <span class="fw-bold">{{ achat.prix_unitaire|floatformat:2 }} {{ symbole_devise }}</span>
+                            </td>
+                            <td class="text-end pe-4">
+                                <span class="fw-bold">{{ achat.total_achat|floatformat:2 }} {{ symbole_devise }}</span>
+                            </td>
+                            <td class="text-center">
+                                {% if achat.transaction %}
+                                    <span class="badge bg-success bg-opacity-10 text-success" 
+                                          data-bs-toggle="tooltip" 
+                                          title="Transaction #{{ achat.transaction.id }}">
+                                        <i class="fas fa-check-circle"></i>
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary">
+                                        <i class="fas fa-times-circle"></i>
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                            type="button" 
+                                            id="dropdownMenuButton{{ forloop.counter }}"
+                                            data-bs-toggle="dropdown" 
+                                            aria-expanded="false">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow" 
+                                        aria-labelledby="dropdownMenuButton{{ forloop.counter }}">
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'achat_detail' achat.pk %}">
+                                                <i class="fas fa-eye me-2 text-info"></i> Détails
+                                            </a>
+                                        </li>
+                                        {% if perms.STOCK.add_transaction %}
+                                        <li>
+                                            <a class="dropdown-item creer-transaction" 
+                                               href="#" 
+                                               data-achat-id="{{ achat.pk }}"
+                                               data-url="{% url 'creer_transaction_achat' achat.pk %}">
+                                                <i class="fas fa-exchange-alt me-2 text-success"></i> Créer transaction
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'achat_pdf' achat.pk %}" target="_blank">
+                                                <i class="fas fa-file-pdf me-2 text-danger"></i> PDF
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'retour_fournisseur' achat.pk %}">
+                                                <i class="fas fa-undo me-2 text-warning"></i> Retour
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">Aucun achat enregistré</h5>
+                                <p class="text-muted">Commencez par enregistrer un nouvel achat</p>
+                                {% if can_add %}
+                                <a href="{% url 'achat_create' %}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus me-1"></i> Ajouter un achat
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?{% param_replace request page=1 %}" aria-label="Première">
+                    <i class="fas fa-angle-double-left"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% param_replace request page=page_obj.previous_page_number %}" aria-label="Précédent">
+                    <i class="fas fa-angle-left"></i>
+                </a>
+            </li>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?{% param_replace request page=num %}">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?{% param_replace request page=page_obj.next_page_number %}" aria-label="Suivant">
+                    <i class="fas fa-angle-right"></i>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% param_replace request page=page_obj.paginator.num_pages %}" aria-label="Dernière">
+                    <i class="fas fa-angle-double-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<style>
+    .hover-scale {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .hover-scale:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
+    }
+    .hover-shadow {
+        transition: box-shadow 0.2s ease;
+    }
+    .hover-shadow:hover {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    .card {
+        border-radius: 0.5rem;
+    }
+    .table thead th {
+        font-weight: 600;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom-width: 1px;
+    }
+    .table tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    .badge {
+        font-weight: 500;
+        padding: 0.35em 0.65em;
+        font-size: 0.75em;
+    }
+    .dropdown-menu {
+        border: none;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    .dropdown-item {
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+    }
+    .dropdown-item i {
+        width: 20px;
+        text-align: center;
+    }
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Gestion de la création de transaction
+    document.querySelectorAll('.creer-transaction').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const achatId = this.dataset.achatId;
+            const url = this.dataset.url;
+            
+            if (confirm("Créer une transaction pour cet achat ?")) {
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert("Transaction créée avec succès !");
+                        window.location.reload();
+                    } else {
+                        alert("Erreur : " + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert("Une erreur s'est produite");
+                });
+            }
+        });
+    });
+
+    // Initialiser les tooltips Bootstrap
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

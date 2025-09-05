@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Supprimer le Paiement{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-lg">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-trash me-2"></i>
+                        Supprimer le Paiement
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <h6 class="alert-heading">Attention !</h6>
+                        <p class="mb-0">
+                            Vous êtes sur le point de supprimer un paiement de 
+                            <strong>{{ object.montant|floatformat:2|intcomma }} {{ devise_symbole }}</strong>
+                            pour la facture #{{ object.facture.numero }}.
+                        </p>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">Conséquences :</h6>
+                        <ul class="mb-0">
+                            <li>Le paiement sera définitivement supprimé</li>
+                            <li>Les écritures comptables associées seront supprimées</li>
+                            <li>Le statut de la facture sera recalculé</li>
+                            <li>Cette action est irréversible</li>
+                        </ul>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'ventes:facture_detail' object.facture.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash me-2"></i>Confirmer la suppression
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

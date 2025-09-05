@@ -1,0 +1,57 @@
+{% extends "base.html" %} {# Adaptez ceci à votre template de base #}
+{% load static %} {# Si vous utilisez des fichiers statiques #}
+
+{% block title %}Ouvrir la Caisse{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white text-center">
+                    <h3 class="mb-0"><i class="fas fa-cash-register me-2"></i> Ouverture de Caisse</h3>
+                </div>
+                <div class="card-body">
+                    <p class="lead text-center">
+                        Bienvenue, **{{ current_user.get_full_name|default:current_user.username }}** !
+                    </p>
+                    <p class="text-center text-muted">
+                        Nous sommes le **{{ today }}**. Avant de commencer à vendre, veuillez ouvrir la caisse pour l'entreprise **{{ current_entreprise.nom }}**.
+                    </p>
+
+                    {% if messages %}
+                        <div class="my-3">
+                            {% for message in messages %}
+                                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <form method="post" class="mt-4 text-center">
+                        {% csrf_token %}
+                        <p class="mb-4">
+                            En cliquant sur le bouton ci-dessous, vous déclarez la caisse **ouverte** pour la journée.
+                        </p>
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-unlock-alt me-2"></i> Ouvrir la Caisse
+                        </button>
+                    </form>
+
+                    <hr class="my-4">
+                    <div class="text-center text-muted small">
+                        Si vous rencontrez des problèmes, veuillez contacter l'administrateur système.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{# Optionnel: Ajoutez ici des scripts JS si nécessaire (ex: icônes FontAwesome) #}
+<script src="https://kit.fontawesome.com/votre_code_fontawesome.js" crossorigin="anonymous"></script> {# Remplacez par votre kit FontAwesome #}
+{% endblock %}

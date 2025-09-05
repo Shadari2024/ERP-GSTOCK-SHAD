@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-6 col-md-8">
+            <div class="card shadow-lg border-0">
+                <!-- En-tête -->
+                <div class="card-header bg-gradient-primary text-white border-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="mb-0"><i class="fas fa-boxes me-2"></i> MOUVEMENT DE STOCK</h2>
+                            <p class="mb-0 opacity-75">Gestion des entrées et sorties de produits</p>
+                        </div>
+                        <i class="fas fa-exchange-alt fa-2x opacity-50"></i>
+                    </div>
+                </div>
+
+                <!-- Formulaire -->
+                <div class="card-body">
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Produit -->
+                        <div class="mb-4">
+                            <label for="produit" class="form-label fw-bold">
+                                <i class="fas fa-cube me-2 text-primary"></i> Produit
+                            </label>
+                            <select class="form-select form-select-lg" name="produit" required>
+                                <option value="" selected disabled>Choisir un produit...</option>
+                                {% for p in produits %}
+                                    <option value="{{ p.id }}">
+                                        {{ p.nom }} - Stock actuel: <span class="fw-bold">{{ p.stock }}</span>
+                                        {% if p.en_alerte %}
+                                            <span class="badge bg-warning text-dark ms-2">
+                                                <i class="fas fa-exclamation-triangle"></i> Alerte
+                                            </span>
+                                        {% endif %}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            <div class="invalid-feedback">
+                                Veuillez sélectionner un produit.
+                            </div>
+                        </div>
+
+                        <!-- Type de mouvement -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-random me-2 text-primary"></i> Type de mouvement
+                            </label>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="form-check card p-3 h-100 border-success border-2" onclick="document.querySelector('input[name=type][value=entree]').checked = true">
+                                        <input class="form-check-input" type="radio" name="type" id="entree" value="entree" checked required>
+                                        <label class="form-check-label d-block text-center" for="entree">
+                                            <i class="fas fa-arrow-circle-down fa-3x text-success mb-2"></i>
+                                            <h5>Entrée de stock</h5>
+                                            <p class="text-muted small">Réception de marchandises</p>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check card p-3 h-100 border-danger border-2" onclick="document.querySelector('input[name=type][value=sortie]').checked = true">
+                                        <input class="form-check-input" type="radio" name="type" id="sortie" value="sortie" required>
+                                        <label class="form-check-label d-block text-center" for="sortie">
+                                            <i class="fas fa-arrow-circle-up fa-3x text-danger mb-2"></i>
+                                            <h5>Sortie de stock</h5>
+                                            <p class="text-muted small">Expédition ou utilisation</p>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quantité -->
+                        <div class="mb-4">
+                            <label for="quantite" class="form-label fw-bold">
+                                <i class="fas fa-hashtag me-2 text-primary"></i> Quantité
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <input type="number" class="form-control" name="quantite" min="1" required placeholder="Saisir la quantité">
+                                <span class="input-group-text">unités</span>
+                                <div class="invalid-feedback">
+                                    Veuillez saisir une quantité valide (minimum 1).
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Commentaire -->
+                        <div class="mb-4">
+                            <label for="commentaire" class="form-label fw-bold">
+                                <i class="fas fa-comment-dots me-2 text-primary"></i> Commentaire
+                            </label>
+                            <textarea class="form-control" name="commentaire" rows="3" placeholder="Facultatif - Raison du mouvement, référence..."></textarea>
+                        </div>
+
+                        <!-- Boutons -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <a href="{% url "liste_mouvements_stock" %}" class="btn btn-outline-secondary me-md-2">
+                                <i class="fas fa-times me-1"></i> Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> Enregistrer le mouvement
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            {% if messages %}
+            <div class="mt-4">
+                {% for message in messages %}
+                <div class="alert alert-dismissible fade show {% if message.tags %}alert-{{ message.tags }}{% endif %}" role="alert">
+                    <i class="fas 
+                        {% if message.tags == 'success' %}fa-check-circle
+                        {% elif message.tags == 'error' %}fa-exclamation-circle
+                        {% else %}fa-info-circle{% endif %} me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Script de validation -->
+<script>
+// Validation Bootstrap
+(function () {
+    'use strict'
+    
+    var forms = document.querySelectorAll('.needs-validation')
+    
+    Array.prototype.slice.call(forms)
+        .forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!form.checkValidity()) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                }
+                
+                form.classList.add('was-validated')
+            }, false)
+        })
+})();
+
+// Mise à jour dynamique du style des cartes radio
+document.querySelectorAll('input[name="type"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        document.querySelectorAll('.form-check.card').forEach(card => {
+            card.classList.remove('bg-light', 'border-3')
+        });
+        
+        const selectedCard = this.closest('.form-check.card');
+        selectedCard.classList.add('bg-light', 'border-3');
+    });
+    
+    // Initialisation au chargement
+    if (radio.checked) {
+        radio.closest('.form-check.card').classList.add('bg-light', 'border-3');
+    }
+});
+</script>
+
+<style>
+    /* Styles personnalisés */
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);
+    }
+    
+    .card {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    
+    .form-check.card {
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .form-check.card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+    }
+    
+    .form-check-input {
+        width: 1.2em;
+        height: 1.2em;
+        margin-top: 0;
+    }
+    
+    .input-group-text {
+        background-color: #f8f9fa;
+    }
+    
+    .invalid-feedback {
+        font-size: 0.85rem;
+    }
+    
+    .alert {
+        border-radius: 0.5rem;
+    }
+</style>
+{% endblock %}

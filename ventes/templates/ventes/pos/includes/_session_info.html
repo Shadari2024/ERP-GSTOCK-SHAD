@@ -1,0 +1,49 @@
+{% load i18n %} {# Assurez-vous que ce tag est chargé #}
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="mb-3">
+            <strong>{% trans "Ouverte par" %}:</strong>
+            <span class="float-end">{{ session.utilisateur.get_full_name }}</span>
+        </div>
+        <div class="mb-3">
+            <strong>{% trans "Date d'ouverture" %}:</strong>
+            <span class="float-end">{{ session.date_ouverture|date:"d/m/Y H:i" }}</span>
+        </div>
+        <div class="mb-3">
+            <strong>{% trans "Fonds d'ouverture" %}:</strong>
+            <span class="float-end fw-bold text-success">
+                {{ session.fonds_ouverture|floatformat:2 }} {% if devise_principale.symbole %}{{ devise_principale.symbole }}{% endif %}
+            </span>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <strong>{% trans "Ventes effectuées" %}:</strong>
+            <span class="float-end">{{ session.ventes.count }}</span>
+        </div>
+        <div class="mb-3">
+            <strong>{% trans "Total ventes" %}:</strong>
+            <span class="float-end fw-bold text-primary">
+                {{ session.total_ventes|floatformat:2 }} {% if devise_principale.symbole %}{{ devise_principale.symbole }}{% endif %}
+            </span>
+        </div>
+        <div class="mb-3">
+            <strong>{% trans "Espèces encaissées" %}:</strong>
+            <span class="float-end fw-bold text-info">
+                {{ session.total_especes|floatformat:2 }} {% if devise_principale.symbole %}{{ devise_principale.symbole }}{% endif %}
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="text-center mt-3">
+    <button type="button" class="btn btn-danger me-2" data-bs-toggle="modal" data-bs-target="#fermerSessionModal">
+        <i class="fas fa-stop-circle me-1"></i>
+        {% trans "Fermer Session" %}
+    </button>
+    <a href="{% url 'ventes:nouvelle_vente_pos' pk=session.point_de_vente.pk session_pk=session.pk %}" class="btn btn-primary"> {# Assurez-vous que cette URL est correcte #}
+        <i class="fas fa-plus me-1"></i>
+        {% trans "Nouvelle Vente" %}
+    </a>
+</div>

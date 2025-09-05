@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+{% load static crispy_forms_tags %}
+{% load security_tags %}
+
+{% block title %}Mon Profil{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="row justify-content-center">
+        <div class="col-xl-8">
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show mt-3">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="card border-0 shadow-lg rounded-lg mt-4">
+                <div class="card-header bg-gradient-primary-to-secondary text-white py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="m-0">
+                            <i class="fas fa-user-circle me-2"></i>
+                            Mon Profil
+                        </h3>
+                        {% if has_edit_permission %}
+                        <a href="{% url 'security:edit_profile' %}" class="btn btn-light btn-sm">
+                            <i class="fas fa-edit me-1"></i> Modifier
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <div class="mb-4">
+                                <img src="{% if user.profil.photo %}{{ user.profil.photo.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}" 
+                                     class="img-thumbnail rounded-circle shadow" 
+                                     style="width: 180px; height: 180px; object-fit: cover;" 
+                                     alt="Photo de profil">
+                            </div>
+                            
+                            <h4 class="mb-1">{{ user.get_full_name|default:user.username }}</h4>
+                            <p class="text-muted mb-3">{{ user.profil.poste|default:"Non spécifié" }}</p>
+                            
+                            {% if has_edit_permission %}
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#changePhotoModal">
+                                    <i class="fas fa-camera me-1"></i> Changer de photo
+                                </button>
+                                <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#signatureModal">
+                                    <i class="fas fa-signature me-1"></i> Gérer la signature
+                                </button>
+                            </div>
+                            {% endif %}
+                            
+                            <hr class="my-4">
+                            
+                            <div class="text-start">
+                                <h5 class="mb-3"><i class="fas fa-info-circle me-2 text-primary"></i> Informations</h5>
+                                <p><i class="fas fa-envelope me-2"></i> {{ user.email }}</p>
+                                <p><i class="fas fa-phone me-2"></i> {{ user.telephone|default:"Non spécifié" }}</p>
+                                <p><i class="fas fa-calendar-alt me-2"></i> Membre depuis {{ user.date_joined|date:"d/m/Y" }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-8">
+                            <div class="card mb-4">
+                                <div class="card-header bg-light">
+                                    <h5 class="m-0">
+                                        <i class="fas fa-id-card me-2"></i>
+                                        Détails du Profil
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <h6>Rôle</h6>
+                                            <span class="badge bg-{{ user.role|role_badge_color }}">
+                                                {{ user.get_role_display }}
+                                            </span>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>Statut</h6>
+                                            {% if user.is_active %}
+                                                <span class="badge bg-success">Actif</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">Inactif</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <h6>Date d'embauche</h6>
+                                        <p>{{ user.profil.date_embauche|default:"Non spécifiée" }}</p>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                    <h6>Signature</h6>
+{% if profil.signature %}
+    <img src="{{ profil.signature.url }}" alt="Signature image" class="img-fluid border p-2" style="max-height: 150px;">
+{% elif profil.signature_svg %}
+    <img src="{{ profil.signature_svg }}" alt="Signature dessinée" class="img-fluid border p-2" style="max-height: 150px;">
+{% else %}
+    <p class="text-muted">Aucune signature enregistrée</p>
+{% endif %}
+
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <h6>Notes</h6>
+                                        <p class="text-muted">{{ user.profil.notes|default:"Aucune note"|linebreaks }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h5 class="m-0">
+                                        <i class="fas fa-key me-2"></i>
+                                        Permissions
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        {% for perm in user.get_all_permissions|slice:":6" %}
+                                        <div class="col-md-6 mb-2">
+                                            <span class="badge bg-info text-dark me-1">{{ perm|cut:"auth." }}</span>
+                                        </div>
+                                        {% empty %}
+                                        <p class="text-muted">Aucune permission spécifique</p>
+                                        {% endfor %}
+                                    </div>
+                                    {% if user.get_all_permissions|length > 6 %}
+                                    <button class="btn btn-sm btn-outline-primary mt-2" data-bs-toggle="collapse" data-bs-target="#morePermissions">
+                                        Voir plus (+{{ user.get_all_permissions|length|add:"-6" }})
+                                    </button>
+                                    <div id="morePermissions" class="collapse mt-2">
+                                        <div class="row">
+                                            {% for perm in user.get_all_permissions|slice:"6:" %}
+                                            <div class="col-md-6 mb-2">
+                                                <span class="badge bg-info text-dark me-1">{{ perm|cut:"auth." }}</span>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour changer la photo -->
+{% if has_edit_permission %}
+<div class="modal fade" id="changePhotoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Changer la photo de profil</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'security:mon_profil' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_photo">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <input type="file" class="form-control" name="photo" accept="image/*" required>
+                        <small class="text-muted">Formats acceptés: JPG, PNG (max 2MB)</small>
+                    </div>
+                    <div class="text-center">
+                        <img id="newPhotoPreview" src="{% if user.profil.photo %}{{ user.profil.photo.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}" 
+                             class="img-thumbnail rounded-circle" style="width: 150px; height: 150px;">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour gérer la signature -->
+<div class="modal fade" id="signatureModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Signature électronique</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'security:mon_profil' %}" id="signatureForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update_signature">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <div id="signature-pad" class="signature-pad">
+                            <div class="signature-pad--body">
+                                <canvas width="600" height="200"></canvas>
+                            </div>
+                            <div class="signature-pad--footer">
+                                <button type="button" class="btn btn-sm btn-outline-danger" id="clearSignature">
+                                    <i class="fas fa-eraser"></i> Effacer
+                                </button>
+                                <small class="text-muted">Signez dans la zone ci-dessus</small>
+                            </div>
+                        </div>
+                        <input type="hidden" name="signature_data" id="signatureData">
+                    </div>
+                    {% if user.profil.signature %}
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="remove_signature" id="removeSignature">
+                        <label class="form-check-label" for="removeSignature">
+                            Supprimer la signature actuelle
+                        </label>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .bg-gradient-primary-to-secondary {
+        background: linear-gradient(135deg, #4e73df 0%, #1cc88a 100%);
+    }
+    .card {
+        border: none;
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(33, 40, 50, 0.15);
+    }
+    .card-header {
+        padding: 1rem 1.35rem;
+        margin-bottom: 0;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    }
+    .img-thumbnail {
+        padding: 0.25rem;
+        background-color: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 50%;
+        transition: all 0.2s ease-in-out;
+    }
+    .img-thumbnail:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    .signature-pad {
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: #f8f9fa;
+    }
+    .signature-pad--body {
+        min-height: 200px;
+    }
+    .signature-pad--footer {
+        padding: 10px;
+        border-top: 1px solid #ddd;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    canvas {
+        width: 100%;
+        height: 100%;
+        background-color: white;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Aperçu de la nouvelle photo
+    const photoInput = document.querySelector('#changePhotoModal input[type="file"]');
+    if (photoInput) {
+        const preview = document.getElementById('newPhotoPreview');
+        
+        photoInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                }
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+    }
+
+    // Gestion de la signature
+    const signatureModal = document.getElementById('signatureModal');
+    if (signatureModal) {
+        const canvas = signatureModal.querySelector('canvas');
+        const signaturePad = new SignaturePad(canvas, {
+            backgroundColor: 'rgb(255, 255, 255)',
+            penColor: 'rgb(0, 0, 0)'
+        });
+        
+        // Redimensionnement du canvas
+        function resizeCanvas() {
+            const ratio = Math.max(window.devicePixelRatio || 1, 1);
+            canvas.width = canvas.offsetWidth * ratio;
+            canvas.height = canvas.offsetHeight * ratio;
+            canvas.getContext('2d').scale(ratio, ratio);
+            signaturePad.clear();
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        signatureModal.addEventListener('shown.bs.modal', resizeCanvas);
+        
+        // Effacer la signature
+        document.getElementById('clearSignature').addEventListener('click', function() {
+            signaturePad.clear();
+        });
+        
+        // Enregistrer la signature
+        document.getElementById('signatureForm').addEventListener('submit', function(e) {
+            if (!signaturePad.isEmpty() && !document.getElementById('removeSignature').checked) {
+                document.getElementById('signatureData').value = signaturePad.toDataURL('image/svg+xml');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

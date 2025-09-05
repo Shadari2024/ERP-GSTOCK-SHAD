@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="alert alert-danger">
+    <h2>Accès refusé</h2>
+    <p>Vous n'avez pas les permissions nécessaires pour accéder à cette page.</p>
+    <p>{{ request.GET.message|default:"" }}</p>
+    <a href="{% url 'security:connexion' %}" class="btn btn-primary">Retour à l'accueil</a>
+</div>
+{% endblock %}

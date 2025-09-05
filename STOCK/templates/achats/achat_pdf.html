@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        /* Styles optimisés pour impression thermique */
+        body { 
+            font-family: 'Arial Narrow', Arial, sans-serif; 
+            font-size: 10px; 
+            width: 80mm; /* Largeur standard ticket */
+            margin: 0;
+            padding: 2mm;
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 3mm;
+            padding-bottom: 3mm;
+            border-bottom: 1px dashed #000;
+        }
+        .logo { 
+            max-height: 15mm; 
+            max-width: 100%;
+        }
+        .title { 
+            font-size: 14px; 
+            font-weight: bold; 
+            margin: 2mm 0;
+            text-transform: uppercase;
+        }
+        .info-entreprise { 
+            margin-bottom: 3mm;
+            line-height: 1.2;
+        }
+        .section-title { 
+            font-weight: bold; 
+            margin: 2mm 0 1mm 0;
+            border-bottom: 1px solid #000;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-bottom: 3mm;
+        }
+        th { 
+            text-align: left; 
+            padding: 1mm;
+            font-size: 9px;
+            border-bottom: 1px solid #000;
+        }
+        td { 
+            padding: 1mm;
+            border-bottom: 1px dashed #ddd;
+            font-size: 9px;
+        }
+        .text-right { 
+            text-align: right; 
+        }
+        .totals { 
+            margin-top: 3mm;
+            width: 100%;
+        }
+        .totals td {
+            padding: 1mm 0;
+            border-bottom: none;
+        }
+        .footer { 
+            margin-top: 5mm;
+            font-size: 8px; 
+            text-align: center;
+            border-top: 1px dashed #000;
+            padding-top: 2mm;
+        }
+        .barcode {
+            text-align: center;
+            margin: 2mm 0;
+        }
+        .divider {
+            border-top: 1px dashed #000;
+            margin: 3mm 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        {% if logo_path %}
+            <img src="{{ logo_path }}" class="logo">
+        {% endif %}
+        <div class="title">DÉTAIL D'ACHAT</div>
+        <div class="info-entreprise">
+            <strong>{{ entreprise.nom }}</strong><br>
+            {% if entreprise.adresse %}{{ entreprise.adresse }}<br>{% endif %}
+            {% if entreprise.telephone %}Tél: {{ entreprise.telephone }}{% endif %}
+        </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-title">INFORMATIONS FOURNISSEUR</div>
+    <table>
+        <tr>
+            <td width="35%"><strong>Fournisseur:</strong></td>
+            <td>{{ achat.fournisseur.nom }}</td>
+        </tr>
+        <tr>
+            <td><strong>Contact:</strong></td>
+            <td>{{ achat.fournisseur.telephone|default:"-" }}</td>
+        </tr>
+        <tr>
+            <td><strong>Date achat:</strong></td>
+            <td>{{ achat.date_achat|date:"d/m/Y H:i" }}</td>
+        </tr>
+    </table>
+
+    <div class="divider"></div>
+
+    <div class="section-title">DÉTAILS DE L'ACHAT</div>
+    <table>
+        <tr>
+            <th width="40%">Produit</th>
+            <th width="20%">Qté</th>
+            <th width="20%" class="text-right">Prix U.</th>
+            <th width="20%" class="text-right">Total</th>
+        </tr>
+        <tr>
+            <td>{{ achat.produit.nom }}</td>
+            <td>{{ achat.quantite }}</td>
+            <td class="text-right">{{ achat.prix_unitaire|floatformat:2 }} {{ symbole_devise }}</td>
+            <td class="text-right">{{ total_ht|floatformat:2 }} {{ symbole_devise }}</td>
+        </tr>
+    </table>
+
+    <div class="divider"></div>
+
+    <div class="totals">
+        <table>
+            <tr>
+                <td><strong>Total HT:</strong></td>
+                <td class="text-right">{{ total_ht|floatformat:2 }} {{ symbole_devise }}</td>
+            </tr>
+            <tr>
+                <td>TVA ({{ taux_tva }}%):</td>
+                <td class="text-right">{{ montant_tva|floatformat:2 }} {{ symbole_devise }}</td>
+            </tr>
+            <tr>
+                <td><strong>TOTAL TTC:</strong></td>
+                <td class="text-right"><strong>{{ total_ttc|floatformat:2 }} {{ symbole_devise }}</strong></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="divider"></div>
+
+    {% if achat.numero_facture %}
+    <div class="section-title">INFORMATIONS FACTURE</div>
+    <table>
+        <tr>
+            <td width="40%"><strong>N° Facture:</strong></td>
+            <td>{{ achat.numero_facture }}</td>
+        </tr>
+        {% if achat.date_facture %}
+        <tr>
+            <td><strong>Date Facture:</strong></td>
+            <td>{{ achat.date_facture|date:"d/m/Y" }}</td>
+        </tr>
+        {% endif %}
+    </table>
+    {% endif %}
+
+    <div class="barcode">
+        <!-- Code-barres ou QR code peut être ajouté ici -->
+        *{{ achat.id }}*
+    </div>
+
+    <div class="footer">
+        Document généré le {{ date_generation|date:"d/m/Y H:i" }}<br>
+        Par {{ auteur.get_full_name|default:auteur.username }}
+    </div>
+</body>
+</html>

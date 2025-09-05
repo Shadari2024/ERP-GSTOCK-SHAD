@@ -1,0 +1,252 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête de page - Version sombre -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-white">
+            <i class="fas fa-wallet fa-fw mr-2"></i>Détails du Compte
+        </h1>
+        <div>
+            <a href="{% url 'liste_comptes' %}" class="btn btn-sm btn-secondary mr-2">
+                <i class="fas fa-arrow-left fa-sm mr-1"></i> Retour
+            </a>
+            <a href="#" class="btn btn-sm btn-warning mr-2">
+                <i class="fas fa-edit fa-sm mr-1"></i> Modifier
+            </a>
+            <a href="#" class="btn btn-sm btn-danger">
+                <i class="fas fa-trash-alt fa-sm mr-1"></i> Supprimer
+            </a>
+        </div>
+    </div>
+
+    <!-- Carte principale - Version sombre -->
+    <div class="card shadow mb-4 border-0">
+        <div class="card-header py-3 bg-dark">
+            <h6 class="m-0 font-weight-bold text-white">
+                <i class="fas fa-info-circle mr-1"></i> Informations du Compte
+            </h6>
+        </div>
+        <div class="card-body bg-gray-900 text-white">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-4">
+                        <h5 class="font-weight-bold text-primary mb-3">
+                            <i class="fas 
+                                {% if compte.type_compte == 'ESP' %}fa-money-bill-wave 
+                                {% elif compte.type_compte == 'MM' %}fa-mobile-alt 
+                                {% elif compte.type_compte == 'BQ' %}fa-university 
+                                {% else %}fa-credit-card{% endif %} 
+                                mr-2"></i>
+                            {{ compte.nom }}
+                        </h5>
+                        
+                        <div class="pl-4">
+                            <p class="mb-2">
+                                <strong class="text-gray-400">Type:</strong>
+                                <span class="badge 
+                                    {% if compte.type_compte == 'ESP' %}badge-success
+                                    {% elif compte.type_compte == 'MM' %}badge-info
+                                    {% elif compte.type_compte == 'BQ' %}badge-primary
+                                    {% else %}badge-warning{% endif %} ml-2">
+                                    {{ compte.get_type_compte_display }}
+                                </span>
+                            </p>
+                            
+                            <p class="mb-2">
+                                <strong class="text-gray-400">Date création:</strong>
+                                <span class="text-white">{{ compte.date_creation|date:"d/m/Y H:i" }}</span>
+                            </p>
+                            
+                            <p class="mb-2">
+                                <strong class="text-gray-400">Solde initial:</strong>
+                                <span class="text-white">{{ compte.solde_initial|floatformat:2 }} {{ request.user.parametre.devise }}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card border-left-{% if solde_actuel > 0 %}success{% elif solde_actuel < 0 %}danger{% else %}info{% endif %} shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-uppercase mb-1">
+                                        Solde Actuel
+                                    </div>
+                                    <div class="h5 mb-0 font-weight-bold text-{% if solde_actuel > 0 %}success{% elif solde_actuel < 0 %}danger{% else %}info{% endif %}">
+                                        {{ solde_actuel|floatformat:2 }} {{ request.user.parametre.devise }}
+                                    </div>
+                                </div>
+                                <div class="col-auto">
+                                    <i class="fas 
+                                        {% if solde_actuel > 0 %}fa-arrow-up text-success
+                                        {% elif solde_actuel < 0 %}fa-arrow-down text-danger
+                                        {% else %}fa-equals text-info{% endif %} 
+                                        fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Carte des transactions -->
+    <div class="card shadow mb-4 border-0">
+        <div class="card-header py-3 bg-dark d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-white">
+                <i class="fas fa-exchange-alt mr-1"></i> Historique des Transactions
+            </h6>
+            <div class="input-group input-group-sm" style="width: 250px;">
+                <input type="text" id="transactionSearch" class="form-control bg-dark text-white border-dark" placeholder="Rechercher...">
+                <div class="input-group-append">
+                    <button class="btn btn-dark border-dark" type="button">
+                        <i class="fas fa-search text-gray-400"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="card-body bg-gray-900 p-0">
+            <div class="table-responsive">
+                <table class="table table-borderless table-hover table-dark mb-0" id="transactionsTable">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th class="pl-4">Date</th>
+                            <th>Type</th>
+                            <th class="text-right">Montant</th>
+                            <th>Description</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for transaction in transactions %}
+                        <tr class="bg-gray-800 hover-bg-gray-750">
+                            <td class="pl-4 align-middle">{{ transaction.date_transaction|date:"d/m/Y H:i" }}</td>
+                            <td class="align-middle">
+                                <span class="badge 
+                                    {% if transaction.type_transaction == 'ENTREE' %}badge-success
+                                    {% else %}badge-danger{% endif %}">
+                                    {{ transaction.get_type_transaction_display }}
+                                </span>
+                            </td>
+                            <td class="text-right font-weight-bold align-middle
+                                {% if transaction.type_transaction == 'ENTREE' %}text-success
+                                {% else %}text-danger{% endif %}">
+                                {% if transaction.type_transaction == 'ENTREE' %}+{% else %}-{% endif %}
+                                {{ transaction.montant|floatformat:2 }} {{ request.user.parametre.devise }}
+                            </td>
+                            <td class="align-middle">
+                                <span class="d-inline-block text-truncate" style="max-width: 200px;">
+                                    {{ transaction.description|default:"-" }}
+                                </span>
+                            </td>
+                            <td class="text-center align-middle">
+                                <a href="#" 
+                                   class="btn btn-sm btn-outline-info" 
+                                   title="Détails"
+                                   data-toggle="tooltip">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-gray-500 py-4">
+                                <i class="fas fa-exclamation-circle fa-2x mb-3"></i><br>
+                                Aucune transaction trouvée pour ce compte.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer bg-gray-800 text-right">
+            <small class="text-gray-400">
+                Affichage des {{ transactions|length }} dernières transactions
+            </small>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+// Activation des tooltips Bootstrap
+$(function () {
+  $('[data-toggle="tooltip"]').tooltip()
+})
+
+// Initialisation de la recherche
+$(document).ready(function() {
+    $('#transactionSearch').on('keyup', function() {
+        const value = $(this).val().toLowerCase();
+        $('#transactionsTable tbody tr').filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+        });
+    });
+});
+</script>
+
+<style>
+/* Thème sombre personnalisé */
+.bg-gray-900 { background-color: #1a202c; }
+.bg-gray-800 { background-color: #2d3748; }
+.bg-gray-750 { background-color: #3a465d; }
+.hover-bg-gray-750:hover { background-color: #3a465d; }
+.text-gray-400 { color: #cbd5e0; }
+
+/* Style tableau */
+.table-dark {
+    color: #fff;
+    background-color: #2d3748;
+}
+.table-dark thead th {
+    border-bottom-color: #4a5568;
+    position: sticky;
+    top: 0;
+    background-color: #2d3748;
+}
+
+/* Barre de recherche */
+#transactionSearch {
+    transition: all 0.3s;
+    color: white !important;
+}
+#transactionSearch:focus {
+    border-color: #4299e1;
+    box-shadow: 0 0 0 0.2rem rgba(66, 153, 225, 0.25);
+}
+
+/* Badges */
+.badge-success { background-color: #48bb78; }
+.badge-info { background-color: #4299e1; }
+.badge-primary { background-color: #667eea; }
+.badge-warning { background-color: #ed8936; }
+.badge-danger { background-color: #f56565; }
+
+/* Boutons */
+.btn-outline-info { 
+    border-color: #4299e1; 
+    color: #4299e1; 
+}
+.btn-outline-info:hover { 
+    background-color: #4299e1; 
+    color: white;
+}
+
+/* Card solde */
+.card-border-left-success { border-left: 0.25rem solid #48bb78 !important; }
+.card-border-left-danger { border-left: 0.25rem solid #f56565 !important; }
+.card-border-left-info { border-left: 0.25rem solid #4299e1 !important; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .d-sm-flex div:last-child {
+        margin-top: 1rem;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card mt-5">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Connexion Faciale</h4>
+                </div>
+                <div class="card-body">
+                    <p>Veuillez prendre une photo de votre visage pour vous connecter.</p>
+                    
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label for="id_image">Capture faciale</label>
+                            <input type="file" class="form-control-file" id="id_image" name="image" accept="image/*" capture="user">
+                            <small class="form-text text-muted">
+                                Cliquez pour prendre une photo avec votre caméra
+                            </small>
+                            {% if form.image.errors %}
+                                <div class="alert alert-danger">
+                                    {{ form.image.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">
+                            Se connecter
+                        </button>
+                        <a href="{% url 'security:connexion' %}" class="btn btn-link">
+                            Utiliser un mot de passe à la place
+                        </a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

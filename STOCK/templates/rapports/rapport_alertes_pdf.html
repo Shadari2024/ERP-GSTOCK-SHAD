@@ -1,0 +1,134 @@
+{% load humanize %}
+{% load custom_filters %}
+
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Rapport des Produits en Alerte</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+        body {
+            font-family: 'Helvetica', sans-serif;
+            color: #333;
+            line-height: 1.6;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 20px;
+        }
+        .logo {
+            max-width: 150px;
+            margin-bottom: 10px;
+        }
+        .title {
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+        .info-box {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th {
+            background-color: #3498db;
+            color: white;
+            padding: 10px;
+            text-align: left;
+        }
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        .alert-cell {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #7f8c8d;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        .date {
+            text-align: right;
+            margin-bottom: 20px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        {% if Param.logo %}
+            <img src="{{ Param.logo.url }}" class="logo" alt="Logo">
+        {% endif %}
+        <h1 class="title">Rapport des Produits en Alerte de Stock</h1>
+        <p class="subtitle">{{ Param.nom_entreprise }} - {{ Param.adresse }}</p>
+    </div>
+
+    <div class="date">
+        Généré le: {% now "j F Y" %} à {% now "H:i" %} par {{ user.username }}
+    </div>
+
+    <div class="info-box">
+        <p>Ce rapport liste tous les produits dont le stock est inférieur ou égal au seuil d'alerte défini.</p>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Référence</th>
+                <th>Désignation</th>
+                <th>Catégorie</th>
+                <th>Stock Actuel</th>
+                <th>Seuil d'Alerte</th>
+                <th>Déficit</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for produit in produits_alertes %}
+            <tr>
+                <td>{{ produit.reference }}</td>
+                <td>{{ produit.designation }}</td>
+                <td>{{ produit.categorie.nom }}</td>
+                <td class="alert-cell">{{ produit.stock }}</td>
+                <td>{{ produit.seuil_alerte }}</td>
+                <td class="alert-cell">{{ produit.seuil_alerte|subtract:produit.stock }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center;">Aucun produit en alerte actuellement</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        {{ Param.nom_societe }} - Tél: {{ Param.telephone }} | Email: {{ Param.email }}
+        <br>
+        Système de Gestion d'Inventaire - © {% now "Y" %}
+    </div>
+</body>
+</html>

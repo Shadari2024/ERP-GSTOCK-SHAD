@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Gestion des Permissions{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-key me-2"></i>
+                        Liste des Permissions
+                    </h5>
+                </div>
+                
+                <!-- Barre de recherche avancée -->
+                <div class="card-body border-bottom">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="searchInput" class="form-label">Recherche</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="searchInput" 
+                                       name="q" value="{{ current_search.q }}" 
+                                       placeholder="Rechercher par nom, code ou modèle..."
+                                       list="keywordSuggestions">
+                                <datalist id="keywordSuggestions">
+                                    {% for keyword in popular_keywords %}
+                                    <option value="{{ keyword }}">
+                                    {% endfor %}
+                                </datalist>
+                                <button class="btn btn-outline-secondary" type="submit">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="appFilter" class="form-label">Application</label>
+                            <select class="form-select" id="appFilter" name="app_label">
+                                <option value="">Toutes les applications</option>
+                                {% for app in app_suggestions %}
+                                <option value="{{ app }}" {% if current_search.app_label == app %}selected{% endif %}>
+                                    {{ app }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="modelFilter" class="form-label">Modèle</label>
+                            <select class="form-select" id="modelFilter" name="model_name">
+                                <option value="">Tous les modèles</option>
+                                {% for model in model_suggestions %}
+                                <option value="{{ model }}" {% if current_search.model_name == model %}selected{% endif %}>
+                                    {{ model }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between">
+                                <button type="submit" class="btn btn-primary me-2">
+                                    <i class="fas fa-filter me-1"></i> Filtrer
+                                </button>
+                                <a href="?" class="btn btn-outline-secondary">
+                                    <i class="fas fa-times me-1"></i> Réinitialiser
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Résultats -->
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Application</th>
+                                    <th>Modèle</th>
+                                    <th>Code</th>
+                                    <th>Nom</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for permission in permissions %}
+                                <tr>
+                                    <td>{{ permission.content_type.app_label }}</td>
+                                    <td>{{ permission.content_type.model }}</td>
+                                    <td><code>{{ permission.codename }}</code></td>
+                                    <td>{{ permission.name }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted py-4">
+                                        <i class="fas fa-ban fa-2x mb-2"></i>
+                                        <p>Aucune permission trouvée</p>
+                                        {% if current_search.q or current_search.app_label or current_search.model_name %}
+                                        <a href="?" class="btn btn-sm btn-outline-primary">
+                                            Réinitialiser les filtres
+                                        </a>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if is_paginated %}
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-center mt-4">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if current_search.q %}&q={{ current_search.q }}{% endif %}{% if current_search.app_label %}&app_label={{ current_search.app_label }}{% endif %}{% if current_search.model_name %}&model_name={{ current_search.model_name }}{% endif %}">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_search.q %}&q={{ current_search.q }}{% endif %}{% if current_search.app_label %}&app_label={{ current_search.app_label }}{% endif %}{% if current_search.model_name %}&model_name={{ current_search.model_name }}{% endif %}">
+                                    <i class="fas fa-angle-left"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% if current_search.q %}&q={{ current_search.q }}{% endif %}{% if current_search.app_label %}&app_label={{ current_search.app_label }}{% endif %}{% if current_search.model_name %}&model_name={{ current_search.model_name }}{% endif %}">{{ num }}</a>
+                                </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_search.q %}&q={{ current_search.q }}{% endif %}{% if current_search.app_label %}&app_label={{ current_search.app_label }}{% endif %}{% if current_search.model_name %}&model_name={{ current_search.model_name }}{% endif %}">
+                                    <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_search.q %}&q={{ current_search.q }}{% endif %}{% if current_search.app_label %}&app_label={{ current_search.app_label }}{% endif %}{% if current_search.model_name %}&model_name={{ current_search.model_name }}{% endif %}">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

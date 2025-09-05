@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "Écarts de Caisse" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">
+                    <i class="fas fa-money-bill-wave me-2"></i>
+                    {% trans "Écarts de Caisse" %} - {{ point_de_vente.nom }}
+                </h1>
+                <div>
+                    <a href="{% url 'ventes:pos_dashboard' pk=point_de_vente.id %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>
+                        {% trans "Retour" %}
+                    </a>
+                    <a href="{% url 'ventes:rapport_ecarts_caisse' pk=point_de_vente.id %}" class="btn btn-info ms-2">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        {% trans "Rapport" %}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <h5 class="card-title">{% trans "Excédents" %}</h5>
+                    <h2 class="stat-number">{{ total_excedent|floatformat:2 }} {{ devise_symbole }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-danger text-white">
+                <div class="card-body text-center">
+                    <h5 class="card-title">{% trans "Manquants" %}</h5>
+                    <h2 class="stat-number">{{ total_manquant|floatformat:2 }} {{ devise_symbole }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-{% if solde_ecarts >= 0 %}info{% else %}warning{% endif %} text-white">
+                <div class="card-body text-center">
+                    <h5 class="card-title">{% trans "Solde" %}</h5>
+                    <h2 class="stat-number">{{ solde_ecarts|floatformat:2 }} {{ devise_symbole }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">{% trans "Caissier" %}</label>
+                    <select name="caissier" class="form-select">
+                        <option value="">{% trans "Tous les caissiers" %}</option>
+                        {% for caissier in caissiers %}
+                        <option value="{{ caissier.id }}" {% if request.GET.caissier == caissier.id|stringformat:"s" %}selected{% endif %}>
+                            {{ caissier.get_full_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{% trans "Type d'écart" %}</label>
+                    <select name="type_ecart" class="form-select">
+                        <option value="">{% trans "Tous les types" %}</option>
+                        {% for type_code, type_label in types_ecart %}
+                        <option value="{{ type_code }}" {% if request.GET.type_ecart == type_code %}selected{% endif %}>
+                            {{ type_label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{% trans "Date début" %}</label>
+                    <input type="date" name="date_debut" class="form-control" value="{{ request.GET.date_debut }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">{% trans "Date fin" %}</label>
+                    <input type="date" name="date_fin" class="form-control" value="{{ request.GET.date_fin }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-filter me-1"></i> {% trans "Filtrer" %}
+                        </button>
+                        <a href="{% url 'ventes:ecarts_caisse' pk=point_de_vente.id %}" class="btn btn-secondary">
+                            <i class="fas fa-undo me-1"></i> {% trans "Réinitialiser" %}
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>{% trans "Date" %}</th>
+                            <th>{% trans "Caissier" %}</th>
+                            <th>{% trans "Session" %}</th>
+                            <th>{% trans "Type" %}</th>
+                            <th>{% trans "Montant" %}</th>
+                            <th>{% trans "Motif" %}</th>
+                            <th>{% trans "Enregistré par" %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ecart in ecarts %}
+                        <tr>
+                            <td>{{ ecart.date_creation|date:"d/m/Y H:i" }}</td>
+                            <td>{{ ecart.caissier.get_full_name }}</td>
+                            <td>Session {{ ecart.session.id }}</td>
+                            <td>
+                                <span class="badge bg-{% if ecart.type_ecart == 'excedent' %}success{% elif ecart.type_ecart == 'manquant' %}danger{% else %}info{% endif %}">
+                                    {{ ecart.get_type_ecart_display }}
+                                </span>
+                            </td>
+                            <td class="fw-bold {% if ecart.type_ecart == 'excedent' %}text-success{% elif ecart.type_ecart == 'manquant' %}text-danger{% endif %}">
+                                {{ ecart.montant }} {{ devise_symbole }}
+                            </td>
+                            <td>{{ ecart.motif|default:"-"|truncatewords:5 }}</td>
+                            <td>{{ ecart.created_by.get_full_name|default:"-" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fas fa-money-bill-wave fa-2x mb-2"></i>
+                                <p>{% trans "Aucun écart de caisse enregistré" %}</p>
+                                {% if request.GET %}
+                                <small>{% trans "Essayez de modifier vos filtres de recherche" %}</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if is_paginated %}
+            <nav aria-label="Page navigation">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            {% trans "Précédent" %}
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                    <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                        <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            {% trans "Suivant" %}
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

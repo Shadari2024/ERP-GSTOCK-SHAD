@@ -1,0 +1,52 @@
+{% extends "grh/base.html" %}
+{% load i18n %}
+
+{% block page_title %}{% trans "Confirmer la suppression du département" %}{% endblock %}
+{% block page_description %}{% trans "Veuillez confirmer si vous souhaitez vraiment supprimer cet élément." %}{% endblock %}
+
+{% block breadcrumb %}
+    <li class="breadcrumb-item"><a href="{% url 'grh:departement_list' %}">{% trans "Départements" %}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{% trans "Suppression" %}</li>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-5">
+        <div class="card shadow-lg border-danger-subtle">
+            <div class="card-header border-danger">
+                <h5 class="card-title text-danger">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    {% trans "Confirmation de suppression" %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="text-white-50">
+                    {% trans "Êtes-vous sûr de vouloir supprimer définitivement le département suivant ? Cette action est irréversible." %}
+                </p>
+                <div class="alert alert-danger bg-opacity-10 py-3 mb-4">
+                    <h6 class="alert-heading text-danger mb-1">{% trans "Département à supprimer" %}:</h6>
+                    <div class="text-danger fw-bold">
+                        <i class="bi bi-building me-2"></i>
+                        {{ object.nom }}
+                    </div>
+                    {% if object.description %}
+                    <small class="d-block mt-1 text-danger-emphasis">{{ object.description }}</small>
+                    {% endif %}
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-danger btn-lg mt-3" data-bs-toggle="tooltip" data-bs-placement="top" title="Confirmer la suppression">
+                            <i class="bi bi-trash-fill me-2"></i>{% trans "Oui, supprimer" %}
+                        </button>
+                        <a href="{% url 'grh:departement_list' %}" class="btn btn-secondary btn-lg" data-bs-toggle="tooltip" data-bs-placement="top" title="Annuler et retourner à la liste">
+                            <i class="bi bi-x-circle me-2"></i>{% trans "Annuler" %}
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

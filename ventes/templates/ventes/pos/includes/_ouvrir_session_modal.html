@@ -1,0 +1,26 @@
+<!-- Modal pour ouvrir une session -->
+<div class="modal fade" id="ouvrirSessionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'ventes:ouvrir_session_pos' point_de_vente.id %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Ouvrir une Session</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="fonds_ouverture" class="form-label">Fonds d'ouverture (€)</label>
+                        <input type="number" class="form-control" id="fonds_ouverture" 
+                               name="fonds_ouverture" step="0.01" min="0" required
+                               placeholder="Montant initial en caisse">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success">Ouvrir la Session</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

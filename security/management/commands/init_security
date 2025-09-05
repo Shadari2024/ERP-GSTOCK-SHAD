@@ -1,0 +1,77 @@
+# management/commands/init_securite.py
+from django.core.management.base import BaseCommand
+from django.contrib.auth.models import Group, Permission
+from django.contrib.contenttypes.models import ContentType
+from ...models import RegleSecurite, UtilisateurPersonnalise
+
+class Command(BaseCommand):
+    help = 'Initialise les groupes et permissions de base pour le système de sécurité'
+    
+    def handle(self, *args, **options):
+        # Création des groupes de base
+        groupes = {
+            'Admin': {
+                'description': 'Administrateurs système avec accès complet',
+                'niveau_acces': 10,
+                'peut_creer_utilisateur': True,
+                'peut_supprimer_utilisateur': True,
+                'peut_modifier_permissions': True,
+            },
+            'Gestionnaire': {
+                'description': 'Gestionnaires avec accès étendu',
+                'niveau_acces': 7,
+                'peut_creer_utilisateur': True,
+                'peut_supprimer_utilisateur': False,
+                'peut_modifier_permissions': False,
+            },
+            'Caissier': {
+                'description': 'Caissiers avec accès limité',
+                'niveau_acces': 5,
+                'peut_creer_utilisateur': False,
+                'peut_supprimer_utilisateur': False,
+                'peut_modifier_permissions': False,
+            },
+            'Stock': {
+                'description': 'Responsables du stock',
+                'niveau_acces': 6,
+                'peut_creer_utilisateur': False,
+                'peut_supprimer_utilisateur': False,
+                'peut_modifier_permissions': False,
+            },
+        }
+        
+        for nom, details in groupes.items():
+            groupe, created = Group.objects.get_or_create(name=nom)
+            if created:
+                groupe.description = details['description']
+                groupe.niveau_acces = details['niveau_acces']
+                groupe.peut_creer_utilisateur = details['peut_creer_utilisateur']
+                groupe.peut_supprimer_utilisateur = details['peut_supprimer_utilisateur']
+                groupe.peut_modifier_permissions = details['peut_modifier_permissions']
+                groupe.save()
+                self.stdout.write(self.style.SUCCESS(f'Groupe créé: {nom}'))
+        
+        # Assignation des permissions de base
+        content_type = ContentType.objects.get_for_model(UtilisateurPersonnalise)
+        permissions = [
+            ('acces_tableau_bord', 'Accès au tableau de bord'),
+            ('gerer_utilisateurs', 'Gérer les utilisateurs'),
+            ('voir_rapports', 'Voir les rapports'),
+            ('exporter_donnees', 'Exporter des données'),
+        ]
+        
+        for codename, name in permissions:
+            permission, created = Permission.objects.get_or_create(
+                codename=codename,
+                content_type=content_type,
+                defaults={'name': name}
+            )
+            if created:
+                self.stdout.write(self.style.SUCCESS(f'Permission créée: {name}'))
+        
+        # Assignation des permissions aux groupes
+        admin_group = Group.objects.get(name='Admin')
+        admin_permissions = Permission.objects.all()
+        admin_group.permissions.set(admin_permissions)
+        
+        self.stdout.write(self.style.SUCCESS('Configuration de sécurité initialisée avec succès'))

@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+    <!-- En-tête avec boutons d'action -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">
+            <i class="fas fa-user-tie text-primary me-2"></i>Fiche Fournisseur
+        </h2>
+        <div class="d-flex gap-2">
+            <a href="{% url 'fournisseur_update' fournisseur.pk %}" class="btn btn-sm btn-outline-warning">
+                <i class="fas fa-edit me-1"></i> Modifier
+            </a>
+            <a href="{% url 'fournisseur_delete' fournisseur.pk %}" class="btn btn-sm btn-outline-danger">
+                <i class="fas fa-trash-alt me-1"></i> Supprimer
+            </a>
+            <a href="{% url 'fournisseur_list' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Retour
+            </a>
+        </div>
+    </div>
+
+    <!-- Carte principale -->
+    <div class="card border-0 shadow-lg">
+        <div class="card-header bg-primary text-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">{{ fournisseur.nom }}</h4>
+                <span class="badge bg-light text-dark">{{ fournisseur.get_type_display }}</span>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <div class="row">
+                <!-- Colonne de gauche -->
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2"><i class="fas fa-phone me-2"></i>Contact</h6>
+                        <div class="ps-4">
+                            <p class="mb-1"><strong>Téléphone :</strong> {{ fournisseur.telephone }}</p>
+                            <p class="mb-0"><strong>Email :</strong> 
+                                {% if fournisseur.email %}
+                                    <a href="mailto:{{ fournisseur.email }}">{{ fournisseur.email }}</a>
+                                {% else %}
+                                    <span class="text-muted">Non renseigné</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Colonne de droite -->
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2"><i class="fas fa-map-marker-alt me-2"></i>Adresse</h6>
+                        <div class="ps-4">
+                            <p class="mb-0">{{ fournisseur.adresse|linebreaksbr|default:"<span class='text-muted'>Non renseignée</span>" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Notes -->
+            <div class="mt-4">
+                <h6 class="text-muted mb-2"><i class="fas fa-sticky-note me-2"></i>Notes</h6>
+                <div class="p-3 bg-light rounded">
+                    {% if fournisseur.notes %}
+                        {{ fournisseur.notes|linebreaks }}
+                    {% else %}
+                        <p class="text-muted mb-0">Aucune note enregistrée</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pied de carte -->
+        <div class="card-footer bg-light d-flex justify-content-between align-items-center">
+            <small class="text-muted">
+                <i class="fas fa-calendar-alt me-1"></i> 
+                Créé le {{ fournisseur.created_at|date:"d/m/Y" }}
+                {% if fournisseur.updated_at %}
+                    | Modifié le {{ fournisseur.updated_at|date:"d/m/Y" }}
+                {% endif %}
+            </small>
+            <div class="d-flex gap-2">
+                <a href="{% url 'fournisseur_update' fournisseur.pk %}" class="btn btn-sm btn-warning">
+                    <i class="fas fa-edit me-1"></i> Modifier
+                </a>
+                <a href="{% url 'fournisseur_delete' fournisseur.pk %}" class="btn btn-sm btn-danger">
+                    <i class="fas fa-trash-alt me-1"></i> Supprimer
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+    .card-header {
+        border-radius: 0 !important;
+    }
+    .badge {
+        font-size: 0.85rem;
+        padding: 0.35em 0.65em;
+    }
+    h6.text-muted {
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,336 @@
+{% extends "comptabilite/base.html" %}
+{% load static %}
+
+{% block title %}Comptes Auxiliaires{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active" aria-current="page">Comptes Auxiliaires</li>
+{% endblock %}
+
+{% block page_title %}Comptes Auxiliaires{% endblock %}
+
+{% block actions %}
+<div>
+    <a href="{% url 'comptabilite:compte_auxiliaire_create' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-1"></i> Nouveau Compte
+    </a>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title">Gestion des Comptes Auxiliaires</h5>
+        <p class="card-subtitle text-muted">Clients, fournisseurs et autres comptes tiers</p>
+    </div>
+    <div class="card-body">
+        <!-- Filtres -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <select class="form-select" id="type-filter">
+                    <option value="">Tous les types</option>
+                    <option value="client" {% if filters.type_compte == 'client' %}selected{% endif %}>Clients</option>
+                    <option value="fournisseur" {% if filters.type_compte == 'fournisseur' %}selected{% endif %}>Fournisseurs</option>
+                    <option value="autre" {% if filters.type_compte == 'autre' %}selected{% endif %}>Autres</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <select class="form-select" id="statut-filter">
+                    <option value="">Tous les statuts</option>
+                    <option value="actif" {% if filters.actif == 'actif' %}selected{% endif %}>Actifs</option>
+                    <option value="inactif" {% if filters.actif == 'inactif' %}selected{% endif %}>Inactifs</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <input type="text" class="form-control" placeholder="Rechercher par code ou intitulé..." 
+                       id="search-input" value="{{ filters.search }}">
+            </div>
+        </div>
+
+        <!-- Tableau des comptes auxiliaires -->
+        <div class="table-responsive">
+            <table class="table table-striped table-hover" id="comptes-auxiliaires-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>Code</th>
+                        <th>Intitulé</th>
+                        <th>Type</th>
+                        <th>Compte Général</th>
+                        <th>Statut</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for compte in comptes_auxiliaires %}
+                    <tr>
+                        <td>
+                            <strong>{{ compte.code }}</strong>
+                        </td>
+                        <td>{{ compte.intitule }}</td>
+                        <td>
+                            {% if compte.type_compte == 'client' %}
+                                <span class="badge bg-info">Client</span>
+                            {% elif compte.type_compte == 'fournisseur' %}
+                                <span class="badge bg-warning">Fournisseur</span>
+                            {% elif compte.type_compte == 'autre' %}
+                                <span class="badge bg-secondary">Autre</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>{{ compte.compte_general.numero }} - {{ compte.compte_general.intitule }}</small>
+                        </td>
+                        <td>
+                            {% if compte.actif %}
+                                <span class="badge bg-success">Actif</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inactif</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group">
+                                <a href="{% url 'comptabilite:compte_auxiliaire_update' compte.pk %}" 
+                                   class="btn btn-sm btn-outline-secondary" title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if perms.comptabilite.delete_compteauxiliaire %}
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        data-bs-toggle="modal" data-bs-target="#deleteModal{{ compte.pk }}" title="Supprimer">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <div class="text-muted">
+                                <i class="fas fa-address-book fa-3x mb-3"></i>
+                                <h5>Aucun compte auxiliaire trouvé</h5>
+                                <p>Commencez par créer votre premier compte auxiliaire.</p>
+                                <a href="{% url 'comptabilite:compte_auxiliaire_create' %}" class="btn btn-primary">
+                                    <i class="fas fa-plus me-1"></i> Créer un compte
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Les modales doivent être placées EN DEHORS du tableau -->
+        {% for compte in comptes_auxiliaires %}
+        {% if perms.comptabilite.delete_compteauxiliaire %}
+        <div class="modal fade" id="deleteModal{{ compte.pk }}" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirmer la suppression</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Êtes-vous sûr de vouloir supprimer le compte auxiliaire <strong>{{ compte.code }} - {{ compte.intitule }}</strong> ?</p>
+                        <p class="text-danger">Cette action est irréversible.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <form method="post" action="{% url 'comptabilite:compte_auxiliaire_delete' compte.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">Supprimer</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+
+        <!-- Statistiques -->
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ comptes_auxiliaires.count }}</h5>
+                        <p class="card-text">Comptes au total</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ comptes_actifs|default:0 }}</h5>
+                        <p class="card-text">Comptes actifs</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ comptes_clients|default:0 }}</h5>
+                        <p class="card-text">Clients</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">{{ comptes_fournisseurs|default:0 }}</h5>
+                        <p class="card-text">Fournisseurs</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Configuration manuelle pour éviter les problèmes de langue
+        const frenchTranslation = {
+            "processing": "Traitement en cours...",
+            "search": "Rechercher :",
+            "lengthMenu": "Afficher _MENU_ éléments",
+            "info": "Affichage de _START_ à _END_ sur _TOTAL_ éléments",
+            "infoEmpty": "Affichage de 0 à 0 sur 0 éléments",
+            "infoFiltered": "(filtrés de _MAX_ éléments au total)",
+            "infoPostFix": "",
+            "loadingRecords": "Chargement en cours...",
+            "zeroRecords": "Aucun élément à afficher",
+            "emptyTable": "Aucune donnée disponible dans le tableau",
+            "paginate": {
+                "first": "Premier",
+                "previous": "Précédent",
+                "next": "Suivant",
+                "last": "Dernier"
+            },
+            "aria": {
+                "sortAscending": ": activer pour trier la colonne par ordre croissant",
+                "sortDescending": ": activer pour trier la colonne par ordre décroissant"
+            }
+        };
+
+        // Vérifier que le tableau a une structure correcte avant d'initialiser DataTables
+        function initializeDataTable() {
+            const table = $('#comptes-auxiliaires-table');
+            const headerCount = table.find('thead th').length;
+            let validStructure = true;
+            
+            // Vérifier chaque ligne du corps du tableau
+            table.find('tbody tr').each(function() {
+                const cellCount = $(this).find('td').length;
+                if (cellCount !== headerCount) {
+                    console.error('Erreur de structure: ligne avec', cellCount, 'cellules au lieu de', headerCount);
+                    validStructure = false;
+                    return false; // Sortir de la boucle
+                }
+            });
+            
+            if (validStructure) {
+                // Initialisation de DataTables avec vérification pour éviter la réinitialisation
+                if (!$.fn.DataTable.isDataTable('#comptes-auxiliaires-table')) {
+                    const dataTable = table.DataTable({
+                        language: frenchTranslation,
+                        pageLength: 25,
+                        order: [[0, 'asc']],
+                        responsive: true,
+                        autoWidth: false,
+                        columnDefs: [
+                            { orderable: false, targets: 5 } // Désactiver le tri sur la colonne Actions
+                        ]
+                    });
+
+                    // Configurer la recherche DataTables
+                    $('#search-input').on('keyup', function() {
+                        dataTable.search(this.value).draw();
+                    });
+                    
+                    console.log('DataTables initialisé avec succès');
+                } else {
+                    // Si DataTables est déjà initialisé, on récupère simplement l'instance
+                    table.DataTable();
+                }
+            } else {
+                console.warn('DataTables non initialisé en raison d\'une structure de tableau incorrecte');
+            }
+        }
+
+        // Initialiser DataTables après un court délai
+        setTimeout(initializeDataTable, 100);
+
+        // Filtrage par type
+        $('#type-filter').change(function() {
+            const type = $(this).val();
+            let url = '{% url "comptabilite:compte_auxiliaire_list" %}?';
+            
+            if (type) url += `type_compte=${type}&`;
+            
+            // Garder les autres filtres
+            const statut = $('#statut-filter').val();
+            const search = $('#search-input').val();
+            
+            if (statut) url += `actif=${statut}&`;
+            if (search) url += `search=${encodeURIComponent(search)}&`;
+            
+            window.location.href = url;
+        });
+
+        // Filtrage par statut
+        $('#statut-filter').change(function() {
+            const statut = $(this).val();
+            let url = '{% url "comptabilite:compte_auxiliaire_list" %}?';
+            
+            if (statut) url += `actif=${statut}&`;
+            
+            // Garder les autres filtres
+            const type = $('#type-filter').val();
+            const search = $('#search-input').val();
+            
+            if (type) url += `type_compte=${type}&`;
+            if (search) url += `search=${encodeURIComponent(search)}&`;
+            
+            window.location.href = url;
+        });
+
+        // Recherche avec Entrée (redirection)
+        $('#search-input').on('keyup', function(e) {
+            if (e.which === 13) { // Enter key
+                const search = $(this).val();
+                let url = '{% url "comptabilite:compte_auxiliaire_list" %}?';
+                
+                if (search) url += `search=${encodeURIComponent(search)}&`;
+                
+                // Garder les autres filtres
+                const type = $('#type-filter').val();
+                const statut = $('#statut-filter').val();
+                
+                if (type) url += `type_compte=${type}&`;
+                if (statut) url += `actif=${statut}&`;
+                
+                window.location.href = url;
+            }
+        });
+    });
+</script>
+
+<style>
+    .badge {
+        font-size: 0.8em;
+    }
+    
+    .table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+    
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    .btn-group .btn {
+        padding: 0.25rem 0.5rem;
+    }
+</style>
+{% endblock %}

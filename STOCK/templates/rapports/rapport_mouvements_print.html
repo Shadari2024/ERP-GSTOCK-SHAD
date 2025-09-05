@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapport des mouvements de stock</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #333;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+        .header h1 {
+            font-size: 18px;
+            margin: 0;
+        }
+        .header p {
+            font-size: 14px;
+            margin: 5px 0 0;
+            color: #666;
+        }
+        .info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+        th {
+            background-color: #f8f9fa;
+            text-align: left;
+            padding: 8px;
+            border-bottom: 2px solid #dee2e6;
+            text-transform: uppercase;
+            font-size: 10px;
+        }
+        td {
+            padding: 8px;
+            border-bottom: 1px solid #dee2e6;
+            vertical-align: top;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        .badge-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .badge-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .badge-warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .footer {
+            text-align: right;
+            font-size: 10px;
+            color: #666;
+            margin-top: 20px;
+            border-top: 1px solid #dee2e6;
+            padding-top: 10px;
+        }
+        .text-end {
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>RAPPORT DES MOUVEMENTS DE STOCK</h1>
+        <p>Période du {{ date_debut|default:"-" }} au {{ date_fin|default:"-" }}</p>
+    </div>
+
+    <div class="info">
+        <div>
+            <strong>Type de mouvement:</strong> 
+            {% if type_mouvement %}{{ type_mouvement|title }}{% else %}Tous types{% endif %}
+        </div>
+        <div>
+            <strong>Nombre de mouvements:</strong> {{ mouvements|length }}
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Produit</th>
+                <th>Type</th>
+                <th class="text-end">Quantité</th>
+                <th>Utilisateur</th>
+                <th>Commentaire</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in mouvements %}
+            <tr>
+                <td>{{ m.date_mouvement|date:"d/m/Y H:i" }}</td>
+                <td>{{ m.produit.nom }}</td>
+                <td>
+                    <span class="badge 
+                        {% if m.type_mouvement == 'entree' %}badge-success
+                        {% elif m.type_mouvement == 'sortie' %}badge-danger
+                        {% else %}badge-warning{% endif %}">
+                        {{ m.get_type_mouvement_display }}
+                    </span>
+                </td>
+                <td class="text-end">{{ m.quantite }}</td>
+                <td>{{ m.utilisateur.username }}</td>
+                <td>{{ m.commentaire|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 20px;">
+                    Aucun mouvement trouvé pour les critères sélectionnés
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Généré le {% now "d/m/Y à H:i" %} | {{ request.user.username }}
+    </div>
+</body>
+</html>

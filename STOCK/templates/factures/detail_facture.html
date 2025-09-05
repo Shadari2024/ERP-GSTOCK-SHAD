@@ -1,0 +1,455 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="facture-container">
+    <!-- En-tête entreprise -->
+    <header class="facture-header">
+        {% if parametres.logo %}
+        <div class="logo-container">
+            <img src="{{ parametres.logo.url }}" alt="Logo {{ parametres.nom_societe }}" class="logo">
+        </div>
+        {% endif %}
+        
+        <div class="entreprise-info">
+            <h1 class="entreprise-nom">{{ parametres.nom_societe }}</h1>
+            <p class="entreprise-adresse">{{ parametres.adresse }}</p>
+            <div class="entreprise-contacts">
+                <span class="contact-item"><i class="fas fa-phone"></i> {{ parametres.telephone }}</span>
+                <span class="contact-item"><i class="fas fa-envelope"></i> {{ parametres.email }}</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="facture-content">
+        <!-- Titre et informations principales -->
+        <div class="facture-title-section">
+            <h2 class="facture-title">FACTURE <span class="facture-numero">#{{ facture.numero }}</span></h2>
+            <div class="facture-meta">
+                <div class="meta-item">
+                    <span class="meta-label">Date :</span>
+                    <span class="meta-value">{{ facture.date|date:"d/m/Y" }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Statut :</span>
+                    <span class="meta-value status-{{ facture.statut }}">{{ facture.get_statut_display }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations client -->
+        <div class="client-section">
+            <h3 class="section-title">Client</h3>
+            <div class="client-info">
+                <p><strong>{{ facture.commande.client.nom }}</strong></p>
+                {% if facture.commande.client.adresse %}
+                <p>{{ facture.commande.client.adresse }}</p>
+                {% endif %}
+                {% if facture.commande.client.telephone %}
+                <p>Tél: {{ facture.commande.client.telephone }}</p>
+                {% endif %}
+                {% if facture.commande.client.email %}
+                <p>Email: {{ facture.commande.client.email }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Résumé financier -->
+        <div class="summary-section">
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <span class="summary-label">Total HT</span>
+                    <span class="summary-value">{{ facture.commande.total_ht }} {{ parametres.devise }}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">TVA ({{ parametres.taux_tva }}%)</span>
+                    <span class="summary-value">{{ facture.commande.total_tva }} {{ parametres.devise }}</span>
+                </div>
+                <div class="summary-item total">
+                    <span class="summary-label">Total TTC</span>
+                    <span class="summary-value">{{ facture.montant_total }} {{ parametres.devise }}</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-label">Montant payé</span>
+                    <span class="summary-value">{{ facture.montant_paye }} {{ parametres.devise }}</span>
+                </div>
+                <div class="summary-item reste">
+                    <span class="summary-label">Reste à payer</span>
+                    <span class="summary-value">{{ facture.reste_a_payer }} {{ parametres.devise }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bouton de paiement -->
+        <button onclick="togglePaymentForm()" class="btn btn-payment">
+            <i class="fas fa-money-bill-wave"></i> Enregistrer un paiement
+        </button>
+
+        <!-- Formulaire de paiement (caché par défaut) -->
+        <div id="payment-form" class="payment-form-container" style="display: none;">
+            <h3 class="form-title"><i class="fas fa-credit-card"></i> Nouveau paiement</h3>
+            <form method="post" action="{% url 'enregistrer_paiement' facture.id %}" class="payment-form">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="montant">Montant ({{ parametres.devise }})</label>
+                    <input type="number" id="montant" name="montant" 
+                           step="0.01" min="0.01" max="{{ facture.reste_a_payer }}"
+                           value="{{ facture.reste_a_payer }}"
+                           required class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="methode">Méthode de paiement</label>
+                    <select id="methode" name="methode" required class="form-control">
+                        <option value="especes">Espèces</option>
+                        <option value="carte">Carte bancaire</option>
+                        <option value="cheque">Chèque</option>
+                        <option value="virement">Virement bancaire</option>
+                    </select>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-submit">
+                        <i class="fas fa-check"></i> Valider le paiement
+                    </button>
+                    <button type="button" onclick="togglePaymentForm()" class="btn btn-cancel">
+                        <i class="fas fa-times"></i> Annuler
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Historique des paiements -->
+        {% if facture.paiement_set.all %}
+        <div class="payments-history">
+            <h3 class="section-title"><i class="fas fa-history"></i> Historique des paiements</h3>
+            <div class="table-responsive">
+                <table class="payments-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Méthode</th>
+                            <th class="text-right">Montant</th>
+                            <th>Référence</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for paiement in facture.paiement_set.all %}
+                        <tr>
+                            <td>{{ paiement.date|date:"d/m/Y H:i" }}</td>
+                            <td>{{ paiement.get_methode_display }}</td>
+                            <td class="text-right">{{ paiement.montant }} {{ parametres.devise }}</td>
+                            <td>Paiement #{{ paiement.id }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Pied de page -->
+    <footer class="facture-footer">
+        <p>{{ parametres.nom_societe }} - SIRET : XXXXXXXX - Code APE : XXXX</p>
+        <p>Merci pour votre confiance !</p>
+    </footer>
+</div>
+
+<style>
+    /* Styles de base */
+    .facture-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 30px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #333;
+        background: #fff;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    
+    .facture-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .logo-container {
+        margin-right: 20px;
+    }
+    
+    .logo {
+        max-height: 80px;
+        max-width: 150px;
+    }
+    
+    .entreprise-info {
+        flex: 1;
+    }
+    
+    .entreprise-nom {
+        margin: 0;
+        color: #2c3e50;
+        font-size: 24px;
+    }
+    
+    .entreprise-adresse {
+        margin: 5px 0;
+        color: #7f8c8d;
+    }
+    
+    .entreprise-contacts {
+        display: flex;
+        gap: 15px;
+        margin-top: 10px;
+    }
+    
+    .contact-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 14px;
+        color: #7f8c8d;
+    }
+    
+    /* Section titre */
+    .facture-title-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+    }
+    
+    .facture-title {
+        margin: 0;
+        color: #2c3e50;
+        font-size: 20px;
+    }
+    
+    .facture-numero {
+        color: #3498db;
+    }
+    
+    .facture-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .meta-item {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .meta-label {
+        font-weight: bold;
+    }
+    
+    .status-payee {
+        color: #27ae60;
+    }
+    
+    .status-impayee {
+        color: #e74c3c;
+    }
+    
+    .status-partielle {
+        color: #f39c12;
+    }
+    
+    /* Sections */
+    .section-title {
+        color: #2c3e50;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 5px;
+        margin: 25px 0 15px;
+        font-size: 18px;
+    }
+    
+    .client-info {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 5px;
+    }
+    
+    /* Résumé financier */
+    .summary-section {
+        margin: 25px 0;
+    }
+    
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+    
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 5px;
+    }
+    
+    .summary-item.total {
+        background: #e3f2fd;
+        font-weight: bold;
+    }
+    
+    .summary-item.reste {
+        background: #fff8e1;
+        font-weight: bold;
+    }
+    
+    /* Boutons */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+    
+    .btn-payment {
+        background: #3498db;
+        color: white;
+        margin: 20px 0;
+    }
+    
+    .btn-payment:hover {
+        background: #2980b9;
+    }
+    
+    .btn-submit {
+        background: #27ae60;
+        color: white;
+    }
+    
+    .btn-submit:hover {
+        background: #219653;
+    }
+    
+    .btn-cancel {
+        background: #e74c3c;
+        color: white;
+    }
+    
+    .btn-cancel:hover {
+        background: #c0392b;
+    }
+    
+    /* Formulaire de paiement */
+    .payment-form-container {
+        margin: 20px 0;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #eee;
+    }
+    
+    .form-title {
+        margin-top: 0;
+        color: #2c3e50;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    /* Tableau des paiements */
+    .payments-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+    
+    .payments-table th, .payments-table td {
+        padding: 12px 15px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .payments-table th {
+        background-color: #3498db;
+        color: white;
+    }
+    
+    .payments-table tr:nth-child(even) {
+        background-color: #f8f9fa;
+    }
+    
+    .text-right {
+        text-align: right;
+    }
+    
+    /* Pied de page */
+    .facture-footer {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid #eee;
+        text-align: center;
+        color: #7f8c8d;
+        font-size: 14px;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .facture-header {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .logo-container {
+            margin-right: 0;
+            margin-bottom: 15px;
+        }
+        
+        .entreprise-contacts {
+            justify-content: center;
+        }
+        
+        .facture-title-section {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        
+        .summary-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<script>
+    function togglePaymentForm() {
+        const form = document.getElementById('payment-form');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    }
+</script>
+{% endblock %}

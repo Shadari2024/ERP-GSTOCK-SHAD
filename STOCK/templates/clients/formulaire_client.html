@@ -1,0 +1,535 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="oe_view_manager oe_view_manager_current" style="padding: 15px;">
+    <div class="oe_view_manager_header">
+        <div class="oe_view_manager_header">
+            <span class="oe_view_title">
+                <span class="oe_view_title_text oe_view_title_editable">
+                    {% if object %}Modifier{% else %}Créer{% endif %} Client
+                </span>
+            </span>
+        </div>
+    </div>
+
+    <div class="oe_view_manager_wrapper">
+        <div class="oe_view_manager_view_form" style="display: block;">
+            <div class="oe_formview oe_view oe_form_editable" style="max-width: 1200px; margin: 0 auto;">
+                <form method="POST" class="oe_form" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="oe_form_container">
+                        <div class="oe_form_buttons">
+                            <div class="oe_form_buttons_edit" style="display: block;">
+                                <button type="submit" class="oe_button oe_form_button_save oe_highlight">
+                                    Enregistrer
+                                </button>
+                                <a href="{% url "liste_client" %}" class="oe_button oe_form_button_cancel">
+                                    Annuler
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="oe_notebook">
+                        <ul class="nav nav-tabs">
+                            <li class="active"><a data-toggle="tab" href="#infos_generales">Informations Générales</a></li>
+                            <li><a data-toggle="tab" href="#coordonnees">Coordonnées</a></li>
+                            <li><a data-toggle="tab" href="#infos_commerciales">Informations Commerciales</a></li>
+                            <li><a data-toggle="tab" href="#infos_fiscales">Informations Fiscales</a></li>
+                        </ul>
+
+                        <div class="tab-content">
+                            <div id="infos_generales" class="tab-pane active">
+                                <table class="oe_form_group">
+                                    <tbody>
+                                        <tr class="oe_form_group_row">
+                                            <td class="oe_form_group_cell" width="50%">
+                                                <table class="oe_form_group">
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="type_client">Type de client</label></td>
+                                                        <td>
+                                                            <select id="type_client" name="type_client" class="form-control">
+                                                                <option value="IND" {% if object.type_client == 'IND' %}selected{% endif %}>Individu</option>
+                                                                <option value="ENT" {% if object.type_client == 'ENT' %}selected{% endif %}>Entreprise</option>
+                                                            </select>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="nom">Nom</label></td>
+                                                        <td>
+                                                            <input type="text" id="nom" name="nom" class="form-control" 
+                                                                   value="{{ object.nom|default:'' }}" placeholder="Nom complet / Raison sociale" required>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="code_client">Code client</label></td>
+                                                        <td>
+                                                            <input type="text" id="code_client" name="code_client" class="form-control" 
+                                                                   value="{{ object.code_client|default:'' }}">
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                            <td class="oe_form_group_cell" width="50%">
+                                                <table class="oe_form_group">
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="statut">Statut</label></td>
+                                                        <td>
+                                                            <select id="statut" name="statut" class="form-control">
+                                                                <option value="ACTIF" {% if object.statut == 'ACTIF' %}selected{% endif %}>Actif</option>
+                                                                <option value="INACTIF" {% if object.statut == 'INACTIF' %}selected{% endif %}>Inactif</option>
+                                                                <option value="SUSPENDU" {% if object.statut == 'SUSPENDU' %}selected{% endif %}>Suspendu</option>
+                                                            </select>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="photo">Photo</label></td>
+                                                        <td>
+                                                            {% if object and object.photo %}
+                                                                <img src="{{ object.photo.url }}" width="80" class="img-thumbnail oe_form_field_image">
+                                                            {% endif %}
+                                                            <input type="file" name="photo" id="photo">
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div id="coordonnees" class="tab-pane">
+                                <table class="oe_form_group">
+                                    <tbody>
+                                        <tr class="oe_form_group_row">
+                                            <td class="oe_form_group_cell" width="50%">
+                                                <h2>Contacts</h2>
+                                                <table class="oe_form_group">
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="telephone">Téléphone</label></td>
+                                                        <td>
+                                                            <input type="tel" id="telephone" name="telephone" class="form-control" 
+                                                                   value="{{ object.telephone|default:'' }}" required pattern="^\+?[\d\s-]{10,20}$">
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="telephone_secondaire">Téléphone secondaire</label></td>
+                                                        <td>
+                                                            <input type="tel" id="telephone_secondaire" name="telephone_secondaire" class="form-control" 
+                                                                   value="{{ object.telephone_secondaire|default:'' }}" pattern="^\+?[\d\s-]{10,20}$">
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="email">Email</label></td>
+                                                        <td>
+                                                            <input type="email" id="email" name="email" class="form-control" 
+                                                                   value="{{ object.email|default:'' }}">
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="website">Site web</label></td>
+                                                        <td>
+                                                            <input type="url" id="website" name="website" class="form-control" 
+                                                                   value="{{ object.website|default:'' }}">
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                            <td class="oe_form_group_cell" width="50%">
+                                                <h2>Adresse</h2>
+                                                <table class="oe_form_group">
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="adresse">Adresse</label></td>
+                                                        <td>
+                                                            <textarea id="adresse" name="adresse" class="form-control" rows="2">{{ object.adresse|default:'' }}</textarea>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="ville">Ville</label></td>
+                                                        <td>
+                                                            <input type="text" id="ville" name="ville" class="form-control" 
+                                                                   value="{{ object.ville|default:'' }}">
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="code_postal">Code postal</label></td>
+                                                        <td>
+                                                            <input type="text" id="code_postal" name="code_postal" class="form-control" 
+                                                                   value="{{ object.code_postal|default:'' }}">
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="pays">Pays</label></td>
+                                                        <td>
+                                                            <select id="pays" name="pays" class="form-control"></select>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div id="infos_commerciales" class="tab-pane">
+                                <table class="oe_form_group">
+                                    <tbody>
+                                        <tr class="oe_form_group_row">
+                                            <td class="oe_form_group_cell" width="50%">
+                                                <table class="oe_form_group">
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="devise_preferee">Devise préférée</label></td>
+                                                        <td>
+                                                        <!-- Dans votre formulaire client -->
+<select name="devise_preferee" class="form-control" required>
+    <option value="">--- Sélectionnez une devise ---</option>
+    {% for devise in devises %}
+        <option value="{{ devise.id }}">  <!-- Envoyer l'ID -->
+            {{ devise.code }} - {{ devise.nom }} ({{ devise.symbole }})
+        </option>
+    {% endfor %}
+</select>
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="limite_credit">Limite de crédit</label></td>
+                                                        <td>
+                                                            <div class="input-group">
+                                                                <span class="input-group-addon">{{ entreprise.devise_principale.symbole|default:"$" }}</span>
+                                                                <input type="number" id="limite_credit" name="limite_credit" class="form-control" 
+                                                                       step="0.01" min="0" value="{{ object.limite_credit|default:'0' }}">
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                            <td class="oe_form_group_cell" width="50%">
+                                                <table class="oe_form_group">
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="delai_paiement">Délai de paiement (jours)</label></td>
+                                                        <td>
+                                                            <input type="number" id="delai_paiement" name="delai_paiement" class="form-control" 
+                                                                   min="0" value="{{ object.delai_paiement|default:'30' }}">
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="taux_remise">Taux de remise</label></td>
+                                                        <td>
+                                                            <div class="input-group">
+                                                                <input type="number" id="taux_remise" name="taux_remise" class="form-control" 
+                                                                       step="0.01" min="0" max="100" value="{{ object.taux_remise|default:'0' }}">
+                                                                <span class="input-group-addon">%</span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div id="infos_fiscales" class="tab-pane">
+                                <table class="oe_form_group">
+                                    <tbody>
+                                        <tr class="oe_form_group_row">
+                                            <td class="oe_form_group_cell" width="50%">
+                                                <table class="oe_form_group">
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="numero_tva">Numéro de TVA</label></td>
+                                                        <td>
+                                                            <input type="text" id="numero_tva" name="numero_tva" class="form-control" 
+                                                                   value="{{ object.numero_tva|default:'' }}">
+                                                        </td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="numero_fiscal">Numéro fiscal</label></td>
+                                                        <td>
+                                                            <input type="text" id="numero_fiscal" name="numero_fiscal" class="form-control" 
+                                                                   value="{{ object.numero_fiscal|default:'' }}">
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                            <td class="oe_form_group_cell" width="50%">
+                                                <table class="oe_form_group">
+                                                    <tr>
+                                                        <td class="oe_form_label"><label for="exonere_tva">Exonéré de TVA</label></td>
+                                                        <td>
+                                                            <div class="checkbox">
+                                                                <label>
+                                                                    <input type="checkbox" id="exonere_tva" name="exonere_tva" 
+                                                                           {% if object.exonere_tva %}checked{% endif %}> Cocher si exonéré
+                                                                </label>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="oe_form_sheetbg">
+                        <div class="oe_form_sheet">
+                            <h2>Notes internes</h2>
+                            <textarea id="notes" name="notes" class="form-control" rows="3">{{ object.notes|default:'' }}</textarea>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.oe_view_manager {
+    background: #f0eeee;
+    border: none;
+    border-radius: 0;
+}
+
+.oe_view_manager_header {
+    background: #ffffff;
+    border-bottom: 1px solid #e2e2e0;
+    padding: 10px;
+}
+
+.oe_view_title {
+    font-size: 22px;
+    font-weight: bold;
+    color: #4c4c4c;
+}
+
+.oe_button {
+    padding: 5px 15px;
+    margin-right: 5px;
+    border-radius: 3px;
+    border: 1px solid #cccccc;
+    background: #f8f8f8;
+    color: #4c4c4c;
+    text-decoration: none;
+    cursor: pointer; /* Indiquer que c'est cliquable */
+}
+
+.oe_button.oe_highlight {
+    background: #7c7bad;
+    color: white;
+    border-color: #6b6a9a;
+}
+
+.oe_form_container {
+    background: white;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 3px;
+    border: 1px solid #e2e2e0;
+}
+
+.nav-tabs {
+    border-bottom: 1px solid #e2e2e0;
+    background: white;
+    padding-left: 15px;
+}
+
+.nav-tabs > li > a {
+    border-radius: 0;
+    border: none;
+    color: #4c4c4c;
+    margin-right: 0;
+    padding: 12px 20px;
+    text-decoration: none; /* Enlever le soulignement par défaut des liens */
+}
+
+.nav-tabs > li.active > a {
+    border-top: 3px solid #7c7bad;
+    background: #f8f8f8;
+    border-bottom: 1px solid #f8f8f8;
+    margin-bottom: -1px;
+}
+
+.tab-content {
+    background: white;
+    padding: 15px;
+    border: 1px solid #e2e2e0;
+    border-top: none;
+}
+
+.oe_form_group {
+    width: 100%;
+}
+
+.oe_form_group_row {
+    display: flex;
+    flex-wrap: wrap; /* Permet aux cellules de passer à la ligne sur les petits écrans */
+}
+
+.oe_form_group_cell {
+    padding: 10px;
+    flex: 1; /* Permet aux cellules de prendre l'espace disponible */
+    min-width: 300px; /* Taille minimale pour éviter un écrasement */
+}
+
+.oe_form_label {
+    padding: 8px 0;
+    font-weight: bold;
+    color: #4c4c4c;
+    width: 40%;
+    vertical-align: top; /* Alignement vertical pour les labels des textareas */
+}
+
+.oe_form_sheetbg {
+    background: white;
+    margin-top: 15px;
+    padding: 15px;
+    border: 1px solid #e2e2e0;
+    border-radius: 3px;
+}
+
+.oe_form_sheet {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Style des inputs pour ressembler à Odoo */
+.form-control {
+    border-radius: 0;
+    border: 1px solid #ccc;
+    box-shadow: none;
+    height: 34px;
+    padding: 6px 12px; /* Espacement intérieur */
+}
+
+.form-control:focus {
+    border-color: #7c7bad;
+    box-shadow: none;
+    outline: none; /* Supprimer l'outline par défaut du navigateur */
+}
+
+.input-group-addon {
+    border-radius: 0;
+    background: #f0eeee;
+    border: 1px solid #ccc;
+    padding: 6px 12px;
+}
+
+.checkbox label {
+    padding-left: 0;
+}
+
+.oe_form_field_image {
+    vertical-align: middle;
+    margin-right: 10px;
+}
+
+/* Styles pour le sélecteur de pays avec drapeaux */
+.iti__flag-container {
+    height: 34px; /* Alignement avec les inputs */
+    display: flex;
+    align-items: center;
+}
+
+.iti__selected-flag {
+    display: flex;
+    align-items: center;
+}
+
+.iti__flag {
+    margin-right: 5px;
+}
+
+/* Pour le selecteur de pays */
+.country-select {
+    width: 100%;
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    border-radius: 0;
+    height: 34px;
+    background-color: #fff;
+    -webkit-appearance: none; /* Supprime le style par défaut des selects sur Webkit */
+    -moz-appearance: none;    /* Supprime le style par défaut des selects sur Mozilla */
+    appearance: none;         /* Supprime le style par défaut des selects */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23333' width='18px' height='18px'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 18px;
+}
+</style>
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.13/js/intlTelInput.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.13/css/intlTelInput.css">
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Activation des onglets Bootstrap
+    $('.nav-tabs a').click(function(e) {
+        e.preventDefault();
+        $(this).tab('show');
+    });
+
+    // Gestion dynamique du type client
+    const typeClientSelect = document.getElementById('type_client');
+    const nomInput = document.getElementById('nom');
+    
+    typeClientSelect.addEventListener('change', function() {
+        if (this.value === 'ENT') {
+            nomInput.placeholder = "Ex: Entreprise XYZ SARL";
+        } else {
+            nomInput.placeholder = "Ex: Jean Dupont";
+        }
+    });
+
+    // Initialisation du champ pays avec codes et drapeaux
+    const countrySelect = document.getElementById('pays');
+    if (countrySelect) {
+        fetch('https://restcountries.com/v3.1/all?fields=name,cca2,flags')
+            .then(response => response.json())
+            .then(data => {
+                // Trier les pays par nom
+                data.sort((a, b) => a.name.common.localeCompare(b.name.common));
+
+                data.forEach(country => {
+                    const option = document.createElement('option');
+                    option.value = country.cca2; // Code ISO 3166-1 alpha-2
+                    option.textContent = country.name.common;
+                    // Ajouter l'URL du drapeau comme attribut de données
+                    if (country.flags && country.flags.svg) {
+                        option.setAttribute('data-flag', country.flags.svg);
+                    }
+                    countrySelect.appendChild(option);
+                });
+
+                // Sélectionner le pays si 'object.pays' est défini
+                const currentCountry = "{{ object.pays|default:'' }}";
+                if (currentCountry) {
+                    countrySelect.value = currentCountry;
+                }
+
+                // Initialiser le sélecteur avec les drapeaux
+                $(countrySelect).select2({
+                    templateResult: formatCountryOption,
+                    templateSelection: formatCountryOption
+                });
+            })
+            .catch(error => console.error('Erreur de chargement des pays:', error));
+    }
+
+    function formatCountryOption (country) {
+        if (!country.id) { return country.text; }
+        var flagUrl = $(country.element).data('flag');
+        if (flagUrl) {
+            return $('<span><img src="' + flagUrl + '" class="flag-icon" style="width: 20px; height: auto; margin-right: 5px; vertical-align: middle;" /> ' + country.text + '</span>');
+        }
+        return country.text;
+    };
+});
+</script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+{% endblock %}

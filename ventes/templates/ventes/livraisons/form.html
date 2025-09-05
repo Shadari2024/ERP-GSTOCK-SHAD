@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %} {# If you use crispy forms #}
+
+{% block title %}
+    {% if form.instance.pk %}Modifier Bon de Livraison #{{ form.instance.numero }}{% else %}Créer Bon de Livraison{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">
+                {% if form.instance.pk %}Modifier Bon de Livraison #{{ form.instance.numero }}{% else %}Créer Nouveau Bon de Livraison{% endif %}
+            </h4>
+        </div>
+        <div class="card-body">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" id="bonLivraisonForm">
+                {% csrf_token %}
+                {{ form|crispy }}
+
+                <hr>
+                <h5>Articles du Bon de Livraison</h5>
+                <div id="formset-container">
+                    {{ formset.management_form }}
+                    {% for form in formset %}
+                        <div class="formset-row row mb-3 p-2 border rounded {% if form.instance.pk %}bg-light{% endif %}" id="item-{{ forloop.counter0 }}">
+                            <div class="col-md-3">{{ form.produit|as_crispy_field }}</div>
+                            <div class="col-md-2">{{ form.quantite|as_crispy_field }}</div>
+                            <div class="col-md-2">{{ form.prix_unitaire|as_crispy_field }}</div>
+                            <div class="col-md-2">{{ form.taux_tva|as_crispy_field }}</div>
+                            <div class="col-md-2 d-flex align-items-center mt-auto">
+                                {% if formset.can_delete %}
+                                    <div class="form-check">
+                                        {{ form.DELETE }}
+                                        <label class="form-check-label" for="{{ form.DELETE.id_for_label }}">Supprimer</label>
+                                    </div>
+                                {% endif %}
+                                {# Hidden PK field for existing items #}
+                                {% if form.instance.pk %}{{ form.id }}{% endif %}
+                            </div>
+                            {% if form.errors %}
+                                <div class="col-12 text-danger">
+                                    {% for field, errors in form.errors.items %}
+                                        {% for error in errors %}
+                                            {{ field }}: {{ error }}<br>
+                                        {% endfor %}
+                                    {% endfor %}
+                                    {{ form.non_field_errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <button type="button" class="btn btn-info mt-3" id="add-item-button">Ajouter un article</button>
+                <hr>
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-save"></i> Enregistrer le Bon de Livraison
+                </button>
+                <a href="{% url 'ventes:livraison_list' %}" class="btn btn-secondary">Annuler</a>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Initialize Select2 if you are using it (add its CSS/JS)
+        // Ensure you've included Select2 CSS and JS in your base.html or this template.
+        // If Select2 is not installed/configured, this line might cause errors.
+        // You can comment it out if you're not using Select2 for now.
+        // $('.select2').select2();
+
+        // Dynamically add new formset rows
+        $('#add-item-button').click(function() {
+            var formsetId = 'id_ligne_bon_livraison_set'; // This might vary based on your inlineformset_factory prefix
+            var totalForms = $('#' + formsetId + '-TOTAL_FORMS');
+            var currentForms = parseInt(totalForms.val());
+            var newForm = $('.formset-row').last().clone(true);
+
+            // Clear input values and remove ID attributes for cloned elements
+            newForm.find('input, select').each(function() {
+                var name = $(this).attr('name').replace('-' + (currentForms - 1) + '-', '-' + currentForms + '-');
+                var id = $(this).attr('id').replace('-' + (currentForms - 1) + '-', '-' + currentForms + '-');
+                $(this).attr({'name': name, 'id': id}).val(''); // Clear value
+            });
+            // Update Select2 for new forms if used
+            // if (typeof $.fn.select2 !== 'undefined') { // Check if Select2 is loaded
+            //     newForm.find('.select2-container').remove(); // Remove old Select2 instance
+            //     newForm.find('.select2').val('').select2(); // Re-initialize Select2
+            // }
+
+            // Update row ID
+            newForm.attr('id', 'item-' + currentForms);
+
+            // Append new form
+            $('#formset-container').append(newForm);
+            totalForms.val(currentForms + 1);
+        });
+    });
+</script>
+{% endblock %}
+**{% endblock %}** {# THIS IS THE MISSING ENDBLOCK FOR 'content' #}

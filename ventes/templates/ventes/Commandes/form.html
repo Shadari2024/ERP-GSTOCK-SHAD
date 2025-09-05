@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}
+    {% if form.instance.pk %}Modifier la Commande #{{ form.instance.numero }}{% else %}Nouvelle Commande{% endif %}
+{% endblock %}
+
+{% block content %}
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-10 offset-md-1">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">
+                            {% if form.instance.pk %}Modifier la Commande #{{ form.instance.numero }}{% else %}Nouvelle Commande{% endif %}
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" novalidate>
+                            {% csrf_token %}
+
+                            <fieldset class="form-group border p-3 mb-4">
+                                <legend class="w-auto px-2 h5">Informations de la Commande</legend>
+                                
+                                <div class="form-row">
+                                    <div class="col-md-6">
+                                        {{ form.client|as_crispy_field }}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div id="devise-container" class="form-group">
+                                            <label for="devise-display">Devise du Client</label>
+                                            <p id="devise-display" class="form-control-plaintext font-weight-bold"></p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{ form.devis|as_crispy_field }}
+                                {{ form.date|as_crispy_field }}
+                                {{ form.notes|as_crispy_field }}
+
+                            </fieldset>
+
+                            <fieldset class="form-group border p-3 mb-4">
+                                <legend class="w-auto px-2 h5">Articles de la Commande</legend>
+                                {% if formset.non_form_errors %}
+                                    <div class="alert alert-danger" role="alert">
+                                        {% for error in formset.non_form_errors %}
+                                            <p>{{ error }}</p>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+
+                                {{ formset.management_form }}
+
+                                <div id="line-items-container-commande">
+                                    {% for line_form in formset %}
+                                        <div class="form-row border rounded p-3 mb-2 bg-light">
+                                            <div class="col-md-12">
+                                                {% if line_form.non_field_errors %}
+                                                    <div class="alert alert-danger small" role="alert">
+                                                        {% for error in line_form.non_field_errors %}
+                                                            <p class="mb-0">{{ error }}</p>
+                                                        {% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                                
+                                                <div class="row">
+                                                    <div class="col-md-4">{{ line_form.produit|as_crispy_field }}</div>
+                                                    <div class="col-md-2">{{ line_form.quantite|as_crispy_field }}</div>
+                                                    <div class="col-md-2">{{ line_form.prix_unitaire|as_crispy_field }}</div>
+                                                    <div class="col-md-2">{{ line_form.taux_tva|as_crispy_field }}</div>
+                                                    <div class="col-md-2 d-flex align-items-end">
+                                                        <div class="form-group form-check">
+                                                            {{ line_form.DELETE }}
+                                                            <label class="form-check-label" for="{{ line_form.DELETE.id_for_label }}">Supprimer</label>
+                                                        </div>
+                                                        {{ line_form.id }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+
+                                <div id="empty-form-template" class="form-row border rounded p-3 mb-2 bg-light d-none">
+                                    <div class="col-md-12">
+                                        <div class="row">
+                                            <div class="col-md-4">{{ formset.empty_form.produit|as_crispy_field }}</div>
+                                            <div class="col-md-2">{{ formset.empty_form.quantite|as_crispy_field }}</div>
+                                            <div class="col-md-2">{{ formset.empty_form.prix_unitaire|as_crispy_field }}</div>
+                                            <div class="col-md-2">{{ formset.empty_form.taux_tva|as_crispy_field }}</div>
+                                            <div class="col-md-2 d-flex align-items-end">
+                                                <div class="form-group form-check">
+                                                    {{ formset.empty_form.DELETE }}
+                                                    <label class="form-check-label" for="{{ formset.empty_form.DELETE.id_for_label|default:'id_form-__prefix__-DELETE' }}">Supprimer</label>
+                                                </div>
+                                                {{ formset.empty_form.id }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button type="button" id="add-line-button-commande" class="btn btn-outline-secondary btn-sm mt-3"><i class="fas fa-plus"></i> Ajouter une ligne</button>
+                            </fieldset>
+
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i>
+                                {% if form.instance.pk %}Enregistrer les modifications{% else %}Créer la Commande{% endif %}
+                            </button>
+                            <a href="{% url 'ventes:commande_list' %}" class="btn btn-secondary">Annuler</a>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const devisSelect = document.getElementById('id_devis_select');
+    const clientSelect = document.getElementById('id_client');
+    
+    // Fonction pour charger les lignes du devis
+    function loadDevisLignes(devisId) {
+        if (!devisId) return;
+        
+        fetch(`/ventes/api/get_devis_lignes/${devisId}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Vider le formset existant
+                    const container = document.getElementById('line-items-container-commande');
+                    container.innerHTML = '';
+                    
+                    // Ajouter les lignes du devis
+                    data.lignes.forEach((ligne, index) => {
+                        addLigneFromDevis(ligne, index);
+                    });
+                    
+                    // Mettre à jour le nombre total de forms
+                    document.getElementById('id_form-TOTAL_FORMS').value = data.lignes.length;
+                    
+                    // Pré-remplir le client si vide
+                    if (!clientSelect.value && data.client_id) {
+                        clientSelect.value = data.client_id;
+                        // Déclencher l'événement change pour mettre à jour la devise
+                        clientSelect.dispatchEvent(new Event('change'));
+                    }
+                }
+            })
+            .catch(error => console.error('Erreur:', error));
+    }
+    
+    // Fonction pour ajouter une ligne à partir des données du devis
+    function addLigneFromDevis(ligne, index) {
+        const template = document.getElementById('empty-form-template');
+        const newForm = template.cloneNode(true);
+        
+        newForm.id = '';
+        newForm.classList.remove('d-none');
+        
+        // Mettre à jour les IDs et names
+        newForm.querySelectorAll('[name], [id], [for]').forEach(el => {
+            if (el.name) el.name = el.name.replace('__prefix__', index);
+            if (el.id) el.id = el.id.replace('__prefix__', index);
+            if (el.htmlFor) el.htmlFor = el.htmlFor.replace('__prefix__', index);
+        });
+        
+        // Pré-remplir les valeurs
+        newForm.querySelector(`[name="form-${index}-produit"]`).value = ligne.produit_id;
+        newForm.querySelector(`[name="form-${index}-quantite"]`).value = ligne.quantite;
+        newForm.querySelector(`[name="form-${index}-prix_unitaire"]`).value = ligne.prix_unitaire;
+        newForm.querySelector(`[name="form-${index}-taux_tva"]`).value = ligne.taux_tva;
+        newForm.querySelector(`[name="form-${index}-DELETE"]`).checked = false;
+        
+        document.getElementById('line-items-container-commande').appendChild(newForm);
+    }
+    
+    // Écouter les changements sur le select devis
+    if (devisSelect) {
+        devisSelect.addEventListener('change', function() {
+            loadDevisLignes(this.value);
+        });
+        
+        // Charger automatiquement si un devis est pré-sélectionné
+        const urlParams = new URLSearchParams(window.location.search);
+        const devisId = urlParams.get('devis_id');
+        if (devisId) {
+            devisSelect.value = devisId;
+            loadDevisLignes(devisId);
+        }
+    }
+});
+</script>
+{% endblock %}

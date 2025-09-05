@@ -1,0 +1,27 @@
+<!-- ventes/pos/confirm_delete.html -->
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 bg-danger text-white">
+            <h6 class="m-0 font-weight-bold">Confirmation de suppression</h6>
+        </div>
+        <div class="card-body text-center">
+            <i class="fas fa-exclamation-triangle fa-4x text-warning mb-4"></i>
+            <h4>Êtes-vous sûr de vouloir supprimer ce point de vente ?</h4>
+            <p class="text-muted">"{{ object.nom }}" ({{ object.code }})</p>
+            
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-trash me-2"></i>Oui, supprimer
+                </button>
+                <a href="{% url 'ventes:pos_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-times me-2"></i>Annuler
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

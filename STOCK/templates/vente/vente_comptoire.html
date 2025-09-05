@@ -1,0 +1,436 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="container-fluid p-0 h-100">
+    <div class="row g-0 h-100">
+        <!-- Products Section -->
+        <div class="col-lg-8 h-100 d-flex flex-column">
+            <div class="card shadow-none border-0 h-100">
+                <div class="card-header bg-white border-bottom py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h3 class="mb-0 text-primary">
+                            <i class="bi bi-grid-3x3-gap-fill me-2"></i>Produits
+                        </h3>
+                        <div class="d-flex gap-2">
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="categoryFilter" data-bs-toggle="dropdown">
+                                    <i class="bi bi-tags me-1"></i>Catégories
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item category-filter active" href="#" data-category="all">Toutes</a></li>
+                                    {% for categorie in categories %}
+                                    <li><a class="dropdown-item category-filter" href="#" data-category="{{ categorie.id }}">{{ categorie.nom }}</a></li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="input-group" style="width: 250px;">
+                                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                                <input type="text" id="search-product" class="form-control border-start-0" placeholder="Rechercher...">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-3 overflow-auto flex-grow-1">
+                    {% if perms.STOCK.view_produit %}
+                    <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3" id="products-grid">
+                        {% for produit in produits %}
+                        <div class="col product-item" data-category="{{ produit.categorie|default:'none' }}">
+                            <div class="card product-card h-100 border-0 shadow-sm" 
+                                 data-id="{{ produit.id }}"
+                                 data-name="{{ produit.nom }}"
+                                 data-price="{{ produit.prix_vente }}"
+                                 data-barcode="{{ produit.code_barre_numero }}"
+                                 {% if perms.STOCK.effectuer_vente %}onclick="addProductToCart(this)"{% endif %}>
+                                <div class="position-relative">
+                                    {% if produit.photo %}
+                                    <img src="{{ produit.photo.url }}" class="card-img-top p-3" alt="{{ produit.nom }}" style="height: 120px; object-fit: contain; background: #f8f9fa;">
+                                    {% else %}
+                                    <div class="text-center p-3 bg-light" style="height: 120px;">
+                                        <i class="bi bi-image text-muted h-100 d-flex align-items-center justify-content-center" style="font-size: 2.5rem;"></i>
+                                    </div>
+                                    {% endif %}
+                                    <span class="position-absolute top-0 end-0 m-2 badge bg-primary rounded-pill">
+                                        {{ produit.stock }} en stock
+                                    </span>
+                                </div>
+                                <div class="card-body p-3 text-center">
+                                    <h6 class="card-title mb-1 text-truncate">{{ produit.nom }}</h6>
+                                    <p class="card-title mb-1 text-truncate">{{ produit.code_barre_numero }}</p>
+                                    <p class="card-text text-success fw-bold mb-0">
+                                        {{ produit.prix_vente|floatformat:0 }} {{ devise_affichee }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning text-center py-4 my-auto">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Vous n'avez pas la permission de voir les produits
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Cart Section -->
+        <div class="col-lg-4 h-100 d-flex flex-column border-start">
+            <div class="card shadow-none border-0 h-100">
+                <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0 text-primary">
+                        <i class="bi bi-cart3 me-2"></i>Panier
+                    </h3>
+                    <button class="btn btn-sm btn-outline-danger" onclick="clearCart()">
+                        <i class="bi bi-trash"></i> Vider
+                    </button>
+                </div>
+                <div class="card-body p-0 d-flex flex-column h-100">
+                    {% if perms.STOCK.effectuer_vente %}
+                    <form method="POST" id="sale-form" class="d-flex flex-column h-100">
+                        {% csrf_token %}
+                        <div class="p-3 border-bottom bg-light">
+                            <div class="input-group">
+                                <input type="text" id="scan-input" class="form-control" placeholder="Scanner code-barres..." autofocus>
+                                <button class="btn btn-primary" type="button" onclick="focusScanInput()">
+                                    <i class="bi bi-upc-scan"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="flex-grow-1 overflow-auto">
+                            <table class="table table-hover mb-0" id="cart-table">
+                                <thead class="sticky-top bg-white">
+                                    <tr>
+                                        <th width="50%">Produit</th>
+                                        <th width="20%">Prix</th>
+                                        <th width="30%">Quantité</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cart-body"></tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="p-3 border-top bg-white">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0">Total:</h5>
+                                <h4 class="mb-0 text-primary fw-bold" id="total-display">
+                                    0.00 {{ devise_affichee }}
+                                </h4>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Moyen de paiement:</label>
+                                <div class="btn-group w-100" role="group">
+                                    <input type="radio" class="btn-check" name="paiement" id="cash" value="cash" autocomplete="off" checked>
+                                    <label class="btn btn-outline-success" for="cash"><i class="bi bi-cash-coin me-1"></i> Espèces</label>
+                                    
+                                    <input type="radio" class="btn-check" name="paiement" id="cb" value="cb" autocomplete="off">
+                                    <label class="btn btn-outline-primary" for="cb"><i class="bi bi-credit-card me-1"></i> Carte</label>
+                                    
+                                    <input type="radio" class="btn-check" name="paiement" id="30j" value="30j" autocomplete="off">
+                                    <label class="btn btn-outline-warning" for="30j"><i class="bi bi-calendar me-1"></i> 30j</label>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-success btn-lg w-100 py-3 fw-bold">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                {% if can_validate %}VALIDER LA VENTE{% else %}ENREGISTRER{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-warning text-center py-4 my-auto">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        Vous n'avez pas la permission d'effectuer des ventes
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    :root {
+        --odoo-primary: #714B67;
+        --odoo-secondary: #F0F0F0;
+        --odoo-success: #2C9B2A;
+        --odoo-danger: #D23F3F;
+        --odoo-warning: #F0B400;
+        --odoo-info: #00A09D;
+    }
+    
+    body {
+        background-color: #f8f9fa;
+        height: 100vh;
+        overflow: hidden;
+    }
+    
+    .product-card {
+        cursor: pointer;
+        transition: all 0.2s;
+        border-radius: 8px;
+    }
+    
+    .product-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--odoo-primary);
+    }
+    
+    .product-card:active {
+        transform: translateY(0);
+    }
+    
+    #cart-table tbody tr:last-child {
+        border-bottom: none;
+    }
+    
+    .quantity-control {
+        display: flex;
+        align-items: center;
+    }
+    
+    .quantity-control button {
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+    }
+    
+    .quantity-control input {
+        width: 40px;
+        text-align: center;
+        margin: 0 2px;
+        font-weight: bold;
+        padding: 0;
+    }
+    
+    .btn-check:checked + .btn-outline-success {
+        background-color: var(--odoo-success);
+        color: white;
+    }
+    
+    .btn-check:checked + .btn-outline-primary {
+        background-color: var(--odoo-primary);
+        color: white;
+    }
+    
+    .btn-check:checked + .btn-outline-warning {
+        background-color: var(--odoo-warning);
+        color: white;
+    }
+    
+    .badge {
+        font-size: 0.7rem;
+        padding: 4px 6px;
+    }
+</style>
+
+<script>
+    // Global Variables
+    let cartItems = [];
+    const deviseAffichee = '{{ devise_affichee }}';
+    const addToCartSound = new Audio('{% static "sounds/ad card.mp3" %}');
+    const saleCompleteSound = new Audio('{% static "sounds/sale-complete.mp3" %}');
+
+    // Initialization
+    document.addEventListener('DOMContentLoaded', function() {
+        updateCartDisplay();
+
+        // Product Search
+        document.getElementById('search-product').addEventListener('input', function(e) {
+            filterProducts();
+        });
+
+        // Category Filter
+        document.querySelectorAll('.category-filter').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('.category-filter').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+                
+                const category = this.dataset.category;
+                filterProducts(category);
+            });
+        });
+
+        // Barcode Scan Handling
+        document.getElementById('scan-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const barcode = this.value.trim();
+                if (!barcode) return;
+                
+                const productCards = document.querySelectorAll('.product-card');
+                let productFound = false;
+                
+                productCards.forEach(card => {
+                    if (card.dataset.barcode === barcode) {
+                        addProductToCart(card);
+                        productFound = true;
+                    }
+                });
+                
+                if (productFound) {
+                    this.value = '';
+                } else {
+                    alert("Aucun produit trouvé avec ce code-barres.");
+                    this.value = '';
+                }
+            }
+        });
+
+        // Auto-focus on scan input
+        focusScanInput();
+
+        // Form submission listener for sale complete sound
+        document.getElementById('sale-form').addEventListener('submit', function(e) {
+            if (cartItems.length === 0) {
+                e.preventDefault();
+                alert("Ajoutez au moins un produit avant de valider la vente.");
+            } else {
+                saleCompleteSound.play().catch(error => console.error("Error playing sale complete sound:", error));
+            }
+        });
+    });
+
+    // Filter Products
+    function filterProducts(category = 'all') {
+        const searchTerm = document.getElementById('search-product').value.toLowerCase();
+        document.querySelectorAll('.product-item').forEach(item => {
+            const productName = item.querySelector('.product-card').dataset.name.toLowerCase();
+            const productCategory = item.dataset.category;
+            const matchesSearch = productName.includes(searchTerm);
+            const matchesCategory = category === 'all' || productCategory === category;
+            item.style.display = (matchesSearch && matchesCategory) ? 'block' : 'none';
+        });
+    }
+
+    function focusScanInput() {
+        const scanInput = document.getElementById('scan-input');
+        scanInput.focus();
+        scanInput.select();
+    }
+
+    function clearCart() {
+        if (cartItems.length > 0 && confirm("Voulez-vous vraiment vider le panier?")) {
+            cartItems = [];
+            updateCartDisplay();
+        }
+    }
+
+    // Add product to cart
+    function addProductToCart(productCard) {
+        const productId = productCard.dataset.id;
+        const existingItem = cartItems.find(item => item.id === productId);
+        
+        if (existingItem) {
+            existingItem.quantity += 1;
+        } else {
+            cartItems.push({
+                id: productId,
+                name: productCard.dataset.name,
+                price: parseFloat(productCard.dataset.price),
+                barcode: productCard.dataset.barcode,
+                quantity: 1
+            });
+        }
+        
+        updateCartDisplay();
+        addToCartSound.play().catch(error => console.error("Error playing add to cart sound:", error));
+        
+        // Highlight the product briefly
+        productCard.classList.add('border-primary');
+        setTimeout(() => {
+            productCard.classList.remove('border-primary');
+        }, 300);
+    }
+
+    // Update cart display
+    function updateCartDisplay() {
+        const cartBody = document.getElementById('cart-body');
+        const totalDisplayElement = document.getElementById('total-display');
+        let totalDisplay = 0;
+
+        cartBody.innerHTML = '';
+        cartItems.forEach((item, index) => {
+            const itemTotalDisplay = item.price * item.quantity;
+            totalDisplay += itemTotalDisplay;
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="align-middle">
+                    <div class="d-flex align-items-center">
+                        <button class="btn btn-sm btn-outline-danger me-2" onclick="removeFromCart(${index})">
+                            <i class="bi bi-x"></i>
+                        </button>
+                        <span>${item.name}</span>
+                    </div>
+                </td>
+                <td class="align-middle">${item.price.toFixed(0)} ${deviseAffichee}</td>
+                <td class="align-middle">
+                    <div class="d-flex align-items-center quantity-control">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="updateQuantity(${index}, -1)">
+                            <i class="bi bi-dash"></i>
+                        </button>
+                        <input type="number" class="form-control form-control-sm text-center mx-1 quantity-input" 
+                               value="${item.quantity}" min="1" 
+                               onchange="updateQuantityInput(${index}, this)">
+                        <button class="btn btn-sm btn-outline-secondary" type="button" onclick="updateQuantity(${index}, 1)">
+                            <i class="bi bi-plus"></i>
+                        </button>
+                    </div>
+                </td>
+                <input type="hidden" name="produit[]" value="${item.id}">
+                <input type="hidden" name="quantite[]" value="${item.quantity}">
+                <input type="hidden" name="prix[]" value="${item.price}">
+            `;
+            cartBody.appendChild(row);
+        });
+
+        totalDisplayElement.textContent = totalDisplay.toFixed(2) + ' ' + deviseAffichee;
+
+        // Empty cart state
+        if (cartItems.length === 0) {
+            cartBody.innerHTML = `
+                <tr>
+                    <td colspan="3" class="text-center py-5 text-muted">
+                        <i class="bi bi-cart-x" style="font-size: 2rem;"></i>
+                        <p class="mt-2 mb-0">Votre panier est vide</p>
+                        <small class="text-muted">Cliquez sur un produit pour l'ajouter</small>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    function updateQuantity(index, change) {
+        const newQuantity = cartItems[index].quantity + change;
+        if (newQuantity >= 1) {
+            cartItems[index].quantity = newQuantity;
+            updateCartDisplay();
+        } else if (newQuantity === 0) {
+            removeFromCart(index);
+        }
+    }
+
+    function updateQuantityInput(index, input) {
+        const newQuantity = parseInt(input.value);
+        if (!isNaN(newQuantity) && newQuantity >= 1) {
+            cartItems[index].quantity = newQuantity;
+            updateCartDisplay();
+        } else {
+            input.value = cartItems[index].quantity;
+        }
+    }
+
+    function removeFromCart(index) {
+        cartItems.splice(index, 1);
+        updateCartDisplay();
+    }
+</script>
+{% endblock %}

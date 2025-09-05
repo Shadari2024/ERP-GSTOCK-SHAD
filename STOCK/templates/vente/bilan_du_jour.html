@@ -1,0 +1,37 @@
+<!-- Top produits vendus -->
+<div class="card shadow mt-4 animate__animated animate__fadeInUp">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">
+            <i class="fas fa-boxes me-2"></i>Produits les plus vendus
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table align-items-center mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="text-uppercase text-secondary text-xs font-weight-bolder">Produit</th>
+                        <th class="text-uppercase text-secondary text-xs font-weight-bolder text-center">Quantité</th>
+                        <th class="text-uppercase text-secondary text-xs font-weight-bolder text-end">Montant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for produit in produits_vendus %}
+                    <tr class="animate__animated animate__fadeIn" style="animation-delay: {{ forloop.counter0|add:"0.1"|floatformat:1 }}s">
+                        <td>{{ produit.nom }}</td>
+                        <td class="text-center">{{ produit.quantite }}</td>
+                        <td class="text-end">{{ produit.montant|floatformat:2 }} €</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center py-4">
+                            <i class="fas fa-box-open fa-2x text-muted mb-2"></i>
+                            <p class="text-muted">Aucun produit vendu aujourd'hui</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

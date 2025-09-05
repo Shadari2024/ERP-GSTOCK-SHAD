@@ -1,0 +1,76 @@
+
+
+<style>
+
+/* Bouton de sauvegarde */
+#manualBackupBtn {
+    transition: all 0.3s ease;
+}
+
+#manualBackupBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+#backupStatus {
+    transition: all 0.3s ease;
+    opacity: 0;
+    height: 0;
+    overflow: hidden;
+}
+
+#backupStatus.show {
+    opacity: 1;
+    height: auto;
+    padding: 10px;
+    border-radius: 4px;
+}
+</style>
+
+<div class="backup-section mb-4">
+    <button id="manualBackupBtn" class="btn btn-primary">
+        <i class="fas fa-save"></i> Sauvegarder maintenant
+    </button>
+    <div id="backupStatus" class="mt-2"></div>
+
+    
+</div>
+
+<script>
+document.getElementById('manualBackupBtn').addEventListener('click', function() {
+    const btn = this;
+    const statusDiv = document.getElementById('backupStatus');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sauvegarde en cours...';
+    statusDiv.innerHTML = '';
+    statusDiv.className = 'mt-2 alert alert-info';
+    
+    fetch('{% url "manual_backup" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            statusDiv.className = 'mt-2 alert alert-success';
+            statusDiv.innerHTML = `Sauvegarde réussie: ${data.filename}`;
+        } else {
+            statusDiv.className = 'mt-2 alert alert-danger';
+            statusDiv.innerHTML = `Erreur: ${data.message}`;
+        }
+    })
+    .catch(error => {
+        statusDiv.className = 'mt-2 alert alert-danger';
+        statusDiv.innerHTML = 'Erreur lors de la sauvegarde';
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Sauvegarder maintenant';
+    });
+});
+</script>

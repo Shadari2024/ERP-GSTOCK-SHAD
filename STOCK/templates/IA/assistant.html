@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion de Stock - Chatbot</title>
+</head>
+<body>
+    {% block content %}{% endblock %}
+</body>
+    <div class="chat-messages" id="chatMessages">
+        <!-- Messages will appear here -->
+    </div>
+    
+    <div class="quick-actions">
+        <button data-question="Quels produits sont en rupture ?">Rupture de stock</button>
+        <button data-question="Top ventes ce mois">Meilleures ventes</button>
+    </div>
+    
+    <form id="chatForm" method="post">
+        {% csrf_token %}
+        <input type="text" id="userInput" placeholder="Posez votre question..." required>
+        <button type="submit">Envoyer</button>
+    </form>
+</div>
+
+<style>
+.chatbot-container {
+    max-width: 800px;
+    margin: 2rem auto;
+    border: 1px solid #e1e1e1;
+    border-radius: 8px;
+    overflow: hidden;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.chat-header {
+    background: #2c3e50;
+    color: white;
+    padding: 1rem;
+    text-align: center;
+}
+
+.chat-messages {
+    height: 400px;
+    overflow-y: auto;
+    padding: 1rem;
+    background: #f9f9f9;
+}
+
+.message {
+    margin-bottom: 1rem;
+    padding: 0.8rem;
+    border-radius: 8px;
+    max-width: 80%;
+}
+
+.user-message {
+    background: #e3f2fd;
+    margin-left: auto;
+}
+
+.bot-message {
+    background: #f1f1f1;
+    margin-right: auto;
+}
+
+.quick-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: #eee;
+}
+
+.quick-actions button {
+    flex: 1;
+    padding: 0.5rem;
+    background: #2c3e50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#chatForm {
+    display: flex;
+    padding: 1rem;
+    background: #eee;
+}
+
+#chatForm input {
+    flex: 1;
+    padding: 0.8rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-right: 0.5rem;
+}
+
+#chatForm button {
+    padding: 0.8rem 1.5rem;
+    background: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('userInput');
+    const chatMessages = document.getElementById('chatMessages');
+    const quickButtons = document.querySelectorAll('.quick-actions button');
+    
+    // Gestion des boutons rapides
+    quickButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            chatInput.value = this.dataset.question;
+            chatForm.dispatchEvent(new Event('submit'));
+        });
+    });
+    
+    // Gestion du formulaire
+    chatForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const message = chatInput.value.trim();
+        if (!message) return;
+        
+        // Afficher le message utilisateur
+        displayMessage(message, 'user');
+        chatInput.value = '';
+        
+        // Envoyer la requête
+        fetch("{% url 'chatbot_query' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: `query=${encodeURIComponent(message)}`
+        })
+        .then(response => {
+            if (!response.ok) throw new Error('Erreur serveur');
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+            displayMessage(data.response, 'bot');
+        })
+        .catch(error => {
+            displayMessage(`Erreur: ${error.message}`, 'error');
+        });
+    });
+    
+    function displayMessage(content, type) {
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `message ${type}-message`;
+        msgDiv.innerHTML = content.replace(/\n/g, '<br>');
+        chatMessages.appendChild(msgDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 bg-danger text-white">
+            <h6 class="m-0 font-weight-bold">Confirmer la suppression</h6>
+        </div>
+        <div class="card-body">
+            <p>Êtes-vous sûr de vouloir supprimer le groupe <strong>{{ object.name }}</strong> ?</p>
+            <p class="text-danger">Cette action est irréversible !</p>
+            
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group mt-4">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash-alt me-1"></i> Confirmer la suppression
+                    </button>
+                    <a href="{% url 'security:liste_groupes' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

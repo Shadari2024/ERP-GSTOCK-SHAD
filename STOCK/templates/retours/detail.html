@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load retour_tags %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Retour #{{ retour.id }} - Commande {{ retour.commande.id }}</h2>
+        <span class="badge bg-{{ retour.statut|get_status_badge_class }}">
+            {{ retour.get_statut_display }}
+        </span>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Informations retour</div>
+                <div class="card-body">
+                    <p><strong>Date création:</strong> {{ retour.date_creation|date:"d/m/Y H:i" }}</p>
+                    <p><strong>Motif:</strong> {{ retour.get_motif_display }}</p>
+                    <p><strong>Responsable:</strong> {{ retour.responsable.get_full_name }} ({{ retour.responsable.username }})</p>
+                    {% if retour.date_traitement %}
+                        <p><strong>Date traitement:</strong> {{ retour.date_traitement|date:"d/m/Y H:i" }}</p>
+                    {% endif %}
+                    {% if retour.notes %}
+                        <p><strong>Notes:</strong> {{ retour.notes }}</p>
+                    {% endif %}
+                    <p><strong>Devise utilisée:</strong> {{ parametre.devise }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Informations client</div>
+                <div class="card-body">
+                    <p><strong>Client:</strong> {{ retour.commande.client.nom }}</p>
+                    <p><strong>Téléphone:</strong> {{ retour.commande.client.telephone }}</p>
+                    {% if retour.commande.client.email %}
+                        <p><strong>Email:</strong> {{ retour.commande.client.email }}</p>
+                    {% endif %}
+                    {% if retour.commande.client.adresse %}
+                        <p><strong>Adresse:</strong> {{ retour.commande.client.adresse|linebreaksbr }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-4">
+        <div class="card-header">Articles retournés</div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Article</th>
+                        <th>Référence</th>
+                        <th>Quantité</th>
+                        <th>Prix unitaire</th>
+                        <th>Total TTC</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ligne in retour.lignes.all %}
+                    <tr>
+                        <td>{{ ligne.produit.nom }}</td>
+                        <td>{{ ligne.produit.code_barre_numero|default:"-" }}</td>
+                        <td>{{ ligne.quantite }}</td>
+                        <td>{{ ligne.prix_unitaire|floatformat:2 }} {{ retour.commande.devise }}</td>
+                        <td>{{ ligne.montant_ttc|floatformat:2 }} {{ retour.commande.devise }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <th colspan="4" class="text-end">Total TTC:</th>
+                        <th>{{ retour.total_ttc|floatformat:2 }} {{ parametre.devise }}</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+    
+    <div class="d-flex justify-content-between">
+        <a href="{% url 'liste_retours' %}" class="btn btn-secondary">
+            Retour à la liste
+        </a>
+        
+        {% if retour.statut == 'en_attente' %}
+        <form method="post" action="{% url 'traiter_retour' retour.id %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">
+                Traiter le retour
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

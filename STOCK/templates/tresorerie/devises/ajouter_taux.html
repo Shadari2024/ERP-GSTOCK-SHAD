@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-plus-circle"></i> Ajouter un Taux de Change
+                </h3>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="card-body">
+                    <!-- Affichage des messages -->
+                    {% if messages %}
+                    <div class="alert-messages">
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert">&times;</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Champ Devise Source -->
+                    <div class="form-group">
+                        <label for="devise_source">Devise Source</label>
+                        <select class="form-control" id="devise_source" name="devise_source" required>
+                            <option value="">Sélectionnez une devise</option>
+                            {% for devise in devises_disponibles %}
+                            <option value="{{ devise }}"
+                                {% if request.POST.devise_source == devise %}selected{% endif %}>
+                                {{ devise }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Champ Devise Cible -->
+                    <div class="form-group">
+                        <label for="devise_cible">Devise Cible</label>
+                        <select class="form-control" id="devise_cible" name="devise_cible" required>
+                            <option value="">Sélectionnez une devise</option>
+                            {% for devise in devises_disponibles %}
+                            <option value="{{ devise }}"
+                                {% if request.POST.devise_cible == devise %}selected{% endif %}>
+                                {{ devise }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Champ Taux -->
+                    <div class="form-group">
+                        <label for="taux">Taux de change</label>
+                        <input type="number" class="form-control" id="taux" name="taux" 
+                               step="0.000001" min="0.000001" required
+                               value="{{ request.POST.taux|default:'' }}"
+                               placeholder="Exemple: 2000 pour 1 USD = 2000 FC">
+                        <small class="form-text text-muted">
+                            Entrez le taux de conversion (1 [source] = X [cible])
+                        </small>
+                    </div>
+                    
+                    <!-- Exemple dynamique -->
+                    <div class="alert alert-info mt-3" id="rate-example">
+                        <i class="fas fa-info-circle"></i> Exemple: Sélectionnez des devises pour voir un exemple
+                    </div>
+                </div>
+                
+                <div class="card-footer text-right">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Enregistrer
+                    </button>
+                    <a href="{% url 'liste_devises' %}" class="btn btn-default">
+                        <i class="fas fa-times"></i> Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+$(document).ready(function() {
+    // Mise à jour dynamique de l'exemple
+    function updateExample() {
+        const source = $('#devise_source').val();
+        const cible = $('#devise_cible').val();
+        if (source && cible && source !== cible) {
+            $('#rate-example').html(
+                `<i class="fas fa-info-circle"></i> Exemple: 1 ${source} = [votre taux] ${cible}`
+            );
+        } else if (source && cible) {
+            $('#rate-example').html(
+                `<i class="fas fa-exclamation-triangle"></i> Les devises doivent être différentes`
+            ).removeClass('alert-info').addClass('alert-warning');
+        } else {
+            $('#rate-example').html(
+                `<i class="fas fa-info-circle"></i> Sélectionnez des devises pour voir un exemple`
+            ).removeClass('alert-warning').addClass('alert-info');
+        }
+    }
+    
+    // Écouteurs d'événements
+    $('#devise_source, #devise_cible').change(updateExample);
+    updateExample();
+});
+</script>
+{% endblock %}

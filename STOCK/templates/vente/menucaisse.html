@@ -1,0 +1,208 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0 fw-bold">
+                <span class="icon-circle bg-primary me-2"><i class="bi bi-speedometer2"></i></span>
+                Tableau de bord
+            </h2>
+            <p class="text-muted mb-0">Accédez rapidement à toutes les fonctionnalités</p>
+        </div>
+        <div class="d-flex align-items-center">
+            <span class="badge bg-primary bg-opacity-10 text-primary me-3">
+                <i class="bi bi-calendar-check me-1"></i>{{ now|date:"d F Y" }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Cartes de fonctionnalités -->
+    <div class="row g-4">
+        <!-- Statistiques -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card feature-card h-100 border-0">
+                <a href="{% url 'statistiquesVente' %}" class="stretched-link text-decoration-none">
+                    <div class="card-body text-center p-4">
+                        <div class="icon-circle bg-primary-light text-primary mb-3">
+                            <i class="bi bi-graph-up"></i>
+                        </div>
+                        <h5 class="fw-semibold mb-2 text-dark">Statistiques</h5>
+                        <p class="text-muted small">Analyse des performances</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Vente au comptoir -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card feature-card h-100 border-0">
+                <a href="{% url 'vente_au_comptoir' %}" class="stretched-link text-decoration-none">
+                    <div class="card-body text-center p-4">
+                        <div class="icon-circle bg-success-light text-success mb-3">
+                            <i class="bi bi-cash"></i>
+                        </div>
+                        <h5 class="fw-semibold mb-2 text-dark">Vente au comptoir</h5>
+                        <p class="text-muted small">Enregistrer une nouvelle vente</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Commandes -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card feature-card h-100 border-0">
+                <a href="{% url 'liste_commandes' %}" class="stretched-link text-decoration-none">
+                    <div class="card-body text-center p-4">
+                        <div class="icon-circle bg-secondary-light text-secondary mb-3">
+                            <i class="bi bi-cart-check"></i>
+                        </div>
+                        <h5 class="fw-semibold mb-2 text-dark">Commandes</h5>
+                        <p class="text-muted small">Gestion des commandes</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Produits / Stock -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card feature-card h-100 border-0">
+                <a href="{% url 'produits_par_categorie' %}" class="stretched-link text-decoration-none">
+                    <div class="card-body text-center p-4">
+                        <div class="icon-circle bg-warning-light text-warning mb-3">
+                            <i class="bi bi-box-seam"></i>
+                        </div>
+                        <h5 class="fw-semibold mb-2 text-dark">Produits / Stock</h5>
+                        <p class="text-muted small">Gestion du stock</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Clôture de caisse -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card feature-card h-100 border-0">
+                <a href="{% url 'cloturer_caisse' %}" class="stretched-link text-decoration-none">
+                    <div class="card-body text-center p-4">
+                        <div class="icon-circle bg-danger-light text-danger mb-3">
+                            <i class="bi bi-cash-stack"></i>
+                        </div>
+                        <h5 class="fw-semibold mb-2 text-dark">Clôture de caisse</h5>
+                        <p class="text-muted small">Clôturer la journée</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Ventes du jour -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card feature-card h-100 border-0">
+                <a href="{% url 'ventes_du_jour' %}" class="stretched-link text-decoration-none">
+                    <div class="card-body text-center p-4">
+                        <div class="icon-circle bg-info-light text-info mb-3">
+                            <i class="bi bi-receipt"></i>
+                        </div>
+                        <h5 class="fw-semibold mb-2 text-dark">Ventes du jour</h5>
+                        <p class="text-muted small">Historique des transactions</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Paramètres -->
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card feature-card h-100 border-0">
+                <a href="{% url 'afficher_parametres' %}" class="stretched-link text-decoration-none">
+                    <div class="card-body text-center p-4">
+                        <div class="icon-circle bg-dark-light text-dark mb-3">
+                            <i class="bi bi-gear"></i>
+                        </div>
+                        <h5 class="fw-semibold mb-2 text-dark">Paramètres</h5>
+                        <p class="text-muted small">Configuration du système</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Gestion des utilisateurs (admin) -->
+        {% if request.user.is_superuser %}
+        <div class="col-xl-3 col-lg-4 col-md-6">
+            <div class="card feature-card h-100 border-0">
+                <a href="" class="stretched-link text-decoration-none">
+                    <div class="card-body text-center p-4">
+                        <div class="icon-circle bg-purple-light text-purple mb-3">
+                            <i class="bi bi-people"></i>
+                        </div>
+                        <h5 class="fw-semibold mb-2 text-dark">Utilisateurs</h5>
+                        <p class="text-muted small">Gestion des accès</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Styles personnalisés -->
+<style>
+    .feature-card {
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+        background-color: #fff;
+        overflow: hidden;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    }
+    
+    .icon-circle {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+        transition: all 0.3s ease;
+    }
+    
+    .feature-card:hover .icon-circle {
+        transform: scale(1.1) rotate(5deg);
+    }
+    
+    /* Couleurs claires pour les icônes */
+    .bg-primary-light { background-color: rgba(13, 110, 253, 0.1); }
+    .bg-success-light { background-color: rgba(25, 135, 84, 0.1); }
+    .bg-secondary-light { background-color: rgba(108, 117, 125, 0.1); }
+    .bg-warning-light { background-color: rgba(255, 193, 7, 0.1); }
+    .bg-danger-light { background-color: rgba(220, 53, 69, 0.1); }
+    .bg-info-light { background-color: rgba(13, 202, 240, 0.1); }
+    .bg-dark-light { background-color: rgba(33, 37, 41, 0.1); }
+    .bg-purple-light { background-color: rgba(111, 66, 193, 0.1); }
+    .text-purple { color: #6f42c1; }
+    
+    /* Effet de lien étendu */
+    .stretched-link::after {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 1;
+        content: "";
+    }
+    
+    @media (max-width: 767.98px) {
+        .icon-circle {
+            width: 60px;
+            height: 60px;
+            font-size: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}

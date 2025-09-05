@@ -1,0 +1,35 @@
+{% extends 'parametres/base.html' %}
+{% load i18n %}
+
+{% block content %}
+<div class="card border-0 shadow">
+    <div class="card-header bg-primary text-white">
+        <h3 class="card-title mb-0">
+            <i class="bi bi-trash me-2"></i>
+            {% trans "Supprimer le taux de change" %}
+        </h3>
+    </div>
+    
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <h5 class="alert-heading">{% trans "Confirmation de suppression" %}</h5>
+                <p>{% trans "Êtes-vous sûr de vouloir supprimer ce taux de change ?" %}</p>
+                <p class="mb-0">
+                    {{ object.devise_source.code }} → {{ object.devise_cible.code }}
+                    ({{ object.taux }}) - {% trans "Date d'application" %}: {{ object.date_application|date:"d/m/Y" }}
+                </p>
+            </div>
+        </div>
+        <div class="card-footer bg-light d-flex justify-content-between">
+            <a href="{% url 'parametres:tauxchange_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> {% trans "Annuler" %}
+            </a>
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-trash"></i> {% trans "Supprimer" %}
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

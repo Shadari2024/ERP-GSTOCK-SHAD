@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4 animate__animated animate__fadeIn">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0 text-danger fw-bold">
+                <i class="bi bi-trash-fill me-2"></i>Supprimer le Client
+            </h2>
+            <p class="text-muted small">Confirmation de suppression irréversible</p>
+        </div>
+        <a href="{% url 'details_client' client.pk %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Annuler et Retour
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-danger mb-4">
+        <div class="card-header bg-danger text-white fw-bold">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>Attention: Suppression irréversible !
+        </div>
+        <div class="card-body">
+            <p class="lead text-center mb-4">
+                Vous êtes sur le point de supprimer définitivement le client suivant :
+            </p>
+            <div class="row justify-content-center mb-4">
+                <div class="col-md-8">
+                    <div class="alert alert-light border text-center py-4" role="alert">
+                        <h4 class="alert-heading text-primary">{{ client.nom }}</h4>
+                        <p class="mb-1"><strong>ID Client:</strong> CL-{{ client.pk|stringformat:"04d" }}</p>
+                        {% if client.type_client %}
+                            <p class="mb-1"><strong>Type:</strong> {{ client.get_type_client_display }}</p>
+                        {% endif %}
+                        {% if client.email %}
+                            <p class="mb-0"><strong>Email:</strong> {{ client.email }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <p class="text-center text-muted">
+                La suppression de ce client entraînera la suppression de toutes les données associées :
+                ses commandes, ses transactions, et toutes les informations qui y sont liées.
+                Cette action ne peut pas être annulée.
+            </p>
+            <p class="text-center text-muted fw-bold mt-3">
+                Êtes-vous absolument certain de vouloir continuer ?
+            </p>
+
+            <form method="post" class="text-center mt-4">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-lg me-3">
+                    <i class="bi bi-trash me-2"></i>Confirmer la Suppression
+                </button>
+                <a href="{% url 'details_client' client.pk %}" class="btn btn-secondary btn-lg">
+                    <i class="bi bi-x-circle me-2"></i>Annuler
+                </a>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        background-color: #f8f9fa; /* Light background */
+    }
+    .card {
+        border-radius: 0.5rem;
+    }
+    .card-header {
+        border-bottom: none;
+        border-top-left-radius: 0.5rem;
+        border-top-right-radius: 0.5rem;
+    }
+    .alert.border {
+        border: 1px solid #dee2e6 !important;
+        border-radius: 0.4rem;
+    }
+</style>
+{% endblock %}

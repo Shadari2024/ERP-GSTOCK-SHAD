@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Ticket #{{ commande.id }} - {{ parametre.nom_societe }}</title>
+    <style>
+        @page {
+            size: 58mm auto; /* ou 80mm pour les plus larges */
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Arial Narrow', sans-serif;
+            font-size: 8px;
+            width: 58mm; /* 80mm pour les plus larges */
+            margin: 0;
+            padding: 1mm;
+            line-height: 1.1;
+        }
+        
+        .ticket {
+            width: 100%;
+            padding: 0;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 1mm;
+            padding-bottom: 1mm;
+            border-bottom: 1px solid #000;
+        }
+        
+        .company-name {
+            font-weight: bold;
+            font-size: 9px;
+            margin: 1mm 0;
+            text-transform: uppercase;
+        }
+        
+        .company-info {
+            font-size: 7px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 0.5mm 0;
+            font-size: 7px;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1mm 0;
+            font-size: 7px;
+        }
+        
+        .items-table th {
+            text-align: left;
+            padding: 0.5mm 0;
+            border-bottom: 1px solid #000;
+        }
+        
+        .items-table td {
+            padding: 0.5mm 0;
+            border-bottom: 1px dashed #ccc;
+        }
+        
+        .items-table .qty {
+            text-align: center;
+            width: 8mm;
+        }
+        
+        .items-table .price {
+            text-align: right;
+            width: 12mm;
+        }
+        
+        .totals {
+            margin-top: 1mm;
+            border-top: 1px solid #000;
+            padding-top: 1mm;
+            font-size: 8px;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 0.5mm 0;
+        }
+        
+        .grand-total {
+            font-weight: bold;
+            font-size: 9px;
+            margin-top: 1mm;
+        }
+        
+        .footer {
+            margin-top: 1mm;
+            text-align: center;
+            font-size: 6px;
+            border-top: 1px solid #000;
+            padding-top: 1mm;
+        }
+        
+        .barcode {
+            text-align: center;
+            margin: 1mm 0;
+            font-family: 'Libre Barcode 128', cursive;
+            font-size: 16px;
+        }
+        
+        @media print {
+            body {
+                margin: 0;
+                padding: 1mm;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Barcode+128&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="ticket">
+    <div class="header">
+        <div class="company-name">{{ parametre.nom_societe|default:"OBED TRADING"|upper }}</div>
+        <div class="company-info">
+            {{ parametre.adresse|default:"Adresse non spécifiée" }}<br>
+            Tél: {{ parametre.telephone|default:"N/A" }}
+        </div>
+    </div>
+    
+    <div class="info-row">
+        <strong>TICKET #{{ commande.id|default:"000" }}</strong>
+        <span>{{ commande.date_commande|date:"d/m/Y H:i" }}</span>
+    </div>
+    
+    <div class="info-row">
+        <span><strong>Client:</strong> {{ commande.client.nom|default:"Non spécifié"|truncatechars:15 }}</span>
+        <span><strong>Vendeur:</strong> {{ commande.vendeur.username|default:"N/A"|truncatechars:10 }}</span>
+    </div>
+    
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th>Article</th>
+                <th class="qty">Qté</th>
+                <th class="price">P.U</th>
+                <th class="price">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in commande.lignes.all %}
+            <tr>
+                <td>{{ ligne.produit.nom|default:"Produit"|truncatechars:12 }}</td>
+                <td class="qty">{{ ligne.quantite|default:0 }}</td>
+                <td class="price">{{ ligne.prix_unitaire|floatformat:0|default:"0" }}F</td>
+                <td class="price">{{ ligne.total_ligne_ttc|floatformat:0|default:"0" }}F</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div class="totals">
+        <div class="total-row">
+            <span>Total HT:</span>
+            <span>{{ commande.total_ht|floatformat:0|default:"0" }} {{ parametre.devise|default:"FC"|upper }}</span>
+        </div>
+        <div class="total-row">
+            <span>TVA ({{ parametre.taux_tva|default:"16"|upper }}%):</span>
+            <span>{{ commande.total_tva|floatformat:0|default:"0" }} {{ parametre.devise|default:"FC"|upper }}</span>
+        </div>
+        <div class="total-row grand-total">
+            <span>TOTAL:</span>
+            <span>{{ commande.montant_total|floatformat:0|default:"0" }}   {{ parametre.devise|default:"FC"|upper }}</span>
+        </div>
+    </div>
+    
+    <div class="info-row">
+        <strong>Paiement:</strong> {{ commande.get_paiement_display|default:"-"|upper }}
+        {% if commande.paiement == "cheque" %}({{ commande.cheque_numero|default:"" }}){% endif %}
+    </div>
+    
+    <div class="barcode">*{{ commande.id|default:"000" }}*</div>
+    
+    <div class="footer">
+        {{ commande.date_commande|date:"d/m/Y H:i" }}<br>
+        {{ parametre.nom_societe|default:"OBED TRADING"|upper }}<br>
+        <em>Ticket non valable comme facture</em>
+    </div>
+</div>
+
+<script>
+    window.onload = function() {
+        setTimeout(function() {
+            window.print();
+            setTimeout(function() {
+                if(window.opener) window.close();
+            }, 100);
+        }, 100);
+    };
+</script>
+</body>
+</html>

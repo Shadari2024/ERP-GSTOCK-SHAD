@@ -1,0 +1,241 @@
+from django.db import models
+from django.contrib.auth import get_user_model
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils.translation import gettext_lazy as _
+from django_choices_field import TextChoicesField
+from django.utils.text import slugify
+
+User = get_user_model()
+
+class PlanTarification(models.Model):
+    """
+    Plans de tarification avec fonctionnalités spécifiques
+    """
+    class NiveauPlan(models.TextChoices):
+        STARTER = 'ST', _('Starter')
+        PROFESSIONAL = 'PRO', _('Professional')
+        ENTERPRISE = 'ENT', _('Enterprise')
+        CUSTOM = 'CUS', _('Custom')
+
+    nom = models.CharField(_("Nom du plan"), max_length=50)
+    niveau = TextChoicesField(choices_enum=NiveauPlan)
+    prix_mensuel = models.DecimalField(_("Prix mensuel"), max_digits=10, decimal_places=2)
+    utilisateurs_inclus = models.PositiveIntegerField(_("Utilisateurs inclus"))
+    stockage_go = models.PositiveIntegerField(_("Stockage inclus (Go)"))
+    modules_inclus = models.JSONField(_("Modules inclus"), default=list)
+    limites = models.JSONField(_("Limites d'usage"), default=dict)  # Ex: {'ventes/mois': 1000}
+    
+    # Fonctionnalités premium
+    support_24h = models.BooleanField(_("Support 24/7"), default=False)
+    api_acces = models.BooleanField(_("Accès API"), default=False)
+    rapports_avances = models.BooleanField(_("Rapports avancés"), default=False)
+
+    class Meta:
+        verbose_name = _("Plan de tarification")
+        verbose_name_plural = _("Plans de tarification")
+        ordering = ['prix_mensuel']
+
+    def __str__(self):
+        return f"{self.nom} ({self.get_niveau_display()})"
+
+class Entreprise(models.Model):
+    """
+    Modèle principal tenant-aware pour l'architecture SAAS
+    """
+    class StatutEntreprise(models.TextChoices):
+        ACTIVE = 'AC', _('Active')
+        ESSAI = 'ES', _("Période d'essai")
+        SUSPENDUE = 'SU', _('Suspendue')
+        ARCHIVE = 'AR', _('Archivée')
+
+    nom = models.CharField(max_length=100)
+    slogan = models.CharField(max_length=255, blank=True, null=True)
+    adresse = models.TextField(blank=True, null=True)
+    telephone = models.CharField(max_length=20, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    site_web = models.URLField(blank=True, null=True)
+    domaine = models.CharField(max_length=255, unique=True)
+    logo = models.ImageField(upload_to='logos/', blank=True, null=True)
+    active = models.BooleanField(default=True)
+    plan_tarification = models.ForeignKey("PlanTarification", on_delete=models.SET_NULL, null=True, blank=True)
+    date_debut_abonnement = models.DateField(blank=True, null=True)
+    date_fin_abonnement = models.DateField(blank=True, null=True)
+    slug = models.SlugField(unique=True, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.slug and self.nom:
+            self.slug = slugify(self.nom)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.nom
+
+    class Meta:
+        verbose_name = _("Entreprise")
+        verbose_name_plural = _("Entreprises")
+        indexes = [
+            models.Index(fields=['slug']),
+            models.Index(fields=['statut']),
+        ]
+
+    def __str__(self):
+        return self.nom
+
+    @property
+    def est_active(self):
+        return self.statut == self.StatutEntreprise.ACTIVE
+
+class Abonnement(models.Model):
+    """
+    Gestion fine des abonnements avec historique
+    """
+    entreprise = models.OneToOneField(Entreprise, on_delete=models.CASCADE, related_name='abonnement')
+    plan_actuel = models.ForeignKey(PlanTarification, on_delete=models.PROTECT)
+    date_debut = models.DateTimeField(_("Date début"))
+    date_fin = models.DateTimeField(_("Date fin"), null=True, blank=True)
+    prochain_paiement = models.DateTimeField(_("Prochain paiement"), null=True, blank=True)
+    
+    # Méthodes de paiement (Stripe, PayPal, etc.)
+    STRIPE = 'STRIPE'
+    PAYPAL = 'PAYPAL'
+    METHODE_PAIEMENT_CHOICES = [
+        (STRIPE, 'Stripe'),
+        (PAYPAL, 'PayPal'),
+    ]
+    methode_paiement = models.CharField(
+        _("Méthode de paiement"),
+        max_length=10,
+        choices=METHODE_PAIEMENT_CHOICES,
+        blank=True
+    )
+    id_abonnement_paiement = models.CharField(
+        _("ID abonnement fournisseur"),
+        max_length=100,
+        blank=True
+    )
+
+    class Meta:
+        verbose_name = _("Abonnement")
+        verbose_name_plural = _("Abonnements")
+
+    def __str__(self):
+        return f"Abonnement {self.entreprise}"
+
+class ConfigurationSAAS(models.Model):
+    """
+    Configuration spécifique SAAS pour chaque entreprise
+    """
+    entreprise = models.OneToOneField(Entreprise, on_delete=models.CASCADE, related_name='config_saas')
+    
+    # Modules
+    modules_actifs = models.JSONField(_("Modules activés"), default=list)
+    
+    # Paramètres système
+    fuseau_horaire = models.CharField(_("Fuseau horaire"), max_length=50, default='UTC')
+    langue = models.CharField(_("Langue"), max_length=10, default='fr')
+    
+    # Sécurité
+    expiration_session = models.PositiveIntegerField(_("Expiration session (minutes)"), default=30)
+    complexite_mdp = models.PositiveIntegerField(
+        _("Complexité mot de passe"),
+        choices=[(1, _("Faible")), (2, _("Moyen")), (3, _("Fort"))],
+        default=2
+    )
+    
+    # Devise
+    devise_principale = models.ForeignKey('Devise', on_delete=models.PROTECT, null=True)
+
+    class Meta:
+        verbose_name = _("Configuration SAAS")
+        verbose_name_plural = _("Configurations SAAS")
+
+class Devise(models.Model):
+    """
+    Gestion multi-devises avec taux automatiques
+    """
+    code = models.CharField(_("Code ISO"), max_length=3, unique=True)
+    nom = models.CharField(_("Nom"), max_length=50)
+    symbole = models.CharField(_("Symbole"), max_length=5)
+    active = models.BooleanField(_("Active"), default=True)
+    
+    # Formatage
+    symbole_avant = models.BooleanField(_("Symbole avant montant"), default=False)
+    decimales = models.PositiveIntegerField(_("Nombre de décimales"), default=2)
+
+    class Meta:
+        verbose_name = _("Devise")
+        verbose_name_plural = _("Devises")
+        ordering = ['code']
+
+    def __str__(self):
+        return f"{self.code} ({self.symbole})"
+
+class TauxChange(models.Model):
+    """
+    Historique des taux de change avec source de données
+    """
+    devise_source = models.ForeignKey(Devise, on_delete=models.CASCADE, related_name='taux_sources')
+    devise_cible = models.ForeignKey(Devise, on_delete=models.CASCADE, related_name='taux_cibles')
+    taux = models.DecimalField(_("Taux"), max_digits=12, decimal_places=6)
+    date_application = models.DateField(_("Date d'application"))
+    
+    # Source du taux (banque centrale, API, manuel)
+    source = models.CharField(_("Source"), max_length=100, default='API')
+    est_actif = models.BooleanField(_("Actif"), default=True)
+
+    class Meta:
+        verbose_name = _("Taux de change")
+        verbose_name_plural = _("Taux de change")
+        unique_together = ('devise_source', 'devise_cible', 'date_application')
+        ordering = ['-date_application']
+
+class ParametreDocument(models.Model):
+    """
+    Numérotation automatique des documents
+    """
+    TYPE_DOCUMENT_CHOICES = [
+        ('FACTURE', _('Facture')),
+        ('DEVIS', _('Devis')),
+        ('BON_LIVRAISON', _('Bon de livraison')),
+    ]
+    
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE, related_name='parametres_docs')
+    type_document = models.CharField(_("Type de document"), max_length=20, choices=TYPE_DOCUMENT_CHOICES)
+    prefixe = models.CharField(_("Préfixe"), max_length=10)
+    suffixe = models.CharField(_("Suffixe"), max_length=10, blank=True)
+    compteur = models.PositiveIntegerField(_("Compteur actuel"), default=1)
+    format_compteur = models.CharField(_("Format compteur"), max_length=10, default='0000')
+    reinitialisation = models.CharField(
+        _("Réinitialisation"),
+        max_length=10,
+        choices=[('NEVER', _('Jamais')), ('YEARLY', _('Annuelle')), ('MONTHLY', _('Mensuelle'))],
+        default='NEVER'
+    )
+
+    class Meta:
+        verbose_name = _("Paramètre document")
+        verbose_name_plural = _("Paramètres documents")
+        unique_together = ('entreprise', 'type_document')
+
+class AuditConfiguration(models.Model):
+    """
+    Journal des modifications de configuration
+    """
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
+    utilisateur = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    action = models.CharField(_("Action"), max_length=50)
+    modele = models.CharField(_("Modèle affecté"), max_length=50)
+    ancienne_valeur = models.JSONField(_("Ancienne valeur"), null=True)
+    nouvelle_valeur = models.JSONField(_("Nouvelle valeur"), null=True)
+    timestamp = models.DateTimeField(_("Horodatage"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Audit configuration")
+        verbose_name_plural = _("Audits configurations")
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['entreprise', 'timestamp']),
+        ]
+
+    def __str__(self):
+        return f"{self.timestamp} - {self.action}"

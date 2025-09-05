@@ -1,0 +1,28 @@
+{% for taux in taux_list %}
+<tr>
+    <td>{{ taux.devise_source }}</td>
+    <td>{{ taux.devise_cible }}</td>
+    <td class="font-weight-bold">{{ taux.taux|floatformat:6 }}</td>
+    <td>
+        <span class="text-muted" title="{{ taux.date_mise_a_jour|date:'DATETIME_FORMAT' }}">
+            {{ taux.date_mise_a_jour|timesince }}
+        </span>
+    </td>
+    <td>
+        {% if taux.est_manuel %}
+            <span class="badge badge-warning">Manuel</span>
+        {% else %}
+            <span class="badge badge-success">Auto</span>
+        {% endif %}
+    </td>
+    <td>
+        <a href="{% url 'modifier_taux' taux.id %}" class="btn btn-xs btn-primary" title="Modifier">
+            <i class="fas fa-edit"></i>
+        </a>
+    </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="6" class="text-center text-muted">Aucun taux de change configuré</td>
+</tr>
+{% endfor %}

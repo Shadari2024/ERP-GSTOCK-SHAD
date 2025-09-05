@@ -1,0 +1,307 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load math_filters %}
+{% block title %}Statistiques des Ventes{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-chart-line me-2"></i>Statistiques des Ventes
+        </h1>
+    </div>
+
+    <!-- Filtres Avancés -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 bg-primary text-white">
+            <h6 class="m-0 font-weight-bold">
+                <i class="fas fa-filter me-2"></i>Filtres Avancés
+            </h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label for="date_debut" class="form-label">Date début</label>
+                    <input type="date" name="date_debut" id="date_debut" 
+                           value="{{ date_debut }}" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="date_fin" class="form-label">Date fin</label>
+                    <input type="date" name="date_fin" id="date_fin" 
+                           value="{{ date_fin }}" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label for="point_de_vente" class="form-label">Point de Vente</label>
+                    <select name="point_de_vente" id="point_de_vente" class="form-select">
+                        <option value="">Tous les POS</option>
+                        {% for pos in points_de_vente %}
+                        <option value="{{ pos.id }}" {% if point_de_vente_id == pos.id|stringformat:"s" %}selected{% endif %}>
+                            {{ pos.code }} - {{ pos.nom }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="caissier" class="form-label">Caissier</label>
+                    <select name="caissier" id="caissier" class="form-select">
+                        <option value="">Tous les caissiers</option>
+                        {% for caissier in caissiers %}
+                        <option value="{{ caissier.id }}" {% if caissier_id == caissier.id|stringformat:"s" %}selected{% endif %}>
+                            {{ caissier.get_full_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-2"></i>Appliquer les filtres
+                    </button>
+                    <a href="{% url 'ventes:statistiques_ventes' %}" class="btn btn-secondary ms-2">
+                        <i class="fas fa-sync me-2"></i>Réinitialiser
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Statistiques Globales -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                CA Total (Période)
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats_periode.total_ventes|floatformat:2 }} {{ devise_symbole }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-euro-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Nombre de Ventes
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats_periode.nombre_ventes }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-shopping-cart fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Panier Moyen
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats_periode.panier_moyen|floatformat:2 }} {{ devise_symbole }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-chart-pie fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Clients Uniques
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ stats_periode.nombre_clients }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques par Point de Vente -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3 bg-info text-white">
+                    <h6 class="m-0 font-weight-bold">
+                        <i class="fas fa-cash-register me-2"></i>Performance par Point de Vente
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Point de Vente</th>
+                                    <th class="text-end">CA Total</th>
+                                    <th class="text-end">Nombre de Ventes</th>
+                                    <th class="text-end">Caissiers</th>
+                                    <th class="text-end">Panier Moyen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pos in stats_par_pos %}
+                                <tr>
+                                    <td>{{ pos.session__point_de_vente__code }} - {{ pos.session__point_de_vente__nom }}</td>
+                                    <td class="text-end">{{ pos.total_ventes|floatformat:2 }} {{ devise_symbole }}</td>
+                                    <td class="text-end">{{ pos.nombre_ventes }}</td>
+                                    <td class="text-end">{{ pos.caissiers_distincts }}</td>
+                                    <td class="text-end">
+                                        {% if pos.nombre_ventes > 0 %}
+                                        {{ pos.total_ventes|floatformat:2|div:pos.nombre_ventes }} {{ devise_symbole }}
+                                        {% else %}
+                                        0.00 {{ devise_symbole }}
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">Aucune donnée disponible</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques par Caissier -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3 bg-success text-white">
+                    <h6 class="m-0 font-weight-bold">
+                        <i class="fas fa-user-tie me-2"></i>Performance par Caissier
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Caissier</th>
+                                    <th>Point de Vente</th>
+                                    <th class="text-end">CA Total</th>
+                                    <th class="text-end">Nombre de Ventes</th>
+                                    <th class="text-end">Panier Moyen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for caissier in stats_par_caissier %}
+                                <tr>
+                                    <td>{{ caissier.session__utilisateur__first_name }} {{ caissier.session__utilisateur__last_name }}</td>
+                                    <td>{{ caissier.session__point_de_vente__nom }}</td>
+                                    <td class="text-end">{{ caissier.total_ventes|floatformat:2 }} {{ devise_symbole }}</td>
+                                    <td class="text-end">{{ caissier.nombre_ventes }}</td>
+                                    <td class="text-end">{{ caissier.panier_moyen|floatformat:2 }} {{ devise_symbole }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">Aucune donnée disponible</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Meilleurs Articles -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3 bg-warning text-white">
+                    <h6 class="m-0 font-weight-bold">
+                        <i class="fas fa-star me-2"></i>Top 20 des Articles
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Article</th>
+                                    <th class="text-end">Quantité Vendue</th>
+                                    <th class="text-end">CA Généré</th>
+                                    <th class="text-end">Nombre de Ventes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for article in meilleurs_articles %}
+                                <tr>
+                                    <td>{{ article.produit__nom }} ({{ article.produit__code }})</td>
+                                    <td class="text-end">{{ article.quantite_vendue }}</td>
+                                    <td class="text-end">{{ article.montant_total|floatformat:2 }} {{ devise_symbole }}</td>
+                                    <td class="text-end">{{ article.nombre_ventes }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Aucune donnée disponible</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Scripts pour les graphiques et l'interactivité
+$(document).ready(function() {
+    // Initialiser les sélecteurs avec Select2 pour une meilleure UX
+    $('#point_de_vente, #caissier').select2({
+        placeholder: "Sélectionnez...",
+        allowClear: true
+    });
+
+    // Mettre à jour les dates par défaut si elles sont vides
+    if (!$('#date_debut').val()) {
+        const firstDay = new Date();
+        firstDay.setDate(1);
+        $('#date_debut').val(firstDay.toISOString().split('T')[0]);
+    }
+    
+    if (!$('#date_fin').val()) {
+        $('#date_fin').val(new Date().toISOString().split('T')[0]);
+    }
+});
+</script>
+{% endblock %}

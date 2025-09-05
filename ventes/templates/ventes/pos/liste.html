@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Points de Vente{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">
+            <i class="fas fa-cash-register me-2"></i>Points de Vente
+        </h1>
+        <a href="{% url 'ventes:pos_create' %}" class="btn btn-primary btn-icon-split">
+            <span class="icon text-white-50">
+                <i class="fas fa-plus"></i>
+            </span>
+            <span class="text">Nouveau Point de Vente</span>
+        </a>
+    </div>
+
+    {% if messages %}
+    <div class="mb-4">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %} me-2"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center bg-primary text-white">
+            <h6 class="m-0 font-weight-bold">Liste des Points de Vente</h6>
+            <span class="badge bg-light text-dark">{{ object_list.count }} point(s) de vente</span>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" width="100%" cellspacing="0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Code</th>
+                            <th>Nom</th>
+                            <th>Responsable</th>
+                            <th>Caissiers</th>
+                            <th>Statut</th>
+                            <th>Créé le</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pos in object_list %}
+                        <tr>
+                            <td>
+                                <strong>{{ pos.code }}</strong>
+                            </td>
+                            <td>{{ pos.nom }}</td>
+                            <td>
+                                {% if pos.responsable %}
+                                <div class="d-flex align-items-center">
+                                    <div class="me-2">
+                                        <i class="fas fa-user-circle text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">{{ pos.responsable.get_full_name }}</div>
+                                        <small class="text-muted">{{ pos.responsable.email }}</small>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <span class="text-muted fst-italic">Non assigné</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if pos.caissiers.exists %}
+                                <span class="badge bg-info text-white">
+                                    {{ pos.caissiers.count }} caissier(s)
+                                </span>
+                                {% else %}
+                                <span class="text-muted fst-italic">Aucun</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if pos.actif %}success{% else %}danger{% endif %}">
+                                    {% if pos.actif %}Actif{% else %}Inactif{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <small class="text-muted">{{ pos.created_at|date:"d/m/Y" }}</small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'ventes:pos_dashboard' pos.pk %}" class="btn btn-info" title="Tableau de bord">
+                                        <i class="fas fa-tachometer-alt"></i>
+                                    </a>
+                                    <a href="{% url 'ventes:pos_update' pos.pk %}" class="btn btn-primary" title="Modifier">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'ventes:pos_delete' pos.pk %}" class="btn btn-danger" title="Supprimer">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5">
+                                <div class="text-muted mb-3">
+                                    <i class="fas fa-cash-register fa-4x"></i>
+                                </div>
+                                <h5 class="text-muted">Aucun point de vente</h5>
+                                <p class="text-muted">Commencez par créer votre premier point de vente</p>
+                                <a href="{% url 'ventes:pos_create' %}" class="btn btn-primary">
+                                    <i class="fas fa-plus me-2"></i>Créer un point de vente
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Tooltips pour les boutons d'action
+    $('[title]').tooltip();
+    
+    // Confirmation avant suppression
+    $('a[href*="delete"]').on('click', function(e) {
+        if (!confirm('Êtes-vous sûr de vouloir supprimer ce point de vente ?')) {
+            e.preventDefault();
+        }
+    });
+});
+</script>
+{% endblock %}
