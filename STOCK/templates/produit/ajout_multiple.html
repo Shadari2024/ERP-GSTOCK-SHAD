@@ -1,33 +1,45 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
 <div class="container py-4">
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white">
-            <h3>Ajout multiple de produits</h3>
+    <div class="card shadow-lg border-0">
+        <div class="card-header bg-primary text-white d-flex align-items-center justify-content-between">
+            <h4 class="mb-0">
+                <i class="fas fa-plus-square me-2"></i>
+                Ajout multiple de produits
+            </h4>
+            <a href="{% url 'produits_par_categorie' %}" class="btn btn-light btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>
+                Retour
+            </a>
         </div>
         <div class="card-body">
             <form id="form-ajout-multiple" enctype="multipart/form-data">
                 {% csrf_token %}
 
-                <div class="mb-3">
-                    <label for="categorie" class="form-label">Catégorie commune (optionnelle)</label>
-                    <select name="categorie" id="categorie" class="form-select">
-                        <option value="">-- Aucune --</option>
-                        {% for cat in categories %}
-                            <option value="{{ cat.id }}">{{ cat.nom }}</option>
-                        {% endfor %}
-                    </select>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label for="categorie" class="form-label fw-bold">Catégorie commune (optionnelle)</label>
+                        <select name="categorie" id="categorie" class="form-select">
+                            <option value="">-- Aucune --</option>
+                            {% for cat in categories %}
+                                <option value="{{ cat.id }}">{{ cat.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
 
                 <div id="produits-container">
-                    <!-- lignes de produits -->
-                </div>
+                    </div>
 
-                <button type="button" class="btn btn-success my-3" id="ajouter-ligne">+ Ajouter une ligne</button>
-
-                <div class="text-end">
-                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                <div class="d-flex justify-content-between my-3">
+                    <button type="button" class="btn btn-outline-success btn-sm" id="ajouter-ligne">
+                        <i class="fas fa-plus me-2"></i>Ajouter une ligne
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Enregistrer
+                    </button>
                 </div>
 
                 <input type="hidden" name="produits_data" id="produits-data">
@@ -38,33 +50,66 @@
     </div>
 </div>
 
-<!-- Template ligne -->
 <template id="ligne-produit-template">
-    <div class="card mb-3 produit-ligne">
-        <div class="card-body row g-3">
+    <div class="card mb-3 produit-ligne border-0 shadow-sm">
+        <div class="card-body row g-3 align-items-center">
             <div class="col-md-3">
-                <input type="text" class="form-control nom" placeholder="Nom du produit *" required>
+                <div class="form-floating">
+                    <input type="text" class="form-control nom" placeholder="Nom du produit" required>
+                    <label>Nom du produit *</label>
+                </div>
             </div>
+            
             <div class="col-md-3">
-                <input type="text" class="form-control description" placeholder="Description">
+                <div class="form-floating">
+                    <textarea class="form-control description" placeholder="Description du produit" style="height: 58px;"></textarea>
+                    <label>Description</label>
+                </div>
             </div>
+            
             <div class="col-md-2">
-                <input type="number" class="form-control prix-achat" placeholder="Prix achat *" required>
+                <div class="input-group has-validation">
+                    <span class="input-group-text">{{ devise_principale_symbole }}</span>
+                    <div class="form-floating">
+                        <input type="number" step="0.01" class="form-control prix-achat" placeholder="Prix achat *" required>
+                        <label>Prix achat *</label>
+                    </div>
+                </div>
             </div>
+            
             <div class="col-md-2">
-                <input type="number" class="form-control prix-vente" placeholder="Prix vente *" required>
+                <div class="input-group has-validation">
+                    <span class="input-group-text">{{ devise_principale_symbole }}</span>
+                    <div class="form-floating">
+                        <input type="number" step="0.01" class="form-control prix-vente" placeholder="Prix vente *" required>
+                        <label>Prix vente *</label>
+                    </div>
+                </div>
             </div>
+            
             <div class="col-md-2">
-                <input type="number" class="form-control stock" placeholder="Stock" value="0">
+                <div class="form-floating">
+                    <input type="number" class="form-control stock" placeholder="Stock" value="0">
+                    <label>Stock</label>
+                </div>
             </div>
+            
             <div class="col-md-2">
-                <input type="number" class="form-control seuil-alerte" placeholder="Seuil" value="10">
+                <div class="form-floating">
+                    <input type="number" class="form-control seuil-alerte" placeholder="Seuil alerte" value="10">
+                    <label>Seuil alerte</label>
+                </div>
             </div>
+
             <div class="col-md-4">
-                <input type="file" class="form-control photo">
+                <label for="photo_id" class="form-label text-muted small">Photo du produit (optionnelle)</label>
+                <input type="file" class="form-control photo" id="photo_id" accept="image/*">
             </div>
-            <div class="col-md-2 d-flex align-items-center">
-                <button type="button" class="btn btn-danger btn-sm supprimer-ligne">Supprimer</button>
+            
+            <div class="col-md-1 d-flex justify-content-end">
+                <button type="button" class="btn btn-outline-danger btn-sm supprimer-ligne" title="Supprimer la ligne">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -76,23 +121,55 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnAjouter = document.getElementById("ajouter-ligne");
     const template = document.getElementById("ligne-produit-template");
     const form = document.getElementById("form-ajout-multiple");
+    const messageDiv = document.getElementById("message");
 
     function ajouterLigne() {
         const clone = template.content.cloneNode(true);
-        clone.querySelector(".supprimer-ligne").addEventListener("click", function () {
+        // Générer un ID unique pour le champ photo
+        const uniqueId = `photo-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        const photoInput = clone.querySelector(".photo");
+        photoInput.id = uniqueId;
+        clone.querySelector('label[for="photo_id"]').setAttribute('for', uniqueId);
+        
+        clone.querySelector(".supprimer-ligne").addEventListener("click", function() {
             this.closest(".produit-ligne").remove();
         });
         container.appendChild(clone);
     }
 
     btnAjouter.addEventListener("click", ajouterLigne);
-    ajouterLigne(); // une ligne au début
+    ajouterLigne(); // Ajoute la première ligne au chargement de la page
 
-    form.addEventListener("submit", async function (e) {
+    form.addEventListener("submit", async function(e) {
         e.preventDefault();
+        messageDiv.innerHTML = `<div class="alert alert-info">Envoi en cours...</div>`;
+        
         const lignes = container.querySelectorAll(".produit-ligne");
         const produits = [];
 
+        if (lignes.length === 0) {
+            messageDiv.innerHTML = `<div class="alert alert-danger">Veuillez ajouter au moins une ligne de produit.</div>`;
+            return;
+        }
+
+        let isValid = true;
+        for (let ligne of lignes) {
+            const nomInput = ligne.querySelector(".nom");
+            const prixAchatInput = ligne.querySelector(".prix-achat");
+            const prixVenteInput = ligne.querySelector(".prix-vente");
+
+            if (!nomInput.value || !prixAchatInput.value || !prixVenteInput.value) {
+                isValid = false;
+                break;
+            }
+        }
+        
+        if (!isValid) {
+            messageDiv.innerHTML = `<div class="alert alert-danger">Veuillez remplir tous les champs obligatoires (*) pour chaque produit.</div>`;
+            return;
+        }
+
+        // Boucle pour collecter les données, y compris les fichiers
         for (let ligne of lignes) {
             const nom = ligne.querySelector(".nom").value;
             const description = ligne.querySelector(".description").value;
@@ -100,19 +177,15 @@ document.addEventListener("DOMContentLoaded", () => {
             const prix_vente = ligne.querySelector(".prix-vente").value;
             const stock = ligne.querySelector(".stock").value || 0;
             const seuil_alerte = ligne.querySelector(".seuil-alerte").value || 10;
-            const photo = ligne.querySelector(".photo").files[0];
-
-            if (!nom || !prix_achat || !prix_vente) {
-                alert("Veuillez remplir tous les champs obligatoires (*) pour chaque produit.");
-                return;
-            }
+            const photoFile = ligne.querySelector(".photo").files[0];
 
             let photo_data = null;
-            if (photo) {
+            if (photoFile) {
                 const reader = new FileReader();
-                photo_data = await new Promise((resolve) => {
+                photo_data = await new Promise((resolve, reject) => {
                     reader.onloadend = () => resolve(reader.result);
-                    reader.readAsDataURL(photo);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(photoFile);
                 });
             }
 
@@ -127,24 +200,29 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }
 
-        const data = new FormData(form);
-        data.append("produits_data", JSON.stringify(produits));
+        const formData = new FormData();
+        formData.append("csrfmiddlewaretoken", document.querySelector('[name=csrfmiddlewaretoken]').value);
+        formData.append("produits_data", JSON.stringify(produits));
+        formData.append("categorie", document.getElementById("categorie").value);
 
-        const response = await fetch("{% url 'ajout_multiple_produits' %}", {
-            method: "POST",
-            headers: { "X-CSRFToken": "{{ csrf_token }}" },
-            body: data,
-        });
+        try {
+            const response = await fetch("{% url 'ajout_multiple_produits' %}", {
+                method: "POST",
+                body: formData,
+            });
 
-        const result = await response.json();
-        const message = document.getElementById("message");
+            const result = await response.json();
 
-        if (result.success) {
-            message.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
-            container.innerHTML = "";
-            ajouterLigne();
-        } else {
-            message.innerHTML = `<div class="alert alert-danger">Erreur : ${result.error}</div>`;
+            if (response.ok) {
+                messageDiv.innerHTML = `<div class="alert alert-success">${result.message}</div>`;
+                container.innerHTML = "";
+                ajouterLigne();
+            } else {
+                const errorsHtml = result.errors ? result.errors.map(err => `<li>${err}</li>`).join('') : '';
+                messageDiv.innerHTML = `<div class="alert alert-danger"><strong>Erreur :</strong> ${result.error || 'Erreur inconnue.'}<ul>${errorsHtml}</ul></div>`;
+            }
+        } catch (error) {
+            messageDiv.innerHTML = `<div class="alert alert-danger">Erreur de connexion au serveur.</div>`;
         }
     });
 });

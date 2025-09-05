@@ -332,6 +332,22 @@ class ContratDetailView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseA
         context['now'] = timezone.now()
         return context
 
+class ContratCreateView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMixin, GRHBaseMixin, CreateView):
+    model = Contrat
+    form_class = ContratForm
+    template_name = "grh/contrat/form.html"
+    permission_required = "grh.add_contrat"
+    success_url = reverse_lazy('grh:contrat_list')
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["entreprise"] = self.request.user.entreprise
+        return kwargs
+    
+    def form_valid(self, form):
+        form.instance.entreprise = self.request.user.entreprise
+        return super().form_valid(form)
+
 # Vues pour les bulletins de paie
 class BulletinPaieListView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMixin, GRHBaseMixin, ListView):
     model = BulletinPaie

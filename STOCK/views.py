@@ -762,14 +762,6 @@ class DeleteCatView(EntrepriseAccessMixin, View):
         
         return redirect('liste_cat')
     #ajouter produit 
-from django.utils.decorators import method_decorator
-from django.contrib.auth.decorators import login_required, permission_required
-from django.views import View
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from decimal import Decimal
-from parametres.mixins import EntrepriseAccessMixin
-from .models import Produit, Categorie
 # Mettez à jour vos imports
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
@@ -777,74 +769,94 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.utils.decorators import method_decorator
 from django.contrib import messages
 from decimal import Decimal
+from django.db import transaction
+
+# Assurez-vous d'importer votre modèle ConfigurationSAAS
+from parametres.models import ConfigurationSAAS
+# Assurez-vous d'importer votre mixin
+from parametres.mixins import EntrepriseAccessMixin
+
+# Mettez à jour vos imports de modèles
+from .models import Produit, Categorie
+
+
 @method_decorator([
     login_required,
-    permission_required('STOCK.add_produit', raise_exception=True)
+    permission_required('stock.add_produit', raise_exception=True)
 ], name='dispatch')
 class AjouterProduitView(EntrepriseAccessMixin, View):
     template_name = 'produit/ajouter_produit.html'
 
     def get_devise_principale_symbole(self, request):
+        """Récupère le symbole de la devise principale de l'entreprise."""
         try:
             config_saas = ConfigurationSAAS.objects.get(entreprise=request.entreprise)
             return config_saas.devise_principale.symbole if config_saas.devise_principale else "€"
         except ConfigurationSAAS.DoesNotExist:
             return "€"
 
-    def get(self, request):
-        if not request.user.has_perm('STOCK.view_categorie'):
-            messages.error(request, "Permission insuffisante pour voir les catégories")
-            return redirect('acces_refuse')
-            
+    def get(self, request, *args, **kwargs):
+        """Affiche le formulaire d'ajout de produit."""
         context = {
             'categories': Categorie.objects.filter(entreprise=request.entreprise),
-            'can_view': request.user.has_perm('STOCK.view_produit'),
             'devise_principale_symbole': self.get_devise_principale_symbole(request),
         }
         return render(request, self.template_name, context)
 
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
+        """Traite les données du formulaire pour créer un produit."""
         try:
-            nom = request.POST['nom']
-            description = request.POST.get('description', '')
-            prix_achat = Decimal(request.POST['prix_achat'])
-            prix_vente = Decimal(request.POST['prix_vente'])
-            stock = int(request.POST['stock'])
-            seuil_alerte = int(request.POST['seuil_alerte'])
-            categorie_id = request.POST['categorie']
-            photo = request.FILES.get('photo')
+            with transaction.atomic():
+                # Récupération et validation des données du formulaire
+                nom = request.POST.get('nom')
+                if not nom:
+                    raise ValueError("Le nom du produit est requis.")
 
-            categorie = get_object_or_404(Categorie, id=categorie_id, entreprise=request.entreprise)
-            
-            produit = Produit(
-                nom=nom,
-                description=description,
-                prix_achat=prix_achat,
-                prix_vente=prix_vente,
-                stock=stock,
-                seuil_alerte=seuil_alerte,
-                categorie=categorie,
-                photo=photo,
-                cree_par=request.user,
-                entreprise=request.entreprise
-            )
+                description = request.POST.get('description', '')
+                prix_achat = Decimal(request.POST.get('prix_achat', '0'))
+                prix_vente = Decimal(request.POST.get('prix_vente', '0'))
+                stock = int(request.POST.get('stock', '0'))
+                seuil_alerte = int(request.POST.get('seuil_alerte', '0'))
+                categorie_id = request.POST.get('categorie')
+                photo = request.FILES.get('photo')
 
-            produit.save()
-            produit.generate_barcode()
-            produit.save()
+                categorie = get_object_or_404(Categorie, id=categorie_id, entreprise=request.entreprise)
+                
+                # Création du produit
+                produit = Produit(
+                    nom=nom,
+                    description=description,
+                    prix_achat=prix_achat,
+                    prix_vente=prix_vente,
+                    stock=stock,
+                    seuil_alerte=seuil_alerte,
+                    categorie=categorie,
+                    photo=photo,
+                    cree_par=request.user,
+                    entreprise=request.entreprise
+                )
 
-            messages.success(request, f"Produit {produit.nom} ajouté avec succès!")
+                produit.save()
+                
+                # Génération du code-barre et sauvegarde
+                produit.generate_barcode()
+                produit.save()
+
+            messages.success(request, f"Le produit '{produit.nom}' a été ajouté avec succès.")
             return redirect('produits_par_categorie')
             
+        except ValueError as ve:
+            messages.error(request, f"Erreur de données: {str(ve)}")
         except Exception as e:
-            messages.error(request, f"Erreur: {str(e)}")
-            context = {
-                'categories': Categorie.objects.filter(entreprise=request.entreprise),
-                'form_data': request.POST,
-                'devise_principale_symbole': self.get_devise_principale_symbole(request),
-            }
-            return render(request, self.template_name, context)
+            messages.error(request, f"Une erreur inattendue est survenue: {str(e)}")
             
+        # Recharger le contexte pour afficher le formulaire avec les erreurs
+        context = {
+            'categories': Categorie.objects.filter(entreprise=request.entreprise),
+            'form_data': request.POST,
+            'devise_principale_symbole': self.get_devise_principale_symbole(request),
+        }
+        return render(request, self.template_name, context)
 #etiquette
 
 
@@ -3340,32 +3352,33 @@ def telecharger_rapport_cloture_pdf(request):
     return response
 
 
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.core.files.base import ContentFile
-from .models import Produit, Categorie
-import base64, json
-import json
-import base64
-from django.http import JsonResponse
-from django.shortcuts import render
-from django.core.files.base import ContentFile
-from django.contrib.auth.decorators import login_required, permission_required
-from parametres.mixins import EntrepriseAccessMixin
-from .models import Produit, Categorie
 
-@login_required
-@permission_required('STOCK.add_produit', raise_exception=True)
-def ajout_multiple_produits(request):
-    if request.method == 'GET':
-        # Filtrage des catégories par entreprise courante
+@method_decorator([
+    login_required,
+    permission_required('stock.add_produit', raise_exception=True)
+], name='dispatch')
+class AjoutMultipleProduitsView(EntrepriseAccessMixin, View):
+
+    def get_devise_principale_symbole(self, request):
+        """Récupère le symbole de la devise principale de l'entreprise."""
+        try:
+            config_saas = ConfigurationSAAS.objects.get(entreprise=request.entreprise)
+            return config_saas.devise_principale.symbole if config_saas.devise_principale else "€"
+        except ConfigurationSAAS.DoesNotExist:
+            return "€"
+
+    def get(self, request, *args, **kwargs):
+        """Affiche le formulaire pour l'ajout multiple de produits."""
         categories = Categorie.objects.filter(entreprise=request.entreprise)
-        return render(request, 'produit/ajout_multiple.html', {
+        
+        context = {
             'categories': categories,
-            'current_entreprise': request.entreprise  # Pour l'affichage dans le template
-        })
+            'devise_principale_symbole': self.get_devise_principale_symbole(request)
+        }
+        return render(request, 'produit/ajout_multiple.html', context)
 
-    elif request.method == 'POST':
+    def post(self, request, *args, **kwargs):
+        """Traite les données JSON pour la création multiple de produits."""
         try:
             if not request.POST.get('produits_data'):
                 return JsonResponse({
@@ -3378,117 +3391,141 @@ def ajout_multiple_produits(request):
             produits_crees = []
             errors = []
 
-            for idx, produit_data in enumerate(produits_data):
-                try:
-                    # Validation des champs obligatoires
-                    if not all(key in produit_data for key in ['nom', 'prix_achat', 'prix_vente']):
-                        errors.append(f"Ligne {idx+1}: Champs obligatoires manquants")
-                        continue
+            with transaction.atomic():
+                for idx, produit_data in enumerate(produits_data):
+                    try:
+                        # Validation des champs obligatoires
+                        nom = produit_data.get('nom')
+                        prix_achat = produit_data.get('prix_achat')
+                        prix_vente = produit_data.get('prix_vente')
 
-                    # Création du produit avec l'entreprise courante
-                    produit = Produit(
-                        nom=produit_data['nom'],
-                        description=produit_data.get('description', ''),
-                        prix_achat=Decimal(produit_data['prix_achat']),
-                        prix_vente=Decimal(produit_data['prix_vente']),
-                        stock=int(produit_data.get('stock', 0)),
-                        seuil_alerte=int(produit_data.get('seuil_alerte', 10)),
-                        entreprise=request.entreprise,
-                        cree_par=request.user
-                    )
-
-                    # Gestion de la catégorie (vérification qu'elle appartient à l'entreprise)
-                    if categorie_id:
-                        try:
-                            categorie = Categorie.objects.get(
-                                id=categorie_id,
-                                entreprise=request.entreprise
-                            )
-                            produit.categorie = categorie
-                        except Categorie.DoesNotExist:
-                            errors.append(f"Ligne {idx+1}: Catégorie invalide")
+                        if not all([nom, prix_achat, prix_vente]):
+                            errors.append(f"Ligne {idx + 1}: Champs obligatoires manquants (nom, prix_achat, prix_vente)")
                             continue
 
-                    # Traitement de la photo en base64
-                    if produit_data.get('photo_data'):
-                        try:
+                        # Convertir en Decimal et int
+                        prix_achat_dec = Decimal(str(prix_achat))
+                        prix_vente_dec = Decimal(str(prix_vente))
+                        stock_int = int(produit_data.get('stock', 0))
+                        seuil_alerte_int = int(produit_data.get('seuil_alerte', 10))
+
+                        # Création de l'objet Produit
+                        produit = Produit(
+                            nom=nom,
+                            description=produit_data.get('description', ''),
+                            prix_achat=prix_achat_dec,
+                            prix_vente=prix_vente_dec,
+                            stock=stock_int,
+                            seuil_alerte=seuil_alerte_int,
+                            entreprise=request.entreprise,
+                            cree_par=request.user
+                        )
+
+                        # Gestion de la catégorie
+                        if categorie_id:
+                            categorie = Categorie.objects.get(id=categorie_id, entreprise=request.entreprise)
+                            produit.categorie = categorie
+                        
+                        # Traitement de la photo
+                        if produit_data.get('photo_data'):
                             format, imgstr = produit_data['photo_data'].split(';base64,')
                             ext = format.split('/')[-1]
                             photo_data = base64.b64decode(imgstr)
-                            produit.photo.save(
-                                f"{produit_data['nom']}_{request.entreprise.id}_{idx}.{ext}",
-                                ContentFile(photo_data),
-                                save=False
-                            )
-                        except Exception as e:
-                            errors.append(f"Ligne {idx+1}: Erreur traitement photo - {str(e)}")
+                            produit.photo.save(f"{nom}_{request.entreprise.id}_{idx}.{ext}", ContentFile(photo_data), save=False)
+                        
+                        produit.save()
+                        produit.generate_barcode()
+                        produit.save() # Pour sauvegarder le code-barre
 
-                    produit.save()
-                    produits_crees.append({
-                        'id': produit.id,
-                        'nom': produit.nom
-                    })
-
-                except Exception as e:
-                    errors.append(f"Ligne {idx+1}: {str(e)}")
-                    continue
+                        produits_crees.append({
+                            'id': produit.id,
+                            'nom': produit.nom
+                        })
+                    
+                    except (ValueError, TypeError, Categorie.DoesNotExist) as e:
+                        errors.append(f"Ligne {idx + 1}: Erreur de données ou de catégorie - {str(e)}")
+                    except Exception as e:
+                        errors.append(f"Ligne {idx + 1}: Erreur inattendue - {str(e)}")
 
             response_data = {
-                'success': True if produits_crees else False,
-                'message': f'{len(produits_crees)} produits créés avec succès',
-                'produits': produits_crees,
-                'total': len(produits_data),
+                'success': True if not errors else False,
+                'message': f'{len(produits_crees)}/{len(produits_data)} produits créés. '
+                           f'{len(errors)} erreurs trouvées.',
+                'produits_crees': produits_crees,
                 'errors': errors
             }
-
-            if not produits_crees:
-                response_data['success'] = False
-                response_data['error'] = "Aucun produit créé - voir les erreurs"
-
-            return JsonResponse(response_data)
+            return JsonResponse(response_data, status=200 if not errors else 400)
 
         except json.JSONDecodeError as e:
             return JsonResponse({
-                'success': False, 
+                'success': False,
                 'error': f'Données JSON invalides: {str(e)}'
             }, status=400)
         except Exception as e:
             return JsonResponse({
-                'success': False, 
-                'error': f'Erreur serveur: {str(e)}'
+                'success': False,
+                'error': f'Erreur serveur inattendue: {str(e)}'
             }, status=500)
+@method_decorator([
+    login_required,
+    permission_required('stock.change_produit', raise_exception=True)
+], name='dispatch')
+class ModifierProduitView(EntrepriseAccessMixin, View):
+    template_name = 'produit/modifier_produit.html'
 
-    return JsonResponse({
-        'success': False, 
-        'error': 'Méthode non autorisée'
-    }, status=405)
+    def get_devise_principale_symbole(self, request):
+        """Récupère le symbole de la devise principale de l'entreprise."""
+        try:
+            config_saas = ConfigurationSAAS.objects.get(entreprise=request.entreprise)
+            return config_saas.devise_principale.symbole if config_saas.devise_principale else "€"
+        except ConfigurationSAAS.DoesNotExist:
+            return "€"
 
-def modifier_produit(request, pk):
-    produit = get_object_or_404(Produit, pk=pk)
+    def get(self, request, pk, *args, **kwargs):
+        """Affiche le formulaire de modification du produit."""
+        produit = get_object_or_404(Produit, pk=pk, entreprise=request.entreprise)
+        
+        context = {
+            'produit': produit,
+            'categories': Categorie.objects.filter(entreprise=request.entreprise),
+            'devise_principale_symbole': self.get_devise_principale_symbole(request),
+        }
+        return render(request, self.template_name, context)
 
-    if request.method == 'POST':
-        produit.nom = request.POST.get('nom')
-        produit.reference = request.POST.get('reference')
-        produit.categorie_id = request.POST.get('categorie') or None
-        produit.prix_achat = request.POST.get('prix_achat') or 0
-        produit.prix_vente = request.POST.get('prix_vente') or 0
-        produit.stock = request.POST.get('stock') or 0
-        produit.tva = request.POST.get('tva') or 0
-        produit.description = request.POST.get('description')
+    def post(self, request, pk, *args, **kwargs):
+        """Traite les données du formulaire pour modifier un produit."""
+        produit = get_object_or_404(Produit, pk=pk, entreprise=request.entreprise)
+        
+        try:
+            with transaction.atomic():
+                produit.nom = request.POST.get('nom')
+                produit.reference = request.POST.get('reference')
+                produit.categorie_id = request.POST.get('categorie') or None
+                produit.prix_achat = Decimal(request.POST.get('prix_achat') or 0)
+                produit.prix_vente = Decimal(request.POST.get('prix_vente') or 0)
+                produit.stock = int(request.POST.get('stock') or 0)
+                produit.tva = int(request.POST.get('tva') or 0)
+                produit.description = request.POST.get('description')
 
-        # Gestion de la nouvelle image si elle est envoyée
-        if request.FILES.get('photo'):
-            produit.photo = request.FILES['photo']
+                # Gère le téléchargement d'une nouvelle photo
+                if 'photo' in request.FILES:
+                    produit.photo = request.FILES['photo']
+                
+                produit.save()
+            
+            messages.success(request, f"Le produit '{produit.nom}' a été modifié avec succès.")
+            return redirect('produits_par_categorie')
 
-        produit.save()
-        messages.success(request,f" Produit  {produit.nom} modifier")
-        return redirect('produits_par_categorie')
+        except Exception as e:
+            messages.error(request, f"Une erreur s'est produite lors de la modification : {str(e)}")
+            
+            context = {
+                'produit': produit,
+                'categories': Categorie.objects.filter(entreprise=request.entreprise),
+                'devise_principale_symbole': self.get_devise_principale_symbole(request),
+            }
+            return render(request, self.template_name, context)
 
-    context = {
-        'produit': produit,
-        'categories': Categorie.objects.all(),
-    }
-    return render(request, 'produit/modifier_produit.html', context)
 
 def imprimer_produit(request, pk):
     """Génère la version PDF de la fiche produit"""
@@ -3655,6 +3692,7 @@ def voir_produit(request, pk):
             'code_barre_base64': None,
         }
         return render(request, 'produit/fiche_produit.html', context, status=500)
+    
 def imprimer_produit(request, pk):
     """Génère la version PDF"""
     try:

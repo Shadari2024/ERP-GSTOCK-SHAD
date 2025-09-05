@@ -29,7 +29,7 @@ urlpatterns = [
     
     # URLs pour les contrats
     path('contrats/', views.ContratListView.as_view(), name='contrat_list'),
-    path('contrats/ajouter/', views.CongeCreateView.as_view(), name='contrat_create'),
+    path('contrats/ajouter/', views.ContratCreateView.as_view(), name='contrat_create'),
     path('contrats/<int:pk>/', views.ContratDetailView.as_view(), name='contrat_detail'),
     path('contrats/<int:pk>/modifier/', views.CongeUpdateView.as_view(), name='contrat_update'),
      

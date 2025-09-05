@@ -1,18 +1,11 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block content %}
 <div class="container py-4">
     <div class="card border-0 shadow-lg">
         <div class="card-header bg-primary text-white">
             <div class="d-flex justify-content-between align-items-center">
-                <tr>
-                    <th>Prix suggéré</th>
-                    <td class="text-warning">
-                        {{ produit.prix_vente_suggere }} {{ parametres.devise }}
-                        <small class="text-muted">(suggestion basée sur la catégorie)</small>
-                    </td>
-                </tr>
-                
                 <h4 class="mb-0">
                     <i class="fas fa-edit me-2"></i>Modifier le produit
                 </h4>
@@ -23,15 +16,24 @@
         </div>
         
         <div class="card-body">
+            {% if produit.prix_vente_suggere %}
+            <div class="alert alert-info py-2 mb-4 text-center">
+                <i class="fas fa-lightbulb me-2"></i>
+                <small>Prix de vente suggéré: 
+                    <strong class="text-primary">{{ produit.prix_vente_suggere }} {{ devise_principale_symbole }}</strong>
+                    (suggestion basée sur la catégorie)
+                </small>
+            </div>
+            {% endif %}
+
             <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
                 {% csrf_token %}
                 
                 <div class="row g-3">
-                    <!-- Section Informations de base -->
                     <div class="col-md-6">
                         <label for="nom" class="form-label fw-bold">Nom du produit*</label>
                         <input type="text" name="nom" id="nom" class="form-control" 
-                               value="{{ produit.nom }}" required>
+                               value="{% if form_data %}{{ form_data.nom }}{% else %}{{ produit.nom }}{% endif %}" required>
                         <div class="invalid-feedback">
                             Veuillez saisir un nom de produit.
                         </div>
@@ -40,7 +42,7 @@
                     <div class="col-md-6">
                         <label for="reference" class="form-label fw-bold">Référence</label>
                         <input type="text" name="reference" id="reference" 
-                               class="form-control" value="{{ produit.reference }}">
+                               class="form-control" value="{% if form_data %}{{ form_data.reference }}{% else %}{{ produit.reference }}{% endif %}">
                     </div>
                     
                     <div class="col-md-6">
@@ -48,55 +50,52 @@
                         <select name="categorie" id="categorie" class="form-select">
                             <option value="">-- Choisir une catégorie --</option>
                             {% for cat in categories %}
-                                <option value="{{ cat.id }}" {% if cat.id == produit.categorie_id %}selected{% endif %}>
+                                <option value="{{ cat.id }}" {% if form_data.categorie == cat.id|stringformat:"s" or produit.categorie_id == cat.id %}selected{% endif %}>
                                     {{ cat.nom }}
                                 </option>
                             {% endfor %}
                         </select>
                     </div>
                     
-                    <!-- Section Prix et Stock -->
                     <div class="col-md-6">
-                        <label for="prix_achat" class="form-label fw-bold">Prix d'achat (€)</label>
+                        <label for="prix_achat" class="form-label fw-bold">Prix d'achat ({{ devise_principale_symbole }})</label>
                         <div class="input-group">
                             <input type="number" step="0.01" name="prix_achat" id="prix_achat" 
-                                   class="form-control" value="{{ produit.prix_achat }}">
-                            <span class="input-group-text">€</span>
+                                   class="form-control" value="{% if form_data %}{{ form_data.prix_achat }}{% else %}{{ produit.prix_achat }}{% endif %}">
+                            <span class="input-group-text">{{ devise_principale_symbole }}</span>
                         </div>
                     </div>
                     
                     <div class="col-md-6">
-                        <label for="prix_vente" class="form-label fw-bold">Prix de vente (€)</label>
+                        <label for="prix_vente" class="form-label fw-bold">Prix de vente ({{ devise_principale_symbole }})</label>
                         <div class="input-group">
                             <input type="number" step="0.01" name="prix_vente" id="prix_vente" 
-                                   class="form-control" value="{{ produit.prix_vente }}">
-                            <span class="input-group-text">€</span>
+                                   class="form-control" value="{% if form_data %}{{ form_data.prix_vente }}{% else %}{{ produit.prix_vente }}{% endif %}">
+                            <span class="input-group-text">{{ devise_principale_symbole }}</span>
                         </div>
                     </div>
                     
                     <div class="col-md-6">
                         <label for="stock" class="form-label fw-bold">Stock</label>
                         <input type="number" name="stock" id="stock" 
-                               class="form-control" value="{{ produit.stock }}">
+                               class="form-control" value="{% if form_data %}{{ form_data.stock }}{% else %}{{ produit.stock }}{% endif %}">
                     </div>
                     
                     <div class="col-md-6">
                         <label for="tva" class="form-label fw-bold">TVA (%)</label>
                         <div class="input-group">
                             <input type="number" step="0.01" name="tva" id="tva" 
-                                   class="form-control" value="{{ produit.tva }}">
+                                   class="form-control" value="{% if form_data %}{{ form_data.tva }}{% else %}{{ produit.tva }}{% endif %}">
                             <span class="input-group-text">%</span>
                         </div>
                     </div>
                     
-                    <!-- Section Description -->
                     <div class="col-12">
                         <label for="description" class="form-label fw-bold">Description</label>
                         <textarea name="description" id="description" 
-                                  class="form-control" rows="4">{{ produit.description }}</textarea>
+                                  class="form-control" rows="4">{% if form_data %}{{ form_data.description }}{% else %}{{ produit.description }}{% endif %}</textarea>
                     </div>
                     
-                    <!-- Section Image -->
                     <div class="col-12">
                         <label class="form-label fw-bold">Image du produit</label>
                         
@@ -129,7 +128,6 @@
                         </div>
                     </div>
                     
-                    <!-- Bouton de soumission -->
                     <div class="col-12 mt-4">
                         <button type="submit" class="btn btn-primary btn-lg w-100">
                             <i class="fas fa-save me-2"></i> Enregistrer les modifications
@@ -141,7 +139,6 @@
     </div>
 </div>
 
-<!-- Validation Bootstrap -->
 <script>
 // Example starter JavaScript for disabling form submissions if there are invalid fields
 (function () {
