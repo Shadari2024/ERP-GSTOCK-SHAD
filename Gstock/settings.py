@@ -301,3 +301,765 @@ PROPHET_CONFIG = {
     'changepoint_prior_scale': 0.05,
     'seasonality_mode': 'multiplicative'
 }
+
+
+
+
+
+# ==============================================================================
+# PARAMÈTRES PERSONNALISÉS DE L'APPLICATION
+# ==============================================================================
+
+# Paramètres de l'interface
+DEFAULT_LOGO = '/static/images/logo.png'
+DEFAULT_FAVICON = '/static/images/favicon.ico'
+COMPANY_NAME = "Votre Société"
+SUPPORT_EMAIL = "support@votresociete.com"
+SUPPORT_PHONE = "+243 XX XXX XXX"
+
+# Configuration SaaS
+SAAS_CONFIG = {
+    'default_plan': 'starter',
+    'trial_days': 14,
+    'currency': 'USD',
+}
+
+# Configuration des notifications
+NOTIFICATION_SETTINGS = {
+    'email_enabled': True,
+    'sms_enabled': False,
+    'push_enabled': False,
+}
+
+# Configuration des rapports
+REPORT_SETTINGS = {
+    'default_format': 'pdf',
+    'retention_days': 365,
+}
+
+# Configuration de l'impression
+PRINT_SETTINGS = {
+    'default_printer': 'system',
+    'paper_size': 'A4',
+}
+
+# Configuration du chatbot
+CHATBOT_SETTINGS = {
+    'enabled': True,
+    'default_response': 'Comment puis-je vous aider ?',
+    'training_data_path': os.path.join(BASE_DIR, 'STOCK', 'ml', 'training_data'),
+}
+
+# Configuration des sauvegardes automatiques
+AUTO_BACKUP = {
+    'enabled': True,
+    'frequency': 'daily',  # daily, weekly, monthly
+    'keep_last': 7,  # nombre de sauvegardes à conserver
+}
+
+# Configuration des limites
+LIMITS = {
+    'max_users': 10,
+    'max_products': 1000,
+    'max_invoices': 10000,
+}
+
+# Configuration des devises
+CURRENCIES = {
+    'USD': 'Dollar américain',
+    'EUR': 'Euro',
+    'CDF': 'Franc congolais',
+}
+
+# Configuration par défaut
+DEFAULT_CURRENCY = 'USD'
+DEFAULT_LANGUAGE = 'fr'
+DEFAULT_TIMEZONE = 'Africa/Lubumbashi'
+
+# Configuration des taxes
+TAX_SETTINGS = {
+    'default_rate': 0.16,  # 16%
+    'inclusive': False,
+}
+
+# Configuration de l'inventaire
+INVENTORY_SETTINGS = {
+    'low_stock_threshold': 10,
+    'critical_stock_threshold': 5,
+    'auto_reorder': True,
+}
+
+# Configuration des ventes
+SALES_SETTINGS = {
+    'default_payment_method': 'cash',
+    'receipt_header': 'Merci pour votre achat !',
+    'receipt_footer': 'Au revoir et à bientôt !',
+}
+
+# Configuration des achats
+PURCHASE_SETTINGS = {
+    'default_supplier_terms': 'net_30',
+    'default_shipping_method': 'ground',
+}
+
+# Configuration de la paie
+PAYROLL_SETTINGS = {
+    'pay_period': 'monthly',
+    'default_currency': 'USD',
+}
+
+# Configuration de la comptabilité
+ACCOUNTING_SETTINGS = {
+    'fiscal_year_start': '01-01',
+    'fiscal_year_end': '12-31',
+    'default_accounting_method': 'accrual',
+}
+
+# Configuration de la sécurité renforcée
+SECURITY_SETTINGS = {
+    'password_expiry_days': 90,
+    'session_timeout_minutes': 30,
+    'max_login_attempts': 5,
+    'lockout_duration_minutes': 30,
+}
+
+# Configuration des exports
+EXPORT_SETTINGS = {
+    'default_format': 'csv',
+    'max_rows_per_export': 10000,
+}
+
+# Configuration des imports
+IMPORT_SETTINGS = {
+    'max_file_size_mb': 10,
+    'allowed_formats': ['csv', 'xlsx', 'xls'],
+}
+
+# Configuration des notifications par email
+EMAIL_NOTIFICATIONS = {
+    'low_stock': True,
+    'new_order': True,
+    'payment_received': True,
+    'expiry_reminder': True,
+}
+
+# Configuration des impressions
+PRINTING_SETTINGS = {
+    'receipt_width': 80,
+    'barcode_enabled': True,
+    'qrcode_enabled': True,
+}
+
+# Configuration des rapports personnalisés
+CUSTOM_REPORTS = {
+    'sales_summary': True,
+    'inventory_valuation': True,
+    'profit_loss': True,
+    'cash_flow': True,
+}
+
+# Configuration des intégrations
+INTEGRATION_SETTINGS = {
+    'api_enabled': True,
+    'webhook_enabled': True,
+    'max_api_requests_per_minute': 60,
+}
+
+# Configuration du mode maintenance
+MAINTENANCE_MODE = False
+MAINTENANCE_MESSAGE = "Système en maintenance. Veuillez réessayer plus tard."
+
+# Configuration du mode démo
+DEMO_MODE = False
+DEMO_SETTINGS = {
+    'data_reset_hours': 24,
+    'allowed_actions': ['view', 'export'],
+    'restricted_actions': ['delete', 'update'],
+}
+
+# Configuration du cache
+CACHE_SETTINGS = {
+    'default_timeout': 300,  # 5 minutes
+    'max_entries': 1000,
+}
+
+# Configuration des logs
+LOGGING_SETTINGS = {
+    'max_log_files': 10,
+    'max_file_size': 10485760,  # 10MB
+    'log_level': 'INFO',
+}
+
+# Configuration des sauvegardes cloud
+CLOUD_BACKUP = {
+    'enabled': False,
+    'provider': 'google_drive',  # ou 'dropbox', 'onedrive'
+    'frequency': 'weekly',
+}
+
+# Configuration des mises à jour automatiques
+AUTO_UPDATE = {
+    'enabled': True,
+    'check_frequency': 'daily',
+    'notify_admins': True,
+}
+
+# Configuration du support
+SUPPORT_SETTINGS = {
+    'helpdesk_enabled': True,
+    'knowledge_base_enabled': True,
+    'live_chat_enabled': False,
+}
+
+# Configuration des mobiles
+MOBILE_SETTINGS = {
+    'app_enabled': True,
+    'offline_mode': True,
+    'sync_frequency': 15,  # minutes
+}
+
+# Configuration des performances
+PERFORMANCE_SETTINGS = {
+    'query_timeout': 30,  # secondes
+    'report_timeout': 300,  # secondes
+    'max_export_rows': 50000,
+}
+
+# Configuration de la personnalisation
+CUSTOMIZATION_SETTINGS = {
+    'theme_enabled': True,
+    'logo_upload_enabled': True,
+    'custom_css_enabled': True,
+}
+
+# Configuration des alertes
+ALERT_SETTINGS = {
+    'sound_enabled': True,
+    'desktop_notifications': True,
+    'email_alerts': True,
+}
+
+# Configuration des sauvegardes de base de données
+DATABASE_BACKUP = {
+    'enabled': True,
+    'frequency': 'daily',
+    'keep_last': 7,
+    'compress': True,
+}
+
+# Configuration des audits
+AUDIT_SETTINGS = {
+    'log_user_actions': True,
+    'log_data_changes': True,
+    'retention_days': 365,
+}
+
+# Configuration des sauvegardes automatiques des médias
+MEDIA_BACKUP = {
+    'enabled': True,
+    'frequency': 'weekly',
+    'keep_last': 4,
+}
+
+# Configuration des limites d'utilisation
+USAGE_LIMITS = {
+    'max_database_size_mb': 1024,
+    'max_storage_mb': 5120,
+    'max_api_calls_per_day': 10000,
+}
+
+# Configuration de la facturation
+BILLING_SETTINGS = {
+    'currency': 'USD',
+    'tax_rate': 0.16,
+    'invoice_due_days': 30,
+}
+
+# Configuration des essais gratuits
+TRIAL_SETTINGS = {
+    'enabled': True,
+    'duration_days': 14,
+    'features': 'all',  # ou 'limited'
+}
+
+# Configuration des rôles par défaut
+DEFAULT_ROLES = {
+    'admin': ['full_access'],
+    'manager': ['view_reports', 'manage_users'],
+    'user': ['basic_access'],
+}
+
+# Configuration des permissions par défaut
+DEFAULT_PERMISSIONS = {
+    'can_view_dashboard': True,
+    'can_export_data': False,
+    'can_import_data': False,
+}
+
+# Configuration des paramètres régionaux par défaut
+LOCALE_SETTINGS = {
+    'date_format': 'dd/MM/yyyy',
+    'time_format': 'HH:mm',
+    'number_format': '1,234.56',
+    'currency_format': '$1,234.56',
+}
+
+# Configuration de l'accessibilité
+ACCESSIBILITY_SETTINGS = {
+    'high_contrast_mode': False,
+    'larger_text': False,
+    'screen_reader_support': True,
+}
+
+# Configuration de la confidentialité
+PRIVACY_SETTINGS = {
+    'data_encryption': True,
+    'auto_logout': True,
+    'activity_logging': True,
+}
+
+# Configuration de la conformité
+COMPLIANCE_SETTINGS = {
+    'gdpr_compliant': False,
+    'data_retention_policy': '1_year',
+    'privacy_policy_url': '/privacy-policy',
+}
+
+# Configuration des sauvegardes automatiques de configuration
+CONFIG_BACKUP = {
+    'enabled': True,
+    'frequency': 'daily',
+    'keep_last': 30,
+}
+
+# Configuration des mises à jour de sécurité
+SECURITY_UPDATES = {
+    'auto_install': True,
+    'notify_admins': True,
+    'check_frequency': 'daily',
+}
+
+# Configuration des tests automatiques
+AUTO_TESTING = {
+    'enabled': True,
+    'run_on_startup': True,
+    'coverage_threshold': 70,
+}
+
+# Configuration du monitoring
+MONITORING_SETTINGS = {
+    'enabled': True,
+    'check_interval': 5,  # minutes
+    'alert_threshold': 95,  # %
+}
+
+# Configuration de la scalabilité
+SCALABILITY_SETTINGS = {
+    'max_concurrent_users': 100,
+    'max_database_connections': 20,
+    'cache_size_mb': 256,
+}
+
+# Configuration de la redondance
+REDUNDANCY_SETTINGS = {
+    'database_redundancy': False,
+    'storage_redundancy': False,
+    'failover_enabled': False,
+}
+
+# Configuration de la récupération après sinistre
+DISASTER_RECOVERY = {
+    'enabled': True,
+    'recovery_time_objective': 4,  # heures
+    'recovery_point_objective': 1,  # heure
+}
+
+# Configuration de la haute disponibilité
+HIGH_AVAILABILITY = {
+    'enabled': False,
+    'min_uptime_percentage': 99.9,
+    'maintenance_window': '02:00-04:00',
+}
+
+# Configuration de la performance du réseau
+NETWORK_SETTINGS = {
+    'timeout': 30,  # secondes
+    'retry_attempts': 3,
+    'compression_enabled': True,
+}
+
+# Configuration de la compression
+COMPRESSION_SETTINGS = {
+    'enabled': True,
+    'level': 6,  # 1-9
+    'min_size_kb': 1,
+}
+
+# Configuration du cache du navigateur
+BROWSER_CACHE = {
+    'enabled': True,
+    'max_age_seconds': 86400,  # 1 jour
+    'static_files': True,
+}
+
+# Configuration de la CDN
+CDN_SETTINGS = {
+    'enabled': False,
+    'provider': 'cloudflare',
+    'cost_optimized': True,
+}
+
+# Configuration de l'analyse des performances
+PERFORMANCE_ANALYTICS = {
+    'enabled': True,
+    'sample_rate': 0.1,  # 10%
+    'retention_days': 90,
+}
+
+# Configuration de l'analyse d'utilisation
+USAGE_ANALYTICS = {
+    'enabled': True,
+    'anonymize_data': True,
+    'track_feature_usage': True,
+}
+
+# Configuration des rapports d'erreurs
+ERROR_REPORTING = {
+    'enabled': True,
+    'notify_admins': True,
+    'log_level': 'ERROR',
+}
+
+# Configuration des sauvegardes incrémentielles
+INCREMENTAL_BACKUP = {
+    'enabled': True,
+    'frequency': 'hourly',
+    'keep_last': 24,
+}
+
+# Configuration de la synchronisation en temps réel
+REAL_TIME_SYNC = {
+    'enabled': True,
+    'delay_ms': 1000,
+    'max_retries': 3,
+}
+
+# Configuration de la validation des données
+DATA_VALIDATION = {
+    'enabled': True,
+    'strict_mode': False,
+    'auto_correction': True,
+}
+
+# Configuration de la qualité des données
+DATA_QUALITY = {
+    'enabled': True,
+    'completeness_threshold': 95,
+    'accuracy_threshold': 98,
+}
+
+# Configuration de la gouvernance des données
+DATA_GOVERNANCE = {
+    'enabled': True,
+    'data_stewards': ['admin'],
+    'retention_policies': True,
+}
+
+# Configuration de la sécurité des données
+DATA_SECURITY = {
+    'encryption_at_rest': True,
+    'encryption_in_transit': True,
+    'mask_sensitive_data': True,
+}
+
+# Configuration de l'archivage
+ARCHIVING_SETTINGS = {
+    'enabled': True,
+    'retention_years': 7,
+    'compress_archives': True,
+}
+
+# Configuration de la purge des données
+DATA_PURGING = {
+    'enabled': True,
+    'schedule': 'monthly',
+    'notify_before_purge': True,
+}
+
+# Configuration de la migration des données
+DATA_MIGRATION = {
+    'enabled': True,
+    'batch_size': 1000,
+    'validation_after_migration': True,
+}
+
+# Configuration de la réplication des données
+DATA_REPLICATION = {
+    'enabled': False,
+    'async_replication': True,
+    'conflict_resolution': 'latest_wins',
+}
+
+# Configuration de la transformation des données
+DATA_TRANSFORMATION = {
+    'enabled': True,
+    'default_charset': 'UTF-8',
+    'normalize_data': True,
+}
+
+# Configuration de l'enrichissement des données
+DATA_ENRICHMENT = {
+    'enabled': True,
+    'sources': ['internal', 'external'],
+    'auto_update': True,
+}
+
+# Configuration de la classification des données
+DATA_CLASSIFICATION = {
+    'enabled': True,
+    'levels': ['public', 'internal', 'confidential', 'restricted'],
+    'auto_classify': True,
+}
+
+# Configuration de la ligne de temps des données
+DATA_TIMELINE = {
+    'enabled': True,
+    'max_history_days': 365,
+    'show_changes': True,
+}
+
+# Configuration de la traçabilité des données
+DATA_LINEAGE = {
+    'enabled': True,
+    'track_origin': True,
+    'track_transformations': True,
+}
+
+# Configuration de la qualité de l'air des données
+DATA_HEALTH = {
+    'enabled': True,
+    'monitor_quality': True,
+    'alert_on_issues': True,
+}
+
+# Configuration de la documentation des données
+DATA_DOCUMENTATION = {
+    'enabled': True,
+    'auto_generate': True,
+    'include_samples': True,
+}
+
+# Configuration de la découverte des données
+DATA_DISCOVERY = {
+    'enabled': True,
+    'search_enabled': True,
+    'faceted_search': True,
+}
+
+# Configuration de la curation des données
+DATA_CURATION = {
+    'enabled': True,
+    'auto_suggest': True,
+    'quality_scoring': True,
+}
+
+# Configuration de la prédiction des données
+DATA_PREDICTION = {
+    'enabled': True,
+    'use_ml': True,
+    'confidence_threshold': 0.7,
+}
+
+# Configuration de l'optimisation des données
+DATA_OPTIMIZATION = {
+    'enabled': True,
+    'auto_index': True,
+    'query_optimization': True,
+}
+
+# Configuration de la visualisation des données
+DATA_VISUALIZATION = {
+    'enabled': True,
+    'default_chart_type': 'line',
+    'interactive_charts': True,
+}
+
+# Configuration de l'export des données
+DATA_EXPORT = {
+    'enabled': True,
+    'formats': ['csv', 'excel', 'json', 'pdf'],
+    'include_metadata': True,
+}
+
+# Configuration de l'import des données
+DATA_IMPORT = {
+    'enabled': True,
+    'max_file_size_mb': 100,
+    'validate_on_import': True,
+}
+
+# Configuration de l'intégration des données
+DATA_INTEGRATION = {
+    'enabled': True,
+    'supported_apis': ['rest', 'soap', 'graphql'],
+    'rate_limiting': True,
+}
+
+# Configuration de la virtualisation des données
+DATA_VIRTUALIZATION = {
+    'enabled': False,
+    'cache_results': True,
+    'query_federation': True,
+}
+
+# Configuration du catalogage des données
+DATA_CATALOG = {
+    'enabled': True,
+    'auto_discovery': True,
+    'business_glossary': True,
+}
+
+# Configuration de la préparation des données
+DATA_PREPARATION = {
+    'enabled': True,
+    'auto_cleaning': True,
+    'feature_engineering': True,
+}
+
+# Configuration de l'orchestration des données
+DATA_ORCHESTRATION = {
+    'enabled': True,
+    'workflow_automation': True,
+    'error_handling': True,
+}
+
+# Configuration de la surveillance des données
+DATA_MONITORING = {
+    'enabled': True,
+    'real_time_alerts': True,
+    'performance_dashboard': True,
+}
+
+# Configuration de la rétention des données
+DATA_RETENTION = {
+    'enabled': True,
+    'compliance_rules': True,
+    'auto_deletion': True,
+}
+
+# Configuration de la résilience des données
+DATA_RESILIENCE = {
+    'enabled': True,
+    'backup_strategy': 'multi_region',
+    'recovery_procedures': True,
+}
+
+# Configuration de la portabilité des données
+DATA_PORTABILITY = {
+    'enabled': True,
+    'export_formats': ['json', 'xml', 'csv'],
+    'api_access': True,
+}
+
+# Configuration de l'éthique des données
+DATA_ETHICS = {
+    'enabled': True,
+    'bias_detection': True,
+    'fairness_metrics': True,
+}
+
+# Configuration de la confidentialité des données
+DATA_PRIVACY = {
+    'enabled': True,
+    'consent_management': True,
+    'right_to_be_forgotten': True,
+}
+
+# Configuration de la sécurité des données avancée
+ADVANCED_DATA_SECURITY = {
+    'enabled': True,
+    'data_masking': True,
+    'tokenization': True,
+    'anonymization': True,
+}
+
+# Configuration de la conformité des données
+DATA_COMPLIANCE = {
+    'enabled': True,
+    'regulation_compliance': ['gdpr', 'ccpa', 'hipaa'],
+    'audit_trail': True,
+}
+
+# Configuration de la valeur des données
+DATA_VALUE = {
+    'enabled': True,
+    'roi_calculation': True,
+    'business_impact': True,
+}
+
+# Configuration de la stratégie des données
+DATA_STRATEGY = {
+    'enabled': True,
+    'alignment_with_business': True,
+    'kpi_tracking': True,
+}
+
+# Configuration de la culture des données
+DATA_CULTURE = {
+    'enabled': True,
+    'training_programs': True,
+    'data_literacy': True,
+}
+
+# Configuration de l'innovation des données
+DATA_INNOVATION = {
+    'enabled': True,
+    'experimentation': True,
+    'prototyping': True,
+}
+
+# Configuration de la maturité des données
+DATA_MATURITY = {
+    'enabled': True,
+    'assessment_framework': True,
+    'improvement_roadmap': True,
+}
+
+# Configuration de la collaboration des données
+DATA_COLLABORATION = {
+    'enabled': True,
+    'shared_workspaces': True,
+    'version_control': True,
+}
+
+# Configuration de la démocratisation des données
+DATA_DEMOCRATIZATION = {
+    'enabled': True,
+    'self_service': True,
+    'citizen_analysts': True,
+}
+
+# Configuration de la monétisation des données
+DATA_MONETIZATION = {
+    'enabled': False,
+    'data_products': True,
+    'api_monetization': True,
+}
+
+# Configuration de l'économie des données
+DATA_ECONOMY = {
+    'enabled': True,
+    'cost_optimization': True,
+    'value_realization': True,
+}
+
+# Configuration du futur des données
+DATA_FUTURE = {
+    'enabled': True,
+    'emerging_technologies': True,
+    'strategic_planning': True,
+}
+
+# ==============================================================================
+# FIN DES PARAMÈTRES PERSONNALISÉS
+# ==============================================================================
