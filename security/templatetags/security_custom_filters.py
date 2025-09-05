@@ -54,3 +54,38 @@ def basename(value):
 @register.filter
 def get_item(dictionary, key):
     return dictionary.get(key)
+
+
+
+@register.filter
+def devis_status_color(statut):
+    colors = {
+        'brouillon': 'info',
+        'envoye': 'warning',
+        'accepte': 'success',
+        'refuse': 'danger',
+        'annule': 'secondary'
+    }
+    return colors.get(statut, 'secondary')
+
+@register.filter
+def commande_status_color(statut):
+    colors = {
+        'brouillon': 'info',
+        'Confirmee': 'primary',
+        'expedie': 'warning',
+        'livre': 'success',
+        'annule': 'danger'
+    }
+    return colors.get(statut, 'secondary')
+
+@register.filter
+def facture_status_color(statut):
+    colors = {
+        'brouillon': 'info',
+        'validee': 'warning',
+        'paye_partiel': 'primary',
+        'paye': 'success',
+        'annulee': 'danger'
+    }
+    return colors.get(statut, 'secondary')

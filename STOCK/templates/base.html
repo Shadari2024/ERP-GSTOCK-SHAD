@@ -229,19 +229,28 @@
                   <i class="fas fa-users me-1"></i> Clients
                 </a>
               </li>
+
+      <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'security:vendeur_dashboard' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Statistiques et rapports d'activité">
+                  <i class="fas fa-chart-bar me-1"></i> Statistiques
+                </a>
+              </li>
+
+
             {% endif %}
             
             <!-- Menu Vendeur -->
             {% if user.role == 'VENDEUR' %}
         
-              <li class="nav-item">
-                <a class="nav-link nav-anim" href="{% url 'gestion_stock_et_produit' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Consultation des produits disponibles">
-                  <i class="fas fa-boxes me-1"></i> Stock
+            <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'security:vendeur_dashboard' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Statistiques et rapports d'activité">
+                  <i class="fas fa-chart-bar me-1"></i> Statistiques
                 </a>
               </li>
-              <li class="nav-item">
-                <a class="nav-link nav-anim" href="{% url 'vente_enligne_' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion des ventes et commandes clients">
-                  <i class="fas fa-store me-1"></i> Vente
+
+             <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'ventes:caissier_dashboard' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Interface de caisse pour les ventes physiques">
+                  <i class="fas fa-cash-register me-1"></i> Point de vente
                 </a>
               </li>
               <li class="nav-item">
@@ -249,21 +258,9 @@
                   <i class="fas fa-cogs me-1"></i> Configuration
                 </a>
               </li>
-              <li class="nav-item">
-                <a class="nav-link nav-anim" href="{% url 'security:journal_activite' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Consultation des activités">
-                  <i class="bi bi-journal-text me-1"></i> Journal
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link nav-anim" href="{% url 'Achats_gestion' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Passation de commandes fournisseurs">
-                  <i class="fas fa-shopping-cart me-1"></i> Achats
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link nav-anim" href="{% url 'inventaitre_liste' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Statistiques de vente et performance">
-                  <i class="fas fa-chart-bar me-1"></i> Statistiques
-                </a>
-              </li>
+          
+           
+          
               {% comment %} <li class="nav-item">
                 <a class="nav-link nav-anim" href="{% url 'fonctionnamlites_IA' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Suggestions et analyses intelligentes">
                   <i class="fas fa-robot me-1"></i> IA

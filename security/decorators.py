@@ -46,7 +46,7 @@ def permission_requise(permission, raise_exception=False):
                 raise PermissionDenied("Permission refusée")
             
             # Redirection par défaut pour les utilisateurs non autorisés
-            return redirect('acces_refuse')
+            return redirect('security:acces_refuse')
         return _wrapped_view
     return decorator
 

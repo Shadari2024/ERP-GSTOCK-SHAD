@@ -1,7 +1,6 @@
 from django.shortcuts import redirect
 from django.urls import reverse, resolve
 from django.contrib import messages
-from django.core.exceptions import PermissionDenied
 from django.utils.deprecation import MiddlewareMixin
 from .models import JournalActivite
 from .utils import get_client_ip
@@ -87,10 +86,9 @@ class VerificationAccesMiddleware(MiddlewareMixin):
             ip_address=get_client_ip(request)
         )
         
-        # Redirection différente selon le type d'utilisateur
-        if getattr(request.user, 'is_saas_admin', False):
-            return redirect('saas:dashboard')
-        return redirect('security:dashboard_redirect')
+        # Redirection vers la page d'accès refusé - CORRECTION ICI
+        from django.urls import reverse
+        return redirect(reverse('security:acces_refuse'))
 
 
 class JournalisationMiddleware(MiddlewareMixin):

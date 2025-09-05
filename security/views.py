@@ -120,6 +120,63 @@ def deconnexion(request):
     return redirect('security:connexion')
 
 
+
+
+
+
+from django.shortcuts import redirect
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from django.views import View
+
+def dashboard_redirect(request):
+    """
+    Redirige l'utilisateur vers le tableau de bord approprié selon son rôle.
+    """
+    if not request.user.is_authenticated:
+        return redirect('security:connexion')
+    
+    if request.user.is_superuser or request.user.is_staff:
+        return redirect('security:admin_dashboard')
+    elif request.user.groups.filter(name='Manager').exists():
+        return redirect('security:manager_dashboard')
+    elif request.user.groups.filter(name='Caissier').exists():
+        return redirect('security:caissier_dashboard')
+    elif request.user.groups.filter(name='Vendeur').exists():
+        return redirect('security:vendeur_dashboard')
+    elif request.user.groups.filter(name='Stock').exists():
+        return redirect('security:stock_dashboard')
+    else:
+        # Redirection par défaut
+        return redirect('security:admin_dashboard')
+
+# Version basée sur classe si vous préférez
+class DashboardRedirectView(View):
+    @method_decorator(login_required)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+    
+    def get(self, request):
+        if request.user.is_superuser or request.user.is_staff:
+            return redirect('security:admin_dashboard')
+        elif request.user.groups.filter(name='Manager').exists():
+            return redirect('security:manager_dashboard')
+        elif request.user.groups.filter(name='Caissier').exists():
+            return redirect('security:caissier_dashboard')
+        elif request.user.groups.filter(name='Vendeur').exists():
+            return redirect('security:vendeur_dashboard')
+        elif request.user.groups.filter(name='Stock').exists():
+            return redirect('security:stock_dashboard')
+        else:
+            return redirect('security:admin_dashboard')
+
+
+
+
+
+
+
+
 class AdminDashboardView(TemplateView):
     template_name = 'security/dashboard/admin.html'
     
@@ -170,13 +227,228 @@ class TableauDeBordCaissier(View):
     
     def get(self, request):
         return render(request, self.template_name)
-
-@method_decorator([login_required, role_requis(['VENDEUR', 'STOCK'])], name='dispatch')
+    
+from django.shortcuts import render
+from django.views import View
+from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import login_required
+from ventes.models import Devis, Commande, Facture, SessionPOS, VentePOS, LigneVentePOS
+from django.db.models import Count, Sum, Q, F, ExpressionWrapper, DecimalField
+from django.utils import timezone
+from datetime import timedelta
+from decimal import Decimal
+from parametres.models import *
+@method_decorator([login_required, role_requis(['VENDEUR', 'CAISSIER'])], name='dispatch')
 class TableauDeBordVendeur(View):
     template_name = 'security/dashboard/vendeur.html'
     
     def get(self, request):
-        return render(request, self.template_name)
+        user = request.user
+        entreprise = user.entreprise
+        
+        # AJOUT DE LA LOGIQUE POUR RÉCUPÉRER LA DEVISE PRINCIPALE
+        devise_principale_symbole = self.get_devise_principale(entreprise)
+        
+        # Statistiques des devis
+        devis_stats = self.get_devis_stats(entreprise)
+        
+        # Statistiques des commandes
+        commandes_stats = self.get_commandes_stats(entreprise)
+        
+        # Statistiques des factures
+        factures_stats = self.get_factures_stats(entreprise)
+        
+        # Statistiques des ventes POS (si applicable)
+        ventes_pos_stats = self.get_ventes_pos_stats(entreprise, user)
+        
+        # Derniers documents
+        derniers_documents = self.get_derniers_documents(entreprise)
+        
+        # Alertes et notifications
+        alertes = self.get_alertes(entreprise)
+        
+        context = {
+            'devis_stats': devis_stats,
+            'commandes_stats': commandes_stats,
+            'factures_stats': factures_stats,
+            'ventes_pos_stats': ventes_pos_stats,
+            'derniers_documents': derniers_documents,
+            'alertes': alertes,
+            'devise_principale': devise_principale_symbole,  # AJOUT DANS LE CONTEXTE
+        }
+        
+        return render(request, self.template_name, context)
+
+    def get_devise_principale(self, entreprise):
+        """Récupère le symbole de la devise principale de l'entreprise."""
+        try:
+            config_saas = ConfigurationSAAS.objects.get(entreprise=entreprise)
+            return config_saas.devise_principale.symbole if config_saas.devise_principale else ''
+        except ConfigurationSAAS.DoesNotExist:
+            return '' # Ou une devise par défaut comme '€' ou '$'
+    
+    def get_devis_stats(self, entreprise):
+        """Récupère les statistiques des devis"""
+        aujourdhui = timezone.now().date()
+        debut_mois = aujourdhui.replace(day=1)
+        debut_semaine = aujourdhui - timedelta(days=aujourdhui.weekday())
+        
+        devis = Devis.objects.filter(entreprise=entreprise)
+        
+        return {
+            'total': devis.count(),
+            'brouillon': devis.filter(statut='brouillon').count(),
+            'envoyes': devis.filter(statut='envoye').count(),
+            'acceptes': devis.filter(statut='accepte').count(),
+            'ce_mois': devis.filter(date__gte=debut_mois).count(),
+            'cette_semaine': devis.filter(date__gte=debut_semaine).count(),
+            'aujourdhui': devis.filter(date=aujourdhui).count(),
+        }
+    
+    def get_commandes_stats(self, entreprise):
+        """Récupère les statistiques des commandes"""
+        aujourdhui = timezone.now().date()
+        debut_mois = aujourdhui.replace(day=1)
+        
+        commandes = Commande.objects.filter(entreprise=entreprise)
+        
+        # Calcul du chiffre d'affaires avec les champs existants
+        ca_mois = commandes.filter(
+            date__gte=debut_mois, 
+            statut__in=['Confirmee', 'expedie', 'livre']
+        ).aggregate(total=Sum('total_ttc'))['total'] or Decimal('0.00')
+        
+        return {
+            'total': commandes.count(),
+            'brouillon': commandes.filter(statut='brouillon').count(),
+            'confirmees': commandes.filter(statut='Confirmee').count(),
+            'expediees': commandes.filter(statut='expedie').count(),
+            'livrees': commandes.filter(statut='livre').count(),
+            'ce_mois': commandes.filter(date__gte=debut_mois).count(),
+            'chiffre_affaire_mois': ca_mois,
+        }
+    
+    def get_factures_stats(self, entreprise):
+        """Récupère les statistiques des factures"""
+        aujourdhui = timezone.now().date()
+        debut_mois = aujourdhui.replace(day=1)
+        
+        factures = Facture.objects.filter(entreprise=entreprise)
+        
+        return {
+            'total': factures.count(),
+            'brouillon': factures.filter(statut='brouillon').count(),
+            'validees': factures.filter(statut='validee').count(),
+            'payees': factures.filter(statut='paye').count(),
+            'impayees': factures.filter(
+                Q(statut='validee') | Q(statut='paye_partiel')
+            ).count(),
+            'montant_impaye': factures.filter(
+                Q(statut='validee') | Q(statut='paye_partiel')
+            ).aggregate(total=Sum('montant_restant'))['total'] or Decimal('0.00'),
+            'chiffre_affaire_mois': factures.filter(
+                date_facture__gte=debut_mois,
+                statut__in=['validee', 'paye_partiel', 'paye']
+            ).aggregate(total=Sum('total_ttc'))['total'] or Decimal('0.00'),
+        }
+    
+    def get_ventes_pos_stats(self, entreprise, user):
+        """Récupère les statistiques des ventes POS"""
+        aujourdhui = timezone.now().date()
+        
+        # Vérifier si l'utilisateur a accès au POS
+        sessions_actives = SessionPOS.objects.filter(
+            point_de_vente__entreprise=entreprise,
+            statut='ouverte',
+            utilisateur=user
+        )
+        
+        if not sessions_actives.exists():
+            return None
+        
+        session_active = sessions_actives.first()
+        ventes = VentePOS.objects.filter(session=session_active)
+        ventes_aujourdhui = ventes.filter(date__date=aujourdhui)
+        
+        # Calcul manuel du chiffre d'affaires pour les ventes d'aujourd'hui
+        ca_jour = Decimal('0.00')
+        for vente in ventes_aujourdhui:
+            ca_jour += vente.total_ttc  # Utilisation de la propriété
+        
+        # Calcul manuel du total des ventes de la session
+        total_ventes_session = Decimal('0.00')
+        for vente in ventes:
+            total_ventes_session += vente.total_ttc  # Utilisation de la propriété
+        
+        return {
+            'session_active': session_active,
+            'ventes_aujourdhui': ventes_aujourdhui.count(),
+            'chiffre_affaire_jour': ca_jour,
+            'fonds_ouverture': session_active.fonds_ouverture,
+            'total_ventes_session': total_ventes_session,
+        }
+    
+    def get_derniers_documents(self, entreprise):
+        """Récupère les derniers documents créés"""
+        return {
+            'devis': Devis.objects.filter(entreprise=entreprise)
+                        .select_related('client')
+                        .order_by('-created_at')[:5],
+            'commandes': Commande.objects.filter(entreprise=entreprise)
+                          .select_related('client')
+                          .order_by('-created_at')[:5],
+            'factures': Facture.objects.filter(entreprise=entreprise)
+                         .select_related('client')
+                         .order_by('-date_facture')[:5],
+        }
+    
+    def get_alertes(self, entreprise):
+        """Récupère les alertes importantes"""
+        alertes = []
+        
+        # Devis en attente de suivi (envoyés il y a plus de 7 jours)
+        devis_en_attente = Devis.objects.filter(
+            entreprise=entreprise,
+            statut='envoye',
+            date__lte=timezone.now().date() - timedelta(days=7)
+        ).count()
+        
+        if devis_en_attente > 0:
+            alertes.append({
+                'type': 'warning',
+                'message': f'{devis_en_attente} devis envoyés nécessitent un suivi',
+                'lien': '/ventes/devis/'  # Remplacez par votre URL réelle
+            })
+        
+        # Commandes en retard de livraison
+        commandes_retard = Commande.objects.filter(
+            entreprise=entreprise,
+            statut='Confirmee',
+            created_at__lte=timezone.now() - timedelta(days=3)
+        ).count()
+        
+        if commandes_retard > 0:
+            alertes.append({
+                'type': 'danger',
+                'message': f'{commandes_retard} commandes en retard de traitement',
+                'lien': '/ventes/commandes/'  # Remplacez par votre URL réelle
+            })
+        
+        # Factures impayées
+        factures_impayees = Facture.objects.filter(
+            entreprise=entreprise,
+            statut__in=['validee', 'paye_partiel'],
+            date_echeance__lt=timezone.now().date()
+        ).count()
+        
+        if factures_impayees > 0:
+            alertes.append({
+                'type': 'danger',
+                'message': f'{factures_impayees} factures en retard de paiement',
+                'lien': '/ventes/factures/'  # Remplacez par votre URL réelle
+            })
+        
+        return alertes
 
 @method_decorator([login_required, permission_requise('gerer_utilisateurs')], name='dispatch')
 class ListeUtilisateurs(View):
@@ -540,6 +812,15 @@ class JournalActiviteView(View):
             for key, value in params.items()
             if value
         )
+        
+        
+        
+        
+from django.shortcuts import render
+
+def acces_refuse_view(request):
+    return render(request, 'security/acces_refuse.html', {})        
+        
         
 class GroupListView(PermissionRequiredMixin, ListView):
     permission_required = 'auth.view_group'
@@ -966,10 +1247,8 @@ class GestionUtilisateur(View):
     
     
 def acces_refuse(request):
-    return render(request, "security/acces_refuse.html", {
-        "message": "Vous n’avez pas les permissions nécessaires pour effectuer cette action."
-    })
-    
+    """Vue pour la page d'accès refusé"""
+    return render(request, 'security/acces_refuse.html')
     
     
 from .forms import SignatureForm

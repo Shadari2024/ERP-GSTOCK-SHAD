@@ -1,108 +1,395 @@
-{% extends "base.html" %}
-
-{% block title %}Tableau de Bord - Vendeur{% endblock %}
+{% extends 'base.html' %}
+{% load static humanize %}
+{% load security_custom_filters %}
+{% block title %}Tableau de Bord Vendeur{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row">
-        <div class="col-md-12">
-            <h1 class="mb-4">Tableau de Bord Vendeur</h1>
-            
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
             <div class="card">
-                <div class="card-header">
-                    <h3>Actions Disponibles</h3>
-                </div>
                 <div class="card-body">
-                    <div class="row">
-                        <!-- Exemple de boutons d'action -->
-                        <div class="col-md-4 mb-3">
-                            {% comment %} <a href="{% url 'stock:liste_produits' %}" class="btn btn-primary btn-block"> {% endcomment %}
-                                <i class="fas fa-boxes"></i> Voir les Produits
-                            </a>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            {% comment %} <a href="{% url 'ventes:creer' %}" class="btn btn-success btn-block"> {% endcomment %}
-                                <i class="fas fa-cash-register"></i> Nouvelle Vente
-                            </a>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            {% comment %} <a href="{% url 'ventes:historique' %}" class="btn btn-info btn-block"> {% endcomment %}
-                                <i class="fas fa-history"></i> Historique des Ventes
-                            </a>
-                        </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h1 class="h3 mb-0">Tableau de Bord Vendeur</h1>
+                        <span class="badge bg-primary">{{ request.user.get_role_display }}</span>
                     </div>
+                    <p class="text-muted mb-0">Bienvenue {{ request.user.get_full_name }}, voici votre activité commerciale</p>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <!-- Section Statistiques -->
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h3>Mes Statistiques</h3>
-                </div>
+    {% if alertes %}
+    <div class="row mb-4">
+        <div class="col-12">
+            {% for alerte in alertes %}
+            <div class="alert alert-{{ alerte.type }} alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                {{ alerte.message }}
+                {% if alerte.lien %}
+                <a href="{{ alerte.lien }}" class="alert-link ms-2">Voir les détails</a>
+                {% endif %}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary h-100">
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="stat-card bg-light p-3 text-center">
-                                <h4>Ventes Aujourd'hui</h4>
-                                <p class="display-4">12</p>
-                            </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-primary text-uppercase mb-1">Devis</h6>
+                            <h3 class="mb-0">{{ devis_stats.total|intcomma }}</h3>
                         </div>
-                        <div class="col-md-4">
-                            <div class="stat-card bg-light p-3 text-center">
-                                <h4>Chiffre d'Affaires</h4>
-                                <p class="display-4">1,450.00 €</p>
-                            </div>
+                        <i class="fas fa-file-contract fa-2x text-gray-300"></i>
+                    </div>
+                    <div class="mt-3">
+                        <span class="badge bg-info text-white me-2">
+                            <i class="fas fa-clock"></i> {{ devis_stats.brouillon }}
+                        </span>
+                        <span class="badge bg-warning text-dark me-2">
+                            <i class="fas fa-paper-plane"></i> {{ devis_stats.envoyes }}
+                        </span>
+                        <span class="badge bg-success me-2">
+                            <i class="fas fa-check"></i> {{ devis_stats.acceptes }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <small class="text-muted">
+                        <i class="fas fa-calendar me-1"></i>
+                        Aujourd'hui: {{ devis_stats.aujourdhui }} | 
+                        Cette semaine: {{ devis_stats.cette_semaine }}
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-success text-uppercase mb-1">Commandes</h6>
+                            <h3 class="mb-0">{{ commandes_stats.total|intcomma }}</h3>
                         </div>
-                        <div class="col-md-4">
-                            <div class="stat-card bg-light p-3 text-center">
-                                <h4>Objectif</h4>
-                                <div class="progress">
-                                    <div class="progress-bar bg-success" role="progressbar" style="width: 75%;" 
-                                         aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">75%</div>
+                        <i class="fas fa-shopping-cart fa-2x text-gray-300"></i>
+                    </div>
+                    <div class="mt-3">
+                        <span class="badge bg-info text-white me-2">
+                            <i class="fas fa-edit"></i> {{ commandes_stats.brouillon }}
+                        </span>
+                        <span class="badge bg-primary text-white me-2">
+                            <i class="fas fa-check-circle"></i> {{ commandes_stats.confirmees }}
+                        </span>
+                        <span class="badge bg-success me-2">
+                            <i class="fas fa-truck"></i> {{ commandes_stats.livrees }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <small class="text-success">
+                        <i class="fas fa-chart-line me-1"></i>
+                        CA mois: **{{ commandes_stats.chiffre_affaire_mois|floatformat:2|intcomma }} {{ devise_principale }}**
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-info text-uppercase mb-1">Factures</h6>
+                            <h3 class="mb-0">{{ factures_stats.total|intcomma }}</h3>
+                        </div>
+                        <i class="fas fa-file-invoice-dollar fa-2x text-gray-300"></i>
+                    </div>
+                    <div class="mt-3">
+                        <span class="badge bg-warning text-dark me-2">
+                            <i class="fas fa-file"></i> {{ factures_stats.validees }}
+                        </span>
+                        <span class="badge bg-success me-2">
+                            <i class="fas fa-check-double"></i> {{ factures_stats.payees }}
+                        </span>
+                        <span class="badge bg-danger me-2">
+                            <i class="fas fa-exclamation-triangle"></i> {{ factures_stats.impayees }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <small class="text-danger">
+                        <i class="fas fa-money-bill-wave me-1"></i>
+                        Impayé: **{{ factures_stats.montant_impaye|floatformat:2|intcomma }} {{ devise_principale }}**
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-warning text-uppercase mb-1">Ventes POS</h6>
+                            {% if ventes_pos_stats %}
+                                <h3 class="mb-0">{{ ventes_pos_stats.ventes_aujourdhui|intcomma }}</h3>
+                            {% else %}
+                                <h3 class="mb-0">0</h3>
+                            {% endif %}
+                        </div>
+                        <i class="fas fa-cash-register fa-2x text-gray-300"></i>
+                    </div>
+                    <div class="mt-3">
+                        {% if ventes_pos_stats %}
+                        <span class="badge bg-success me-2">
+                            <i class="fas fa-store"></i> Session active
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary me-2">
+                            <i class="fas fa-store-slash"></i> Aucune session
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    {% if ventes_pos_stats %}
+                    <small class="text-warning">
+                        <i class="fas fa-coins me-1"></i>
+                        CA jour: **{{ ventes_pos_stats.chiffre_affaire_jour|floatformat:2|intcomma }} {{ devise_principale }}**
+                    </small>
+                    {% else %}
+                    <small class="text-muted">Aucune session POS active</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Derniers Devis</h6>
+                    <a href="{% url 'ventes:devis_create' %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus"></i> Nouveau
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for devis in derniers_documents.devis %}
+                        <a href="{% url 'ventes:devis_detail' devis.pk %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ devis.numero }}</h6>
+                                    <small class="text-muted">{{ devis.client.nom }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-{{ devis.statut|devis_status_color }}">
+                                        {{ devis.get_statut_display }}
+                                    </span>
+                                    <div class="text-muted small">
+                                        {{ devis.date|date:"d/m/Y" }}
+                                    </div>
                                 </div>
                             </div>
+                        </a>
+                        {% empty %}
+                        <div class="list-group-item text-center text-muted py-4">
+                            <i class="fas fa-file-contract fa-2x mb-2"></i>
+                            <p>Aucun devis récent</p>
                         </div>
+                        {% endfor %}
                     </div>
                 </div>
+                <div class="card-footer bg-white">
+                    <a href="{% url 'ventes:devis_list' %}" class="btn btn-sm btn-outline-primary w-100">
+                        Voir tous les devis
+                    </a>
+                </div>
             </div>
+        </div>
 
-            <!-- Dernières ventes -->
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h3>Dernières Ventes</h3>
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-success">Dernières Commandes</h6>
+                    <a href="{% url 'ventes:commande_create' %}" class="btn btn-sm btn-success">
+                        <i class="fas fa-plus"></i> Nouvelle
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for commande in derniers_documents.commandes %}
+                        <a href="{% url 'ventes:commande_detail' commande.pk %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ commande.numero }}</h6>
+                                    <small class="text-muted">{{ commande.client.nom }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-{{ commande.statut|commande_status_color }}">
+                                        {{ commande.get_statut_display }}
+                                    </span>
+                                    <div class="text-success small fw-bold">
+                                        {{ commande.total_ttc|floatformat:2|intcomma }} **{{ devise_principale }}**
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                        {% empty %}
+                        <div class="list-group-item text-center text-muted py-4">
+                            <i class="fas fa-shopping-cart fa-2x mb-2"></i>
+                            <p>Aucune commande récente</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="card-footer bg-white">
+                    <a href="{% url 'ventes:commande_list' %}" class="btn btn-sm btn-outline-success w-100">
+                        Voir toutes les commandes
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-info">Dernières Factures</h6>
+                    <a href="{% url 'ventes:facture_create' %}" class="btn btn-sm btn-info text-white">
+                        <i class="fas fa-plus"></i> Nouvelle
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for facture in derniers_documents.factures %}
+                        <a href="{% url 'ventes:facture_detail' facture.pk %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ facture.numero }}</h6>
+                                    <small class="text-muted">{{ facture.client.nom }}</small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge bg-{{ facture.statut|facture_status_color }}">
+                                        {{ facture.get_statut_display }}
+                                    </span>
+                                    <div class="text-info small fw-bold">
+                                        {{ facture.total_ttc|floatformat:2|intcomma }} **{{ devise_principale }}**
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                        {% empty %}
+                        <div class="list-group-item text-center text-muted py-4">
+                            <i class="fas fa-file-invoice-dollar fa-2x mb-2"></i>
+                            <p>Aucune facture récente</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="card-footer bg-white">
+                    <a href="{% url 'ventes:facture_list' %}" class="btn btn-sm btn-outline-info w-100">
+                        Voir toutes les factures
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h6 class="m-0 font-weight-bold">Actions Rapides</h6>
                 </div>
                 <div class="card-body">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>N° Vente</th>
-                                <th>Date</th>
-                                <th>Client</th>
-                                <th>Montant</th>
-                                <th>Statut</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Exemple de données statiques - À remplacer par des données dynamiques -->
-                            <tr>
-                                <td>#1254</td>
-                                <td>Aujourd'hui, 14:30</td>
-                                <td>Client A</td>
-                                <td>120.00 €</td>
-                                <td><span class="badge bg-success">Payé</span></td>
-                            </tr>
-                            <tr>
-                                <td>#1253</td>
-                                <td>Aujourd'hui, 11:45</td>
-                                <td>Client B</td>
-                                <td>85.50 €</td>
-                                <td><span class="badge bg-success">Payé</span></td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div class="row text-center">
+                        <div class="col-md-3 col-6 mb-3">
+                            <a href="{% url 'ventes:devis_create' %}" class="btn btn-primary btn-lg w-100 py-3">
+                                <i class="fas fa-file-contract fa-2x mb-2"></i><br>
+                                Nouveau Devis
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <a href="{% url 'ventes:commande_create' %}" class="btn btn-success btn-lg w-100 py-3">
+                                <i class="fas fa-shopping-cart fa-2x mb-2"></i><br>
+                                Nouvelle Commande
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            <a href="{% url 'ventes:facture_create' %}" class="btn btn-info btn-lg w-100 py-3 text-white">
+                                <i class="fas fa-file-invoice-dollar fa-2x mb-2"></i><br>
+                                Nouvelle Facture
+                            </a>
+                        </div>
+                        <div class="col-md-3 col-6 mb-3">
+                            {% comment %} <a href="{% url 'ventes:pos_dashboard' %}" class="btn btn-warning btn-lg w-100 py-3"> {% endcomment %}
+                                <i class="fas fa-cash-register fa-2x mb-2"></i><br>
+                                Point de Vente
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.card {
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    transition: all 0.3s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 2rem 0 rgba(58, 59, 69, 0.2);
+}
+
+.border-left-primary { border-left: 4px solid #4e73df !important; }
+.border-left-success { border-left: 4px solid #1cc88a !important; }
+.border-left-info { border-left: 4px solid #36b9cc !important; }
+.border-left-warning { border-left: 4px solid #f6c23e !important; }
+
+.list-group-item {
+    border: none;
+    border-bottom: 1px solid #eaecf4;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+.btn-lg {
+    border-radius: 0.5rem;
+    transition: all 0.3s;
+}
+
+.btn-lg:hover {
+    transform: translateY(-2px);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Animation des cartes statistiques
+document.addEventListener('DOMContentLoaded', function() {
+    const statsCards = document.querySelectorAll('.card');
+    statsCards.forEach((card, index) => {
+        card.style.animationDelay = `${index * 0.1}s`;
+        card.classList.add('animate__animated', 'animate__fadeInUp');
+    });
+});
+</script>
 {% endblock %}

@@ -5,17 +5,22 @@ from .views import *
 app_name = 'security'
 
 urlpatterns = [
+  
     # Authentification
     path('connexion/', ConnexionView.as_view(), name='connexion'),
     path('deconnexion/', deconnexion, name='deconnexion'),
     
     # Tableaux de bord par rôle
-   path('admin/dashboard/', AdminDashboardView.as_view(), name='admin_dashboard'),
+    path('admin/dashboard/', AdminDashboardView.as_view(), name='admin_dashboard'),
     path('manager/', TableauDeBordManager.as_view(), name='manager_dashboard'),
     path('caissier/', TableauDeBordCaissier.as_view(), name='caissier_dashboard'),
     path('vendeur/', TableauDeBordVendeur.as_view(), name='vendeur_dashboard'),
     path('stock/', TableauDeBordStock.as_view(), name='stock_dashboard'),
-    path("acces-refuse/", acces_refuse, name="acces_refuse"),
+    path('dashboard-redirect/', dashboard_redirect, name='dashboard_redirect'),
+    
+    # Page d'accès refusé - CORRIGEZ CETTE LIGNE :
+    path("acces-refuse/", acces_refuse_view, name="acces_refuse"),
+    
     # Gestion des utilisateurs
     path('utilisateurs/', ListeUtilisateurs.as_view(), name='liste_utilisateurs'),
     path('utilisateurs/creer/', CreerUtilisateur.as_view(), name='creer_utilisateur'),
@@ -30,9 +35,8 @@ urlpatterns = [
     # Journal d'activité
     path('journal/', JournalActiviteView.as_view(), name='journal_activite'),
     path('changement-mdp/', ChangementMdpView.as_view(), name='changement_mdp'),
-     path('dashboard/', dashboard_redirect, name='dashboard_redirect'),
-     
-   # Group management
+  
+    # Group management
     path('groups/', GroupListView.as_view(), name='liste_groupes'),
     path('groups/new/', GroupCreateView.as_view(), name='creer_groupe'),
     path('groups/<int:pk>/edit/', GroupUpdateView.as_view(), name='group_update'),
@@ -42,5 +46,4 @@ urlpatterns = [
     path('api/groupes/<int:group_id>/permissions/', get_group_permissions, name='api_group_permissions'),
     path('profile/',user_profile, name='user_profile'),
     path('profile/signature/',manage_signature, name='manage_signature'),
-    
 ]
