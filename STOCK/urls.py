@@ -21,6 +21,7 @@ urlpatterns = [
     path('produits/search/', produits_search, name='produits_search'),
     path('produits/details/<int:id>/', produit_detail, name='produit_detail'),
   path('supprimer/<int:pk>/', DeleteProduitView.as_view(), name='supprimer_produit'),
+   path('produits/tickets/imprimer-stock/', imprimer_tickets_en_stock_pdf, name='imprimer_tickets_en_stock'),
     # ,
  
 
@@ -52,6 +53,7 @@ urlpatterns = [
     path('stats/commandes/', commande_stats, name='commande_stats'),
     path('inventaitre/', inventaire, name='inventaitre_liste'),
     path('inventaire/etat-stock/', etat_stock, name='etat_stock'),
+    path('inventaire/exporter-stock/',exporter_stock, name='exporter_stock'),
     path('stock/ajout/',ajouter_mouvement_stock, name='ajouter_mouvement_stock'),
     path('stock/mouvements/',liste_mouvements_stock, name='liste_mouvements_stock'),
     path('saisie/', saisie_inventaire, name='saisie_inventaire'),

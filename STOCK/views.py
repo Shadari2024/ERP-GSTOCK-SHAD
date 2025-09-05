@@ -859,49 +859,148 @@ class AjouterProduitView(EntrepriseAccessMixin, View):
         return render(request, self.template_name, context)
 #etiquette
 
+import base64
+from django.shortcuts import get_object_or_404, render
+from django.template.loader import get_template
+from django.http import HttpResponse
+from decimal import Decimal
+from weasyprint import HTML
+from django.core.files.storage import default_storage # Importez default_storage
+from .models import Produit
+from parametres.models import ConfigurationSAAS, TauxChange
 
 def ticket_produit_pdf(request, pk):
     produit = get_object_or_404(Produit, pk=pk, entreprise=request.entreprise)
     
-    # Récupération des paramètres SAAS de l'entreprise
+    devise_principale_symbole = "$"
+    devise_principale_code = 'USD'
+    logo_base64 = None
+    code_barre_base64 = None
+    
     try:
         config_saas = ConfigurationSAAS.objects.get(entreprise=request.entreprise)
-        devise_principale = config_saas.devise_principale.code if config_saas.devise_principale else 'USD'
+        if config_saas.devise_principale:
+            devise_principale_symbole = config_saas.devise_principale.symbole
+            devise_principale_code = config_saas.devise_principale.code
     except ConfigurationSAAS.DoesNotExist:
-        devise_principale = 'USD'
-
-    # Récupération du taux de change USD si différent de la devise principale
+        pass
+    
     taux_usd = None
     prix_vente_usd = None
-    
-    if devise_principale != 'USD':
+    if devise_principale_code != 'USD':
         taux_usd = TauxChange.objects.filter(
-            devise_source__code=devise_principale,
+            devise_source__code=devise_principale_code,
             devise_cible__code='USD',
             est_actif=True
         ).order_by('-date_application').first()
-        
         if taux_usd:
             try:
                 prix_vente_usd = Decimal(produit.prix_vente) * Decimal(taux_usd.taux)
             except:
                 prix_vente_usd = None
 
+    # Conversion du logo en Base64 si le fichier existe
+    if request.entreprise.logo:
+        # Utilisez default_storage pour un accès compatible avec S3 ou le système de fichiers
+        if default_storage.exists(request.entreprise.logo.name):
+            with default_storage.open(request.entreprise.logo.name, "rb") as logo_file:
+                logo_base64 = base64.b64encode(logo_file.read()).decode('utf-8')
+
+    # Conversion du code-barres en Base64 si le fichier existe
+    if produit.code_barre:
+        if default_storage.exists(produit.code_barre.name):
+            with default_storage.open(produit.code_barre.name, "rb") as barcode_file:
+                code_barre_base64 = base64.b64encode(barcode_file.read()).decode('utf-8')
+
     template = get_template('produit/ticket_produit.html')
     html = template.render({
         'produit': produit,
-        'entreprise': request.entreprise,  # Ajout de l'entreprise pour le template
-        'devise_principale': devise_principale,
+        'entreprise': request.entreprise,
+        'devise_principale_symbole': devise_principale_symbole,
         'taux_usd': taux_usd.taux if taux_usd else None,
         'prix_vente_usd': prix_vente_usd,
+        'logo_base64': logo_base64,
+        'code_barre_base64': code_barre_base64,
     })
 
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'filename=ticket_produit_{produit.id}.pdf'
-
-    HTML(string=html, base_url=request.build_absolute_uri('/')).write_pdf(response)
-    return response
     
+    # WeasyPrint n'a plus besoin du base_url car les images sont encodées
+    HTML(string=html).write_pdf(response)
+    return response
+
+from django.core.files.storage import default_storage
+
+def imprimer_tickets_en_stock_pdf(request):
+    """Génère un PDF contenant un ticket par produit en stock."""
+    
+    # 1. Récupérer les données essentielles
+    produits = Produit.objects.filter(entreprise=request.entreprise, stock__gt=0)
+    
+    devise_principale_symbole = "$"
+    taux_usd = None
+    
+    try:
+        config_saas = ConfigurationSAAS.objects.get(entreprise=request.entreprise)
+        if config_saas.devise_principale:
+            devise_principale_symbole = config_saas.devise_principale.symbole
+            devise_principale_code = config_saas.devise_principale.code
+            if devise_principale_code != 'USD':
+                taux_usd = TauxChange.objects.filter(
+                    devise_source__code=devise_principale_code,
+                    devise_cible__code='USD',
+                    est_actif=True
+                ).order_by('-date_application').first()
+    except ConfigurationSAAS.DoesNotExist:
+        pass
+        
+    # 2. Préparer le contexte pour chaque produit
+    liste_tickets = []
+    
+    # Préparez le logo une seule fois pour tous les tickets
+    logo_base64 = None
+    if request.entreprise.logo:
+        if default_storage.exists(request.entreprise.logo.name):
+            with default_storage.open(request.entreprise.logo.name, "rb") as logo_file:
+                logo_base64 = base64.b64encode(logo_file.read()).decode('utf-8')
+
+    for produit in produits:
+        prix_vente_usd = None
+        if taux_usd:
+            try:
+                prix_vente_usd = Decimal(produit.prix_vente) * Decimal(taux_usd.taux)
+            except:
+                pass
+        
+        # Préparez le code-barres pour chaque produit
+        code_barre_base64 = None
+        if produit.code_barre:
+            if default_storage.exists(produit.code_barre.name):
+                with default_storage.open(produit.code_barre.name, "rb") as barcode_file:
+                    code_barre_base64 = base64.b64encode(barcode_file.read()).decode('utf-8')
+        
+        liste_tickets.append({
+            'produit': produit,
+            'entreprise': request.entreprise,
+            'devise_principale_symbole': devise_principale_symbole,
+            'prix_vente_usd': prix_vente_usd,
+            'taux_usd': taux_usd,
+            'code_barre_base64': code_barre_base64,
+            'logo_base64': logo_base64,
+            'current_date': timezone.now().date(),
+        })
+
+    # 3. Générer le PDF
+    template = get_template('produit/liste_tickets.html')
+    html = template.render({'liste_tickets': liste_tickets})
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'filename=tickets_en_stock.pdf'
+    
+    HTML(string=html).write_pdf(response)
+    return response
+
 
  #affiche produit
 @login_required
@@ -2346,38 +2445,262 @@ def commande_stats(request):
 def inventaire(request):
     return render(request,"inventaire/inventaire.html")
 
+# Dans votre fichier views.py (corrigé)
+from django.db.models import F
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from .models import Produit, Categorie
+from parametres.models import ConfigurationSAAS
+
 @login_required
 def etat_stock(request):
+    # Vérification de l'entreprise
     if not hasattr(request, 'entreprise'):
-        messages.error(request, "Entreprise non définie")
+        messages.error(request, "Entreprise non définie.")
         return redirect('security:acces_refuse')
 
+    # Récupération de la devise principale
+    devise_principale = 'USD'  # Devise par défaut
+    try:
+        config_saas = ConfigurationSAAS.objects.get(entreprise=request.entreprise)
+        devise_principale = config_saas.devise_principale.symbole
+    except ConfigurationSAAS.DoesNotExist:
+        pass
+
+    # Requête de base pour les produits
     produits = Produit.objects.filter(entreprise=request.entreprise)
     categories = Categorie.objects.filter(entreprise=request.entreprise)
-    fournisseurs = Fournisseur.objects.filter(entreprise=request.entreprise)
 
     # Filtres
     cat = request.GET.get('categorie')
-    frs = request.GET.get('fournisseur')
     seuil = request.GET.get('alerte')
 
+    # Filtrage par catégorie
     if cat:
         produits = produits.filter(categorie_id=cat)
-    if frs:
-        produits = produits.filter(fournisseur_id=frs)
+        
+    # Filtrage par seuil d'alerte
     if seuil == "1":
         produits = produits.filter(stock__lte=F('seuil_alerte'))
 
     context = {
         'produits': produits,
         'categories': categories,
-        'fournisseurs': fournisseurs,
         'cat_selected': int(cat) if cat else None,
-        'frs_selected': int(frs) if frs else None,
         'seuil_selected': seuil,
-        'entreprise': request.entreprise
+        'entreprise': request.entreprise,
+        'devise_principale': devise_principale
     }
     return render(request, 'inventaire/etat_stock.html', context)
+
+
+
+# In STOCK/views.py
+# Dans votre fichier STOCK/views.py
+
+import csv
+import openpyxl
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from django.shortcuts import render, redirect
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from django.db.models import F
+from .models import Produit, Categorie
+from parametres.models import ConfigurationSAAS
+
+def get_devise_principale(request):
+    """Récupère la devise principale de l'entreprise."""
+    devise_principale = 'USD'  # Devise par défaut
+    try:
+        config_saas = ConfigurationSAAS.objects.get(entreprise=request.entreprise)
+        devise_principale = config_saas.devise_principale.symbole
+    except (ConfigurationSAAS.DoesNotExist, AttributeError):
+        pass
+    return devise_principale
+
+@login_required
+def etat_stock(request):
+    if not hasattr(request, 'entreprise'):
+        messages.error(request, "Entreprise non définie.")
+        return redirect('security:acces_refuse')
+
+    produits = Produit.objects.filter(entreprise=request.entreprise)
+    categories = Categorie.objects.filter(entreprise=request.entreprise)
+    
+    cat = request.GET.get('categorie')
+    seuil = request.GET.get('alerte')
+
+    if cat:
+        produits = produits.filter(categorie_id=cat)
+    if seuil == "1":
+        produits = produits.filter(stock__lte=F('seuil_alerte'))
+
+    context = {
+        'produits': produits,
+        'categories': categories,
+        'cat_selected': int(cat) if cat else None,
+        'seuil_selected': seuil,
+        'entreprise': request.entreprise,
+        'devise_principale': get_devise_principale(request)
+    }
+    return render(request, 'inventaire/etat_stock.html', context)
+# In STOCK/views.py
+
+import csv
+import openpyxl
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from django.shortcuts import render, redirect
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from django.db.models import F
+from .models import Produit, Categorie
+from parametres.models import Entreprise # Make sure this import path is correct
+from django.conf import settings
+import os
+
+def get_devise_principale(request):
+    """Retrieves the main currency of the company."""
+    # (Existing function, no changes needed)
+    devise_principale = 'USD'
+    try:
+        config_saas = ConfigurationSAAS.objects.get(entreprise=request.entreprise)
+        devise_principale = config_saas.devise_principale.symbole
+    except (ConfigurationSAAS.DoesNotExist, AttributeError):
+        pass
+    return devise_principale
+
+@login_required
+def exporter_stock(request):
+    if not hasattr(request, 'entreprise'):
+        return redirect('security:acces_refuse')
+
+    entreprise = request.entreprise
+    format_type = request.GET.get('format', 'csv')
+    produits = Produit.objects.filter(entreprise=request.entreprise)
+
+    headers = ['Nom', 'Catégorie', 'Stock', 'Seuil d\'alerte', 'Prix de vente']
+
+    # --- CSV Export (No Design Changes) ---
+    if format_type == 'csv':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="etat_stock.csv"'
+        writer = csv.writer(response)
+        writer.writerow(headers)
+        for produit in produits:
+            writer.writerow([
+                produit.nom,
+                produit.categorie.nom if produit.categorie else 'N/A',
+                produit.stock,
+                produit.seuil_alerte,
+                produit.prix_vente
+            ])
+        return response
+
+    # --- XLSX Export (Improved Design) ---
+    elif format_type == 'xlsx':
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="etat_stock.xlsx"'
+        workbook = openpyxl.Workbook()
+        sheet = workbook.active
+        
+        # Company Header
+        sheet['B2'] = 'Rapport d\'État du Stock'
+        sheet['B3'] = f"Entreprise: {entreprise.nom}"
+        sheet['B4'] = f"Adresse: {entreprise.adresse}"
+        
+        # Add a blank row for spacing
+        sheet.append([])
+        
+        # Headers with bold styling
+        header_row = sheet.append(headers)
+        for cell in sheet[sheet.max_row]:
+            cell.font = openpyxl.styles.Font(bold=True)
+            cell.fill = openpyxl.styles.PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+        
+        # Data rows with light alternating color
+        for i, produit in enumerate(produits):
+            row_data = [
+                produit.nom,
+                produit.categorie.nom if produit.categorie else 'N/A',
+                produit.stock,
+                produit.seuil_alerte,
+                produit.prix_vente
+            ]
+            sheet.append(row_data)
+            if i % 2 == 0:
+                for cell in sheet[sheet.max_row]:
+                    cell.fill = openpyxl.styles.PatternFill(start_color="FAFAFA", end_color="FAFAFA", fill_type="solid")
+
+        workbook.save(response)
+        return response
+
+    # --- PDF Export (Improved Design with ReportLab) ---
+    elif format_type == 'pdf':
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="etat_stock.pdf"'
+
+        doc = SimpleDocTemplate(response, pagesize=letter)
+        styles = getSampleStyleSheet()
+        story = []
+
+        # Company Header
+        company_logo_path = entreprise.logo.path if entreprise.logo else None
+        if company_logo_path and os.path.exists(company_logo_path):
+            story.append(Image(company_logo_path, width=1.5*inch, height=0.5*inch))
+        
+        story.append(Paragraph(f"<font size=14><b>{entreprise.nom}</b></font>", styles['Normal']))
+        story.append(Paragraph(f"<font size=10>{entreprise.adresse}</font>", styles['Normal']))
+        story.append(Spacer(1, 0.25*inch))
+        
+        # Report Title
+        report_title_style = ParagraphStyle('ReportTitle', parent=styles['Normal'], fontSize=16, alignment=1, spaceAfter=0.25*inch, fontName='Helvetica-Bold')
+        story.append(Paragraph("RAPPORT D'ÉTAT DU STOCK", report_title_style))
+        story.append(Spacer(1, 0.25*inch))
+
+        # Table Data
+        data = [headers]
+        for produit in produits:
+            data.append([
+                produit.nom,
+                produit.categorie.nom if produit.categorie else 'N/A',
+                produit.stock,
+                produit.seuil_alerte,
+                produit.prix_vente
+            ])
+        
+        # Table Styling
+        table_style = TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2d3748')),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e0e0e0')),
+            ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#bdbdbd')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 12),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+        ])
+        
+        # Apply alternating row colors
+        for i in range(1, len(data)):
+            if i % 2 == 0:
+                table_style.add('BACKGROUND', (0, i), (-1, i), colors.HexColor('#fafafa'))
+        
+        table = Table(data)
+        table.setStyle(table_style)
+        
+        story.append(table)
+        
+        doc.build(story)
+        return response
+
+    return HttpResponse("Format non supporté.", status=400)
 
 from django.db import transaction
 from django.contrib.auth.decorators import login_required, permission_required
@@ -3691,17 +4014,27 @@ def voir_produit(request, pk):
             'photo_base64': None,
             'code_barre_base64': None,
         }
-        return render(request, 'produit/fiche_produit.html', context, status=500)
-    
+
 def imprimer_produit(request, pk):
     """Génère la version PDF"""
     try:
         produit = get_object_or_404(Produit, pk=pk)
-        parametres = Parametre.objects.first()
         
+        # Récupération de la devise principale de l'entreprise
+        devise_principale_symbole = "€"  # Valeur par défaut
+        try:
+            config_saas = ConfigurationSAAS.objects.get(entreprise=request.entreprise)
+            if config_saas.devise_principale:
+                devise_principale_symbole = config_saas.devise_principale.symbole
+        except ConfigurationSAAS.DoesNotExist:
+            # Gérer le cas où la configuration n'existe pas
+            pass
+
         context = {
             'produit': produit,
-            'parametres': parametres,
+            # Le modèle Parametre est-il toujours pertinent ? Si non, retirez cette ligne.
+            'parametres': Parametre.objects.first() if Parametre.objects.exists() else None,
+            'devise_principale_symbole': devise_principale_symbole,
             'date_impression': timezone.now().strftime("%d/%m/%Y %H:%M"),
             'code_barre_img': None
         }
@@ -3725,7 +4058,6 @@ def imprimer_produit(request, pk):
         
     except Exception as e:
         return render(request, 'produit/fiche_produit.html', {'error': str(e)}, status=500)
-    
     
 
 from openpyxl.styles import Font

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Tickets en Stock</title>
+    <style>
+        /* ===== RESET ET CONFIGURATION DE BASE ===== */
+        @page {
+            size: 8cm 5cm;
+            margin: 0.1cm;
+        }
+        
+        body {
+            font-family: 'Roboto', 'Segoe UI', 'Arial', sans-serif;
+            font-size: 7px;
+            padding: 0;
+            margin: 0;
+            color: #4c4c4c;
+            background: #ffffff;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        /* ===== STRUCTURE COMPACTE DU TICKET ===== */
+        .ticket-page {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px;
+            box-sizing: border-box;
+            background: #ffffff;
+            border: 1px solid #d1d8dd;
+            border-radius: 4px;
+            page-break-after: always;
+        }
+        
+        .ticket-page:last-child {
+            page-break-after: avoid;
+        }
+        
+        /* ===== EN-TÊTE ULTRA-COMPACT ===== */
+        .header {
+            width: 100%;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-bottom: 3px;
+            margin-bottom: 3px;
+        }
+        
+        .logo { 
+            max-height: 18px; 
+            max-width: 70%; 
+            margin-bottom: 2px; 
+        }
+        
+        .company-name { 
+            font-size: 9px; 
+            font-weight: 700; 
+            color: #875A7B; 
+            margin: 0; 
+            line-height: 1.1; 
+            text-transform: uppercase; 
+        }
+        
+        .company-info { 
+            font-size: 6px; 
+            color: #666; 
+            margin: 1px 0; 
+            text-align: center; 
+            font-weight: 500; 
+        }
+        
+        /* ===== INFORMATIONS PRODUIT COMPACTES ===== */
+        .product-info {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 4px;
+            padding: 3px;
+        }
+        
+        .product-name { 
+            font-size: 10px; 
+            font-weight: 600; 
+            margin: 0; 
+            line-height: 1.2; 
+            color: #2c3e50; 
+            word-break: break-word; 
+            text-transform: uppercase; 
+        }
+        
+        .product-reference { 
+            font-size: 6px; 
+            color: #666; 
+            margin-top: 1px; 
+        }
+
+        /* ===== SECTION PRIX OPTIMISÉE ===== */
+        .price-section {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            margin: 3px 0;
+            padding: 3px 0;
+        }
+        
+        .price-box { 
+            text-align: center; 
+            padding: 3px; 
+            flex: 1; 
+            min-width: 0; 
+        }
+        
+        .price-label { 
+            font-size: 6px; 
+            color: #666; 
+            text-transform: uppercase; 
+            font-weight: 600; 
+            margin-bottom: 1px; 
+        }
+        
+        .price { 
+            font-size: 11px; 
+            font-weight: 700; 
+            color: #2c3e50; 
+            margin: 1px 0; 
+            line-height: 1.1; 
+        }
+        
+        .price-main { 
+            color: #875A7B; 
+        }
+        
+        .price-converted { 
+            color: #5d6771; 
+            font-size: 10px; 
+        }
+        
+        .currency-symbol { 
+            font-size: 9px; 
+            font-weight: 600; 
+            color: #888; 
+        }
+        
+        .tva-info { 
+            font-size: 5px; 
+            color: #666; 
+            margin-top: 1px; 
+        }
+
+        /* ===== CODE-BARRES COMPACT ===== */
+        .barcode-container {
+            width: 100%;
+            text-align: center;
+            padding: 3px 0;
+            margin: 2px 0;
+        }
+        
+        .barcode-img { 
+            height: 25px; 
+            max-width: 80%; 
+            display: block; 
+            margin: 0 auto; 
+        }
+        
+        .barcode-number { 
+            font-family: 'Courier New', monospace; 
+            font-size: 7px; 
+            letter-spacing: 0.8px; 
+            color: #444; 
+            margin-top: 1px; 
+        }
+        
+        .badge { 
+            display: inline-block; 
+            padding: 2px 4px; 
+            border-radius: 2px; 
+            font-size: 6px; 
+            background: #ffebee; 
+            color: #c62828; 
+            font-weight: 600; 
+        }
+
+        /* ===== OPTIMISATIONS D'IMPRESSION ===== */
+        @media print {
+            .ticket-page { 
+                border: 0.5px solid #ccc; 
+                padding: 4px; 
+            }
+            
+            body { 
+                font-size: 6px; 
+            }
+            
+            .product-name { 
+                font-size: 9px; 
+            }
+            
+            .price { 
+                font-size: 10px; 
+            }
+            
+            .barcode-img { 
+                height: 22px; 
+            }
+            
+            .company-name {
+                font-size: 8px;
+            }
+        }
+
+        /* ===== ESPACEMENT DYNAMIQUE ===== */
+        .spacer {
+            flex: 1;
+            min-height: 1px;
+        }
+
+        /* ===== RESPONSIVE ULTRA-COMPACT ===== */
+        @media (max-width: 250px) {
+            .price-section {
+                flex-direction: column;
+                gap: 2px;
+            }
+            
+            .price-box {
+                padding: 2px;
+            }
+            
+            .product-name {
+                font-size: 8px;
+            }
+            
+            .price {
+                font-size: 9px;
+            }
+        }
+
+        /* ===== SUPPRESSION DES ÉLÉMENTS OPTIONNELS ===== */
+        /* Commentez ces lignes si vous voulez conserver ces éléments */
+        .footer, .date-info, .stock-info, .indicator, .exchange-rate {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    {% for ticket in liste_tickets %}
+        <div class="ticket-page">
+            <!-- En-tête ultra-compact -->
+            <div class="header">
+                {% if ticket.logo_base64 %}
+                    <img src="data:image/png;base64,{{ ticket.logo_base64 }}" class="logo" alt="Logo {{ ticket.entreprise.nom }}">
+                {% endif %}
+                <p class="company-name">{{ ticket.entreprise.nom|truncatechars:20 }}</p>
+                <p class="company-info">
+                    {% if ticket.entreprise.telephone %}{{ ticket.entreprise.telephone }}{% endif %}
+                </p>
+            </div>
+
+            <!-- Informations Produit compactes -->
+            <div class="product-info">
+                <p class="product-name">{{ ticket.produit.nom|truncatechars:25 }}</p>
+                {% if ticket.produit.reference %}
+                    <p class="product-reference">REF: {{ ticket.produit.reference|truncatechars:15 }}</p>
+                {% endif %}
+            </div>
+
+            <!-- Section Prix optimisée -->
+            <div class="price-section">
+                <div class="price-box">
+                    <div class="price-label">Prix</div>
+                    <div class="price price-main">
+                        <span class="currency-symbol">{{ ticket.devise_principale_symbole }}</span>
+                        {{ ticket.produit.prix_vente|floatformat:2 }}
+                    </div>
+                    {% if ticket.produit.taux_tva %}
+                        <div class="tva-info">TVA {{ ticket.produit.taux_tva }}%</div>
+                    {% endif %}
+                </div>
+                
+                {% if ticket.prix_vente_usd %}
+                <div class="price-box">
+                    <div class="price-label">USD</div>
+                    <div class="price price-converted">
+                        <span class="currency-symbol">$</span>
+                        {{ ticket.prix_vente_usd|floatformat:2 }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Code-barres compact -->
+            <div class="barcode-container">
+                {% if ticket.code_barre_base64 %}
+                    <img src="data:image/png;base64,{{ ticket.code_barre_base64 }}" class="barcode-img" alt="Code-barres">
+                    <div class="barcode-number">{{ ticket.produit.code_barre_numero }}</div>
+                {% else %}
+                    <span class="badge">CODE-BARRE MANQUANT</span>
+                {% endif %}
+            </div>
+
+            <!-- Espaceur dynamique pour éviter le débordement -->
+            <div class="spacer"></div>
+        </div>
+    {% endfor %}
+</body>
+</html>
