@@ -4886,9 +4886,62 @@ class NouvelleVenteSimpleView(LoginRequiredMixin, PermissionRequiredMixin, View)
         # Rediriger vers la page de vente avec la session
         return redirect('ventes:nouvelle_vente_pos', pk=point_de_vente.pk, session_pk=session.pk)
 
+# ventes/views.py
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.db.models import Q
+import json
 
-
-
+@require_GET
+@csrf_exempt
+def api_search_by_barcode(request):
+    """API pour rechercher un produit par code-barres"""
+    barcode = request.GET.get('barcode', '').strip()
+    
+    if not barcode:
+        return JsonResponse({
+            'success': False,
+            'message': 'Code-barres requis'
+        }, status=400)
+    
+    try:
+        from STOCK.models import Produit
+        
+        # Recherche par code-barres exact
+        produit = Produit.objects.filter(
+            Q(code_barre=barcode) | Q(code_barre_secondaire=barcode),
+            entreprise=request.entreprise,
+            actif=True
+        ).first()
+        
+        if produit:
+            return JsonResponse({
+                'success': True,
+                'product': {
+                    'id': produit.id,
+                    'nom': produit.nom,
+                    'code_barre': produit.code_barre,
+                    'prix_vente': float(produit.prix_vente) if produit.prix_vente else 0.0,
+                    'taux_tva': float(produit.taux_tva) if produit.taux_tva else 20.0,
+                    'stock': produit.stock,
+                    'photo_url': produit.photo.url if produit.photo else '',
+                    'unite_mesure': produit.unite_mesure
+                }
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'Produit non trouvé'
+            }, status=404)
+            
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Erreur serveur: {str(e)}'
+        }, status=500)
+        
 class PaiementVenteView(LoginRequiredMixin, View):
     """Vue pour le paiement de la vente"""
     template_name = 'ventes/pos/paiement.html'
@@ -4905,8 +4958,8 @@ class PaiementVenteView(LoginRequiredMixin, View):
             total=Sum('montant')
         )['total'] or 0
         
-        # Calculer le montant restant
-        montant_restant = vente.total_ttc - montant_deja_paye
+        # Utiliser le total HT comme base pour les paiements (TVA = 0)
+        montant_restant = vente.total_ht - montant_deja_paye
         
         # Récupérer la devise
         try:
@@ -4934,7 +4987,7 @@ class PaiementVenteView(LoginRequiredMixin, View):
             'montant_deja_paye': montant_deja_paye,
             'montant_restant': montant_restant,
             'devise_symbole': devise_symbole,
-            'nom_client': nom_client,  # Ajout du nom du client
+            'nom_client': nom_client,
         }
         return render(request, self.template_name, context)
     
@@ -4954,12 +5007,12 @@ class PaiementVenteView(LoginRequiredMixin, View):
                 paiement.session = vente.session
                 paiement.save()
                 
-                # Vérifier si la vente est complètement payée
+                # Vérifier si la vente est complètement payée (basé sur HT)
                 montant_total_paye = vente.paiementpos_set.aggregate(
                     total=Sum('montant')
                 )['total'] or 0
                 
-                if montant_total_paye >= vente.total_ttc:
+                if montant_total_paye >= vente.total_ht:
                     vente.est_payee = True
                     vente.save()
                     messages.success(request, _("Paiement complet enregistré avec succès."))
@@ -4976,7 +5029,7 @@ class PaiementVenteView(LoginRequiredMixin, View):
         montant_deja_paye = vente.paiementpos_set.aggregate(
             total=Sum('montant')
         )['total'] or 0
-        montant_restant = vente.total_ttc - montant_deja_paye
+        montant_restant = vente.total_ht - montant_deja_paye
         
         try:
             config_saas = ConfigurationSAAS.objects.get(entreprise=request.user.entreprise)
@@ -5001,10 +5054,10 @@ class PaiementVenteView(LoginRequiredMixin, View):
             'montant_deja_paye': montant_deja_paye,
             'montant_restant': montant_restant,
             'devise_symbole': devise_symbole,
-            'nom_client': nom_client,  # Ajout du nom du client
+            'nom_client': nom_client,
         }
         return render(request, self.template_name, context)
-    
+
 class ImpressionTicketView(LoginRequiredMixin, View):
     """Générer le HTML du ticket pour impression automatique"""
     

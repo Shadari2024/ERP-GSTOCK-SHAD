@@ -142,7 +142,7 @@
                                     <td>{{ paiement.montant }} {{ devise_symbole }}</td>
                                     <td>{{ paiement.get_mode_paiement_display }}</td>
                                     <td>{{ paiement.reference|default:"-" }}</td>
-                                    <td>{{ paiement.created_by.username }}</td>
+                                    <td>{{ paiement.session.utilisateur.get_full_name }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const enteredMontant = parseFloat(this.value);
             
             if (enteredMontant > maxMontant) {
-                alert('{% trans "Le montant ne peut pas dépasser le reste à payer de" %} ' + maxMontant.toFixed(2) + ' {{ devise_symbole }}');
+                alert('{% trans "Le montant ne peut pas dépasser le montant restant de" %} ' + maxMontant.toFixed(2) + ' {{ devise_symbole }}');
                 this.value = maxMontant.toFixed(2);
             }
             

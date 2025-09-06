@@ -1034,24 +1034,24 @@ class VentePOS(models.Model):
 
     def __str__(self):
         return f"Vente POS {self.numero}"
-
+    
 class LigneVentePOS(models.Model):
     vente = models.ForeignKey(VentePOS, related_name='items', on_delete=models.CASCADE)
     produit = models.ForeignKey(Produit, on_delete=models.PROTECT)
     quantite = models.DecimalField(max_digits=10, decimal_places=2)
     prix_unitaire = models.DecimalField(max_digits=10, decimal_places=2)
-    taux_tva = models.DecimalField(max_digits=5, decimal_places=2)
+    taux_tva = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # TVA à 0 par défaut
     montant_ht = models.DecimalField(max_digits=12, decimal_places=2)
-    montant_tva = models.DecimalField(max_digits=12, decimal_places=2)
+    montant_tva = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # Montant TVA à 0
 
     def save(self, *args, **kwargs):
         self.montant_ht = self.quantite * self.prix_unitaire
-        self.montant_tva = self.montant_ht * (self.taux_tva / 100)
+        self.montant_tva = 0  # Forcer le montant TVA à 0
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.article.designation} - {self.quantite} x {self.prix_unitaire}"
-
+        return f"{self.produit.nom} - {self.quantite} x {self.prix_unitaire}"
+    
 class PaiementPOS(models.Model):
     MODE_PAIEMENT_CHOICES = [
         ('espece', 'Espèce'),

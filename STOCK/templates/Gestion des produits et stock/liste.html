@@ -3,7 +3,6 @@
 
 {% block content %}
 <div class="container-fluid px-4 py-4 dashboard-app">
-    <!-- En-tête style pro -->
     <div class="d-flex justify-content-between align-items-center mb-5 header-app">
         <div class="d-flex align-items-center">
             <div class="app-main-icon bg-primary">
@@ -24,11 +23,10 @@
         </div>
     </div>
 
-    <!-- Grille d'applications style pro -->
     <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 row-cols-xl-6 g-4 app-grid">
-        <!-- Fournisseurs -->
         <div class="col">
-            <a href="{% url 'achats:liste_fournisseurs' %}" class="app-card" data-aos="zoom-in" data-aos-delay="50">
+            <a href="{% url 'achats:liste_fournisseurs' %}" class="app-card" data-aos="zoom-in" data-aos-delay="50"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Gérer vos partenaires d'approvisionnement.">
                 <div class="app-icon bg-primary-light">
                     <i class="bi bi-truck"></i>
                 </div>
@@ -38,11 +36,11 @@
             </a>
         </div>
 
-        <!-- Produits -->
         <div class="col">
-            <a href="{% url 'produits_par_categorie' %}" class="app-card" data-aos="zoom-in" data-aos-delay="100">
+            <a href="{% url 'produits_par_categorie' %}" class="app-card" data-aos="zoom-in" data-aos-delay="100"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Consulter et gérer votre catalogue de produits.">
                 <div class="app-icon bg-success-light">
-                    <i class="bi bi-box-seam"></i>
+                    <i class="bi bi-box-seam-fill"></i>
                 </div>
                 <div class="app-name">Produits</div>
                 <div class="app-badge">Gestion articles</div>
@@ -50,11 +48,11 @@
             </a>
         </div>
 
-        <!-- Catégories -->
         <div class="col">
-            <a href="{% url 'liste_cat' %}" class="app-card" data-aos="zoom-in" data-aos-delay="150">
+            <a href="{% url 'liste_cat' %}" class="app-card" data-aos="zoom-in" data-aos-delay="150"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Organiser les produits par catégories.">
                 <div class="app-icon bg-secondary-light">
-                    <i class="bi bi-tags"></i>
+                    <i class="bi bi-tags-fill"></i>
                 </div>
                 <div class="app-name">Catégories</div>
                 <div class="app-badge">Classement</div>
@@ -62,11 +60,11 @@
             </a>
         </div>
 
-        <!-- Stock -->
         <div class="col">
-            <a href="{% url 'etat_stock' %}" class="app-card" data-aos="zoom-in" data-aos-delay="200">
+            <a href="{% url 'etat_stock' %}" class="app-card" data-aos="zoom-in" data-aos-delay="200"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Voir l'état actuel de votre inventaire.">
                 <div class="app-icon bg-warning-light">
-                    <i class="bi bi-clipboard-data"></i>
+                    <i class="bi bi-boxes"></i>
                 </div>
                 <div class="app-name">Stock</div>
                 <div class="app-badge">Vue globale</div>
@@ -74,9 +72,9 @@
             </a>
         </div>
 
-        <!-- Mouvements de stock -->
         <div class="col">
-            <a href="{% url 'liste_mouvements_stock' %}" class="app-card" data-aos="zoom-in" data-aos-delay="250">
+            <a href="{% url 'liste_mouvements_stock' %}" class="app-card" data-aos="zoom-in" data-aos-delay="250"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Consulter l'historique des entrées et sorties.">
                 <div class="app-icon bg-danger-light">
                     <i class="bi bi-arrow-left-right"></i>
                 </div>
@@ -86,11 +84,11 @@
             </a>
         </div>
 
-        <!-- Inventaire -->
         <div class="col">
-            <a href="{% url 'liste_inventaires' %}" class="app-card" data-aos="zoom-in" data-aos-delay="300">
+            <a href="{% url 'liste_inventaires' %}" class="app-card" data-aos="zoom-in" data-aos-delay="300"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Effectuer un inventaire physique.">
                 <div class="app-icon bg-info-light">
-                    <i class="bi bi-clipboard-check"></i>
+                    <i class="bi bi-clipboard-check-fill"></i>
                 </div>
                 <div class="app-name">Inventaire</div>
                 <div class="app-badge">Vérification</div>
@@ -98,11 +96,11 @@
             </a>
         </div>
 
-        <!-- Écarts de stock -->
         <div class="col">
-            <a href="{% url 'liste_ecarts' %}" class="app-card" data-aos="zoom-in" data-aos-delay="350">
+            <a href="{% url 'liste_ecarts' %}" class="app-card" data-aos="zoom-in" data-aos-delay="350"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Analyser les écarts entre le stock théorique et physique.">
                 <div class="app-icon bg-dark-light">
-                    <i class="bi bi-exclamation-triangle"></i>
+                    <i class="bi bi-exclamation-triangle-fill"></i>
                 </div>
                 <div class="app-name">Écarts</div>
                 <div class="app-badge">Analyse</div>
@@ -110,12 +108,12 @@
             </a>
         </div>
 
-        <!-- Sauvegarde BD (Admin) -->
         {% if request.user.is_superuser %}
         <div class="col">
-            <a href="{% url 'telecharger_sauvegarde' %}" class="app-card" data-aos="zoom-in" data-aos-delay="400">
+            <a href="{% url 'telecharger_sauvegarde' %}" class="app-card" data-aos="zoom-in" data-aos-delay="400"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Télécharger une sauvegarde de la base de données.">
                 <div class="app-icon bg-purple-light">
-                    <i class="bi bi-database"></i>
+                    <i class="bi bi-database-fill-down"></i>
                 </div>
                 <div class="app-name">Sauvegarde</div>
                 <div class="app-badge">Base de données</div>
@@ -126,7 +124,6 @@
     </div>
 </div>
 
-<!-- Styles personnalisés -->
 <style>
     .dashboard-app {
         max-width: 1400px;
@@ -294,8 +291,8 @@
     }
 </style>
 
-<!-- Bibliothèque AOS pour les animations -->
 <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
 <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 <script>
@@ -328,15 +325,12 @@
     updateClock();
     setInterval(updateClock, 60000);
     
-    // Animation au survol améliorée
-    document.querySelectorAll('.app-card').forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.zIndex = '100';
-        });
-        
-        card.addEventListener('mouseleave', function() {
-            this.style.zIndex = '1';
-        });
+    // Initialisation des tooltips
+    document.addEventListener('DOMContentLoaded', function () {
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+      })
     });
 </script>
 {% endblock %}

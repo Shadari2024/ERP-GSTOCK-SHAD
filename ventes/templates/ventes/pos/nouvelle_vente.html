@@ -11,7 +11,10 @@
             <div class="d-flex justify-content-between align-items-center py-3">
                 <div class="d-flex align-items-center">
                     <i class="fas fa-cash-register fa-2x text-primary me-3"></i>
-                    <h1 class="h2 mb-0 fw-light">{% trans "Nouvelle Vente" %}</h1>
+                    <h1 class="h2 mb-0 fw-light">
+                        {% trans "Nouvelle Vente" %}
+                        <span class="text-muted fs-5 ms-2">{{ devise_principale_symbole }}</span>
+                    </h1>
                 </div>
                 <div class="d-flex gap-3">
                     <div class="d-flex flex-column align-items-end">
@@ -245,48 +248,6 @@
                         </div>
                     </div>
 
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-header bg-transparent py-3">
-                            <h5 class="card-title mb-0 d-flex align-items-center">
-                                <i class="fas fa-calculator me-2 text-primary"></i>
-                                {% trans "Calculatrice" %}
-                            </h5>
-                        </div>
-                        <div class="card-body p-2">
-                            <div class="calculator">
-                                <div class="calculator-display mb-2">
-                                    <input type="text" class="form-control text-end fs-4 py-2" readonly value="0">
-                                </div>
-                                <div class="calculator-buttons">
-                                    <div class="row g-1 mb-1">
-                                        <div class="col-3"><button type="button" class="btn btn-light w-100 py-2" data-value="7">7</button></div>
-                                        <div class="col-3"><button type="button" class="btn btn-light w-100 py-2" data-value="8">8</button></div>
-                                        <div class="col-3"><button type="button" class="btn btn-light w-100 py-2" data-value="9">9</button></div>
-                                        <div class="col-3"><button type="button" class="btn btn-light w-100 py-2" data-action="clear">C</button></div>
-                                    </div>
-                                    <div class="row g-1 mb-1">
-                                        <div class="col-3"><button type="button" class="btn btn-light w-100 py-2" data-value="4">4</button></div>
-                                        <div class="col-3"><button type="button" class="btn btn-light w-100 py-2" data-value="5">5</button></div>
-                                        <div class="col-3"><button type="button" class="btn btn-light w-100 py-2" data-value="6">6</button></div>
-                                        <div class="col-3"><button type="button" class="btn btn-light w-100 py-2" data-action="backspace">⌫</button></div>
-                                    </div>
-                                    <div class="row g-1 mb-1">
-                                        <div class="col-3"><button type="button" class="btn btn-light w-100 py-2" data-value="1">1</button></div>
-                                        <div class="col-3"><button type="button" class="btn btn-light w-100 py-2" data-value="2">2</button></div>
-                                        <div class="col-3"><button type="button" class="btn btn-light w-100 py-2" data-value="3">3</button></div>
-                                        <div class="col-3"><button type="button" class="btn btn-light w-100 py-2" data-operator="+">+</button></div>
-                                    </div>
-                                    <div class="row g-1 mb-1">
-                                        <div class="col-3"><button type="button" class="btn btn-light w-100 py-2" data-value="0">0</button></div>
-                                        <div class="col-3"><button type="button" class="btn btn-light w-100 py-2" data-value=".">.</button></div>
-                                        <div class="col-3"><button type="button" class="btn btn-light w-100 py-2" data-operator="=">=</button></div>
-                                        <div class="col-3"><button type="button" class="btn btn-light w-100 py-2" data-operator="-">-</button></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <div class="card shadow-sm">
                         <div class="card-header bg-transparent py-3">
                             <h5 class="card-title mb-0 d-flex align-items-center">
@@ -297,20 +258,20 @@
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <span class="text-muted">{% trans "Total HT:" %}</span>
-                                <span id="total-ht" class="fw-semibold">0,00 {{ devise_symbole }}</span>
+                                <span id="total-ht" class="fw-semibold">0,00 {{ devise_principale_symbole }}</span>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <span class="text-muted">{% trans "TVA:" %}</span>
-                                <span id="total-tva" class="fw-semibold">0,00 {{ devise_symbole }}</span>
+                                <span id="total-tva" class="fw-semibold">0,00 {{ devise_principale_symbole }}</span>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <span class="text-muted">{% trans "Remise:" %}</span>
-                                <span id="total-remise" class="fw-semibold text-danger">0,00 {{ devise_symbole }}</span>
+                                <span id="total-remise" class="fw-semibold text-danger">0,00 {{ devise_principale_symbole }}</span>
                             </div>
                             <hr>
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <span class="fw-bold">{% trans "Total TTC:" %}</span>
-                                <span id="total-ttc" class="fs-4 fw-bold text-success">0,00 {{ devise_symbole }}</span>
+                                <span id="total-ttc" class="fs-4 fw-bold text-success">0,00 {{ devise_principale_symbole }}</span>
                             </div>
 
                             <button type="submit" class="btn btn-success w-100 py-3 fs-5">
@@ -336,164 +297,152 @@
 {% block extra_css %}
 <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
 <style>
-:root {
-    --pos-primary: #4e73df;
-    --pos-secondary: #6f42c1;
-    --pos-success: #1cc88a;
-    --pos-light: #f8f9fc;
-}
-
-body {
-    background-color: #f5f7fb;
-}
-
-.pos-container {
-    max-width: 1920px;
-}
-
-.card {
-    border: none;
-    border-radius: 0.5rem;
-}
-
-.btn {
-    border-radius: 0.375rem;
-    transition: all 0.15s ease;
-}
-
-.btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-}
-
-.select2-container .select2-selection--single {
-    height: 38px;
-    padding: 5px;
-    border: 1px solid #d1d3e2;
-    border-radius: 0.375rem;
-}
-
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-    line-height: 26px;
-    padding-left: 0.75rem;
-}
-
-.select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 36px;
-    right: 6px;
-}
-
-.ligne-vente {
-    transition: all 0.3s ease;
-    border-bottom: 1px solid #eaecf4;
-}
-
-.ligne-vente.deleted {
-    opacity: 0.5;
-    background-color: #f8f9fa;
-    text-decoration: line-through;
-}
-
-.ligne-vente.deleted td {
-    color: #6c757d !important;
-}
-
-.form-control {
-    border: 1px solid #d1d3e2;
-    border-radius: 0.375rem;
-    padding: 0.375rem 0.75rem;
-}
-
-.form-control:focus {
-    border-color: #a7b3e6;
-    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
-}
-
-.input-group-text {
-    background-color: #f8f9fc;
-    border: 1px solid #d1d3e2;
-}
-
-.quantity-controls {
-    display: flex;
-    align-items: center;
-}
-
-.quantity-controls .btn {
-    padding: 0.25rem 0.5rem;
-    width: 32px;
-}
-
-.quantity-controls input {
-    text-align: center;
-    width: 45px;
-    margin: 0 0.25rem;
-}
-
-.calculator {
-    background-color: #f8f9fc;
-    border-radius: 0.5rem;
-    padding: 0.5rem;
-}
-
-.calculator-display input {
-    background-color: #fff;
-    font-weight: 500;
-}
-
-.calculator-buttons .btn {
-    font-weight: 500;
-    font-size: 1.1rem;
-}
-
-.calculator-buttons .btn:hover {
-    background-color: #e3e6f0;
-}
-
-#article-count {
-    font-size: 0.75rem;
-}
-
-.product-image-container {
-    width: 50px;
-    height: 50px;
-    border-radius: 0.375rem;
-    overflow: hidden;
-    flex-shrink: 0;
-}
-
-.product-image {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-/* Améliorations pour écran tactile */
-@media (max-width: 992px) {
-    .btn {
-        padding: 0.75rem 1rem;
-        min-height: 44px;
+    :root {
+        --pos-primary: #007bff; /* Bleu Bootstrap */
+        --pos-secondary: #6c757d; /* Gris Bootstrap */
+        --pos-success: #28a745; /* Vert Bootstrap */
+        --pos-light: #f8f9fa; /* Gris clair */
+        --pos-bg: #e9ecef; /* Arrière-plan plus doux */
     }
 
-    .form-control {
-        min-height: 44px;
-        font-size: 16px; /* Évite le zoom sur iOS */
+    body {
+        background-color: var(--pos-bg);
+        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    .pos-container {
+        max-width: 1920px;
+    }
+
+    .card {
+        border: 1px solid rgba(0, 0, 0, .125);
+        border-radius: .5rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+
+    .btn {
+        border-radius: .3rem;
+        transition: all 0.2s ease-in-out;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15);
     }
 
     .select2-container .select2-selection--single {
-        height: 44px;
+        height: 38px;
+        padding: 5px;
+        border: 1px solid #ced4da;
+        border-radius: .25rem;
     }
-}
 
-/* Animation pour l'ajout d'articles */
-@keyframes highlight {
-    0% { background-color: rgba(78, 115, 223, 0.2); }
-    100% { background-color: transparent; }
-}
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 26px;
+        padding-left: .75rem;
+    }
 
-.highlight {
-    animation: highlight 1s ease;
-}
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+        right: 6px;
+    }
+
+    .ligne-vente {
+        transition: all 0.3s ease;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .ligne-vente.deleted {
+        opacity: 0.6;
+        background-color: #f1f3f5;
+        text-decoration: line-through;
+    }
+
+    .ligne-vente.deleted td {
+        color: #868e96 !important;
+    }
+
+    .form-control {
+        border: 1px solid #ced4da;
+        border-radius: .25rem;
+        padding: 0.375rem 0.75rem;
+    }
+
+    .form-control:focus {
+        border-color: var(--pos-primary);
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    .input-group-text {
+        background-color: #e9ecef;
+        border: 1px solid #ced4da;
+    }
+
+    .quantity-controls {
+        display: flex;
+        align-items: center;
+    }
+
+    .quantity-controls .btn {
+        padding: 0.25rem 0.5rem;
+        width: 32px;
+    }
+
+    .quantity-controls input {
+        text-align: center;
+        width: 45px;
+        margin: 0 0.25rem;
+    }
+
+    #article-count {
+        font-size: 0.75rem;
+    }
+
+    .product-image-container {
+        width: 50px;
+        height: 50px;
+        border-radius: .375rem;
+        overflow: hidden;
+        flex-shrink: 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .product-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* Améliorations pour écran tactile */
+    @media (max-width: 992px) {
+        .btn {
+            padding: 0.75rem 1rem;
+            min-height: 44px;
+        }
+
+        .form-control {
+            min-height: 44px;
+            font-size: 16px; /* Évite le zoom sur iOS */
+        }
+
+        .select2-container .select2-selection--single {
+            height: 44px;
+        }
+    }
+
+    /* Animation pour l'ajout d'articles */
+    @keyframes highlight {
+        0% {
+            background-color: rgba(0, 123, 255, 0.1);
+        }
+        100% {
+            background-color: transparent;
+        }
+    }
+
+    .highlight {
+        animation: highlight 1s ease;
+    }
 </style>
 {% endblock %}
 
@@ -504,70 +453,20 @@ body {
 <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
 
 <script>
-$(document).ready(function() {
-    // Variable globale pour la devise
-    const DEVISE_SYMBOLE = "{{ devise_symbole|default:'€' }}";
+    $(document).ready(function() {
+        // Variable globale pour la devise
+        const DEVISE_SYMBOLE = "{{ devise_principale_symbole|default:'€' }}";
 
-    // Initialisation de Select2 pour les clients
-    $('#id_client').select2({
-        language: 'fr',
-        placeholder: "{% trans 'Sélectionnez un client' %}",
-        allowClear: true,
-        width: '100%'
-    });
-
-    // Initialisation de Select2 pour les produits
-    $('select[name$="-produit"]').select2({
-        language: 'fr',
-        placeholder: "{% trans 'Sélectionnez un produit' %}",
-        allowClear: true,
-        width: '100%',
-        minimumResultsForSearch: 3
-    });
-
-    // Mise à jour de l'heure en temps réel
-    function updateClock() {
-        const now = new Date();
-        $('#current-time').text(now.toLocaleTimeString('fr-FR'));
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
-
-    // Gestion de l'ajout de lignes
-    $('#ajouter-ligne').click(function() {
-        const formCount = parseInt($('#id_form-TOTAL_FORMS').val());
-        const template = $('.ligne-vente:first').clone();
-        const detailsTemplate = $('.ligne-details:first').clone();
-
-        // Réinitialiser tous les champs
-        template.find('input, select').val('');
-        template.removeClass('deleted highlight');
-        template.find('.product-image-container').hide();
-        template.find('.total-ligne').val('0,00 ' + DEVISE_SYMBOLE);
-        template.find('.product-info').text('');
-
-        // Mettre à jour les noms et IDs des champs
-        template.find(':input').each(function() {
-            const name = $(this).attr('name');
-            if (name) {
-                const newName = name.replace(/-\d+-/, `-${formCount}-`);
-                const newId = 'id_' + newName.replace(/-/g, '_');
-                $(this).attr({'name': newName, 'id': newId});
-            }
+        // Initialisation de Select2 pour les clients
+        $('#id_client').select2({
+            language: 'fr',
+            placeholder: "{% trans 'Sélectionnez un client' %}",
+            allowClear: true,
+            width: '100%'
         });
 
-        // Faire de même pour la ligne de détails
-        detailsTemplate.find(':input').each(function() {
-            const name = $(this).attr('name');
-            if (name) {
-                const newName = name.replace(/-\d+-/, `-${formCount}-`);
-                const newId = 'id_' + newName.replace(/-/g, '_');
-                $(this).attr({'name': newName, 'id': newId});
-            }
-        });
-
-        // Réinitialiser Select2 pour le nouveau produit
-        template.find('select').select2({
+        // Initialisation de Select2 pour les produits
+        $('select[name$="-produit"]').select2({
             language: 'fr',
             placeholder: "{% trans 'Sélectionnez un produit' %}",
             allowClear: true,
@@ -575,238 +474,212 @@ $(document).ready(function() {
             minimumResultsForSearch: 3
         });
 
-        $('#lignes-vente tbody').append(template);
-        $('#lignes-vente tbody').append(detailsTemplate);
-        $('#id_form-TOTAL_FORMS').val(formCount + 1);
-        updateArticleCount();
-        calculerTotal();
-
-        // Animation de mise en évidence
-        template.addClass('highlight');
-        setTimeout(() => template.removeClass('highlight'), 1000);
-    });
-
-    // Gestion de la suppression de lignes
-    $(document).on('click', '.supprimer-ligne', function() {
-        const ligne = $(this).closest('.ligne-vente');
-        const details = ligne.next('.ligne-details');
-        const deleteInput = ligne.find('input[id$="-DELETE"]');
-
-        if (deleteInput.length) {
-            deleteInput.val('on');
+        // Mise à jour de l'heure en temps réel
+        function updateClock() {
+            const now = new Date();
+            $('#current-time').text(now.toLocaleTimeString('fr-FR'));
         }
-        ligne.addClass('deleted');
-        details.hide();
-        updateArticleCount();
-        calculerTotal();
-    });
+        setInterval(updateClock, 1000);
+        updateClock();
 
-    // Incrémentation/décrémentation des quantités
-    $(document).on('click', '.increment-quantity', function() {
-        const input = $(this).closest('.ligne-vente').find('input[name$="-quantite"]');
-        let value = parseInt(input.val()) || 0;
-        input.val(value + 1).trigger('input');
-    });
+        // Gestion de l'ajout de lignes
+        $('#ajouter-ligne').click(function() {
+            const formCount = parseInt($('#id_form-TOTAL_FORMS').val());
+            const template = $('.ligne-vente:first').clone();
+            const detailsTemplate = $('.ligne-details:first').clone();
 
-    $(document).on('click', '.decrement-quantity', function() {
-        const input = $(this).closest('.ligne-vente').find('input[name$="-quantite"]');
-        let value = parseInt(input.val()) || 0;
-        if (value > 1) {
-            input.val(value - 1).trigger('input');
-        }
-    });
+            // Réinitialiser tous les champs
+            template.find('input, select').val('');
+            template.removeClass('deleted highlight');
+            template.find('.product-image-container').hide();
+            template.find('.total-ligne').val('0,00 ' + DEVISE_SYMBOLE);
+            template.find('.product-info').text('');
 
-    // Calcul automatique des totaux
-    function calculerTotal() {
-        let totalHT = 0;
-        let totalTVA = 0;
-        const remise = parseFloat($('#id_remise').val()) || 0;
+            // Mettre à jour les noms et IDs des champs
+            template.find(':input').each(function() {
+                const name = $(this).attr('name');
+                if (name) {
+                    const newName = name.replace(/-\d+-/, `-${formCount}-`);
+                    const newId = 'id_' + newName.replace(/-/g, '_');
+                    $(this).attr({
+                        'name': newName,
+                        'id': newId
+                    });
+                }
+            });
 
-        $('.ligne-vente:not(.deleted)').each(function() {
-            const quantite = parseFloat($(this).find('input[name$="-quantite"]').val()) || 0;
-            const prix = parseFloat($(this).find('input[name$="-prix_unitaire"]').val()) || 0;
-            const tauxTVA = parseFloat($(this).find('input[name$="-taux_tva"]').val()) || 0;
+            // Faire de même pour la ligne de détails
+            detailsTemplate.find(':input').each(function() {
+                const name = $(this).attr('name');
+                if (name) {
+                    const newName = name.replace(/-\d+-/, `-${formCount}-`);
+                    const newId = 'id_' + newName.replace(/-/g, '_');
+                    $(this).attr({
+                        'name': newName,
+                        'id': newId
+                    });
+                }
+            });
 
-            if (quantite > 0 && prix > 0) {
-                const montantHT = quantite * prix;
-                const montantTVA = montantHT * (tauxTVA / 100);
-                const totalLigne = montantHT + montantTVA;
+            // Réinitialiser Select2 pour le nouveau produit
+            template.find('select').select2({
+                language: 'fr',
+                placeholder: "{% trans 'Sélectionnez un produit' %}",
+                allowClear: true,
+                width: '100%',
+                minimumResultsForSearch: 3
+            });
 
-                $(this).find('.total-ligne').val(totalLigne.toFixed(2) + ' ' + DEVISE_SYMBOLE);
+            $('#lignes-vente tbody').append(template);
+            $('#lignes-vente tbody').append(detailsTemplate);
+            $('#id_form-TOTAL_FORMS').val(formCount + 1);
+            updateArticleCount();
+            calculerTotal();
 
-                totalHT += montantHT;
-                totalTVA += montantTVA;
-            } else {
-                $(this).find('.total-ligne').val('0,00 ' + DEVISE_SYMBOLE);
+            // Animation de mise en évidence
+            template.addClass('highlight');
+            setTimeout(() => template.removeClass('highlight'), 1000);
+        });
+
+        // Gestion de la suppression de lignes
+        $(document).on('click', '.supprimer-ligne', function() {
+            const ligne = $(this).closest('.ligne-vente');
+            const details = ligne.next('.ligne-details');
+            const deleteInput = ligne.find('input[id$="-DELETE"]');
+
+            if (deleteInput.length) {
+                deleteInput.val('on');
+            }
+            ligne.addClass('deleted');
+            details.hide();
+            updateArticleCount();
+            calculerTotal();
+        });
+
+        // Incrémentation/décrémentation des quantités
+        $(document).on('click', '.increment-quantity', function() {
+            const input = $(this).closest('.ligne-vente').find('input[name$="-quantite"]');
+            let value = parseInt(input.val()) || 0;
+            input.val(value + 1).trigger('input');
+        });
+
+        // Décrémentation de la quantité
+        $(document).on('click', '.decrement-quantity', function() {
+            const input = $(this).closest('.ligne-vente').find('input[name$="-quantite"]');
+            let value = parseInt(input.val()) || 0;
+            if (value > 1) {
+                input.val(value - 1).trigger('input');
+            } else if (value === 1) {
+                // Option de supprimer la ligne si la quantité atteint 0
+                $(this).closest('.ligne-vente').find('.supprimer-ligne').trigger('click');
             }
         });
 
-        const totalTTC = totalHT + totalTVA - remise;
+        // Calcul automatique des totaux
+        function calculerTotal() {
+            let totalHT = 0;
+            let totalTVA = 0;
+            const remise = parseFloat($('#id_remise').val()) || 0;
 
-        $('#total-ht').text(totalHT.toFixed(2) + ' ' + DEVISE_SYMBOLE);
-        $('#total-tva').text(totalTVA.toFixed(2) + ' ' + DEVISE_SYMBOLE);
-        $('#total-remise').text('-' + remise.toFixed(2) + ' ' + DEVISE_SYMBOLE);
-        $('#total-ttc').text(totalTTC.toFixed(2) + ' ' + DEVISE_SYMBOLE);
-    }
+            $('.ligne-vente:not(.deleted)').each(function() {
+                const quantite = parseFloat($(this).find('input[name$="-quantite"]').val()) || 0;
+                const prix = parseFloat($(this).find('input[name$="-prix_unitaire"]').val()) || 0;
+                const tauxTVA = parseFloat($(this).find('input[name$="-taux_tva"]').val()) || 0;
 
-    // Mise à jour du compteur d'articles
-    function updateArticleCount() {
-        const count = $('.ligne-vente:not(.deleted)').length;
-        $('#article-count').text(count);
-    }
+                if (quantite > 0 && prix > 0) {
+                    const montantHT = quantite * prix;
+                    const montantTVA = montantHT * (tauxTVA / 100);
+                    const totalLigne = montantHT + montantTVA;
 
-    // Auto-remplissage des prix et TVA lors de la sélection d'un produit
-    $(document).on('change', 'select[name$="-produit"]', function() {
-        const produitId = $(this).val();
-        const ligne = $(this).closest('.ligne-vente');
-        const details = ligne.next('.ligne-details');
-        const imageContainer = ligne.find('.product-image-container');
-        const productImage = ligne.find('.product-image');
-        const productInfo = ligne.find('.product-info');
+                    $(this).find('.total-ligne').val(totalLigne.toFixed(2) + ' ' + DEVISE_SYMBOLE);
 
-        if (produitId) {
-            // Afficher un indicateur de chargement
-            const prixInput = ligne.find('input[name$="-prix_unitaire"]');
-            const tvaInput = details.find('input[name$="-taux_tva"]');
-            const quantiteInput = ligne.find('input[name$="-quantite"]');
+                    totalHT += montantHT;
+                    totalTVA += montantTVA;
+                } else {
+                    $(this).find('.total-ligne').val('0,00 ' + DEVISE_SYMBOLE);
+                }
+            });
 
-            prixInput.prop('disabled', true);
-            tvaInput.prop('disabled', true);
+            const totalTTC = totalHT + totalTVA - remise;
 
-            // Récupérer les informations du produit
-            $.ajax({
-                url: '{% url "ventes:api_search_article" %}',
-                method: 'GET',
-                data: { id: produitId },
-                success: function(data) {
-                    if (data && data.length > 0) {
-                        const produit = data[0];
-                        prixInput.val(produit.prix_vente || 0).prop('disabled', false);
-                        tvaInput.val(produit.taux_tva || 20).prop('disabled', false);
+            $('#total-ht').text(totalHT.toFixed(2) + ' ' + DEVISE_SYMBOLE);
+            $('#total-tva').text(totalTVA.toFixed(2) + ' ' + DEVISE_SYMBOLE);
+            $('#total-remise').text('-' + remise.toFixed(2) + ' ' + DEVISE_SYMBOLE);
+            $('#total-ttc').text(totalTTC.toFixed(2) + ' ' + DEVISE_SYMBOLE);
+        }
 
-                        // Afficher la photo du produit
-                        if (produit.photo_url) {
-                            productImage.attr('src', produit.photo_url);
-                            productInfo.html(`${produit.nom}<br><span class="text-primary">{% trans "Stock" %}: ${produit.stock}</span>`);
-                            imageContainer.show();
+        // Mise à jour du compteur d'articles
+        function updateArticleCount() {
+            const count = $('.ligne-vente:not(.deleted)').length;
+            $('#article-count').text(count);
+        }
+
+        // Auto-remplissage des prix et TVA lors de la sélection d'un produit
+        $(document).on('change', 'select[name$="-produit"]', function() {
+            const produitId = $(this).val();
+            const ligne = $(this).closest('.ligne-vente');
+            const details = ligne.next('.ligne-details');
+            const imageContainer = ligne.find('.product-image-container');
+            const productImage = ligne.find('.product-image');
+            const productInfo = ligne.find('.product-info');
+
+            if (produitId) {
+                const prixInput = ligne.find('input[name$="-prix_unitaire"]');
+                const tvaInput = details.find('input[name$="-taux_tva"]');
+                const quantiteInput = ligne.find('input[name$="-quantite"]');
+
+                prixInput.prop('disabled', true);
+                tvaInput.prop('disabled', true);
+
+                $.ajax({
+                    url: '{% url "ventes:api_search_article" %}',
+                    method: 'GET',
+                    data: {
+                        id: produitId
+                    },
+                    success: function(data) {
+                        if (data && data.length > 0) {
+                            const produit = data[0];
+                            prixInput.val(produit.prix_vente || 0).prop('disabled', false);
+                            tvaInput.val(produit.taux_tva || 20).prop('disabled', false);
+
+                            if (produit.photo_url) {
+                                productImage.attr('src', produit.photo_url);
+                                productInfo.html(`${produit.nom}<br><span class="text-primary">{% trans "Stock" %}: ${produit.stock}</span>`);
+                                imageContainer.show();
+                            } else {
+                                imageContainer.hide();
+                                productInfo.text('');
+                            }
+
+                            quantiteInput.val(1);
                         } else {
+                            prixInput.val('').prop('disabled', false);
+                            tvaInput.val('').prop('disabled', false);
                             imageContainer.hide();
+                            productInfo.text('');
                         }
-
-                        // Auto-remplir la quantité à 1
-                        quantiteInput.val(1);
-                    } else {
-                        // Réinitialiser en cas d'erreur
+                        calculerTotal();
+                    },
+                    error: function() {
                         prixInput.val('').prop('disabled', false);
                         tvaInput.val('').prop('disabled', false);
                         imageContainer.hide();
                         productInfo.text('');
+                        calculerTotal();
                     }
-                    calculerTotal();
-                },
-                error: function() {
-                    prixInput.val('').prop('disabled', false);
-                    tvaInput.val('').prop('disabled', false);
-                    imageContainer.hide();
-                    productInfo.text('');
-                    calculerTotal();
-                }
-            });
-        } else {
-            // Réinitialiser si le produit est dé-sélectionné
-            ligne.find('input[name$="-prix_unitaire"]').val('');
-            details.find('input[name$="-taux_tva"]').val('');
-            ligne.find('input[name$="-quantite"]').val('');
-            imageContainer.hide();
-            productInfo.text('');
+                });
+            }
+        });
+
+        // Déclenche le calcul lors de la modification des champs importants
+        $(document).on('input', 'input[name$="-quantite"], input[name$="-prix_unitaire"], input[name$="-taux_tva"], #id_remise', function() {
             calculerTotal();
-        }
+        });
+
+        // Initialise le total et le compteur au chargement de la page
+        calculerTotal();
+        updateArticleCount();
     });
-
-    // Écouteurs d'événements pour le calcul
-    $(document).on('input', 'input[name$="-quantite"], input[name$="-prix_unitaire"], #id_remise', calculerTotal);
-    $(document).on('change', 'select[name$="-produit"]', calculerTotal);
-    
-    // Remplacement des `€` par le symbole de la devise
-    function replaceCurrencySymbols() {
-        $('.input-group-text:contains("€")').text(DEVISE_SYMBOLE);
-        $('#total-ht').text((parseFloat($('#total-ht').text()) || 0).toFixed(2) + ' ' + DEVISE_SYMBOLE);
-        $('#total-tva').text((parseFloat($('#total-tva').text()) || 0).toFixed(2) + ' ' + DEVISE_SYMBOLE);
-        $('#total-remise').text('-' + (parseFloat($('#total-remise').text().replace('-', '')) || 0).toFixed(2) + ' ' + DEVISE_SYMBOLE);
-        $('#total-ttc').text((parseFloat($('#total-ttc').text()) || 0).toFixed(2) + ' ' + DEVISE_SYMBOLE);
-    }
-    
-    // Appel initial et lors des mises à jour
-    replaceCurrencySymbols();
-    setTimeout(replaceCurrencySymbols, 500);
-
-    // Initialisation de la calculatrice
-    const calculatorDisplay = $('.calculator-display input');
-    let currentInput = '0';
-    let previousInput = null;
-    let operator = null;
-    let newNumber = true;
-
-    function updateDisplay(value) {
-        calculatorDisplay.val(value);
-    }
-
-    $('.calculator-buttons button').on('click', function() {
-        const value = $(this).data('value');
-        const action = $(this).data('action');
-        const op = $(this).data('operator');
-
-        if (value !== undefined) {
-            if (newNumber) {
-                currentInput = value === '.' ? '0.' : value.toString();
-                newNumber = false;
-            } else {
-                if (value === '.' && currentInput.includes('.')) {
-                    return;
-                }
-                currentInput += value;
-            }
-            updateDisplay(currentInput);
-        } else if (action === 'clear') {
-            currentInput = '0';
-            previousInput = null;
-            operator = null;
-            newNumber = true;
-            updateDisplay(currentInput);
-        } else if (action === 'backspace') {
-            currentInput = currentInput.slice(0, -1) || '0';
-            updateDisplay(currentInput);
-            if (currentInput === '0') {
-                newNumber = true;
-            }
-        } else if (op !== undefined) {
-            if (op === '=') {
-                if (previousInput !== null && operator !== null) {
-                    const result = eval(`${previousInput} ${operator} ${currentInput}`);
-                    currentInput = result.toString();
-                    previousInput = null;
-                    operator = null;
-                    newNumber = true;
-                    updateDisplay(currentInput);
-                }
-            } else {
-                if (previousInput !== null && operator !== null) {
-                    const result = eval(`${previousInput} ${operator} ${currentInput}`);
-                    previousInput = result;
-                    currentInput = '0';
-                    operator = op;
-                    newNumber = true;
-                    updateDisplay(previousInput.toString());
-                } else {
-                    previousInput = parseFloat(currentInput);
-                    operator = op;
-                    currentInput = '0';
-                    newNumber = true;
-                }
-            }
-        }
-    });
-
-});
 </script>
 {% endblock %}

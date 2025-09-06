@@ -3,7 +3,6 @@
 
 {% block content %}
 <div class="container-fluid px-4 py-4 dashboard-app">
-    <!-- En-tête style pro -->
     <div class="d-flex justify-content-between align-items-center mb-5 header-app">
         <div class="d-flex align-items-center">
             <div class="app-main-icon bg-primary">
@@ -24,11 +23,10 @@
         </div>
     </div>
 
-    <!-- Grille d'applications style pro -->
     <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 row-cols-xl-6 g-4 app-grid">
-        <!-- Clients -->
         <div class="col">
-            <a href="{% url 'liste_client' %}" class="app-card" data-aos="zoom-in" data-aos-delay="50">
+            <a href="{% url 'liste_client' %}" class="app-card" data-aos="zoom-in" data-aos-delay="50"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Gérer vos fiches clients et leur historique d'achat.">
                 <div class="app-icon bg-primary-light">
                     <i class="bi bi-people-fill"></i>
                 </div>
@@ -38,9 +36,9 @@
             </a>
         </div>
 
-        <!-- Vente au comptoir -->
         <div class="col">
-            <a href="{% url "ventes:pos_list" %}" class="app-card" data-aos="zoom-in" data-aos-delay="100">
+            <a href="{% url "ventes:pos_list" %}" class="app-card" data-aos="zoom-in" data-aos-delay="100"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Accéder au terminal de point de vente pour les encaissements.">
                 <div class="app-icon bg-success-light">
                     <i class="bi bi-cash-coin"></i>
                 </div>
@@ -50,9 +48,9 @@
             </a>
         </div>
 
-        <!-- Commandes -->
         <div class="col">
-            <a href="{% url 'ventes:commande_list' %}" class="app-card" data-aos="zoom-in" data-aos-delay="150">
+            <a href="{% url 'ventes:commande_list' %}" class="app-card" data-aos="zoom-in" data-aos-delay="150"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Suivre l'état de toutes les commandes clients.">
                 <div class="app-icon bg-secondary-light">
                     <i class="bi bi-cart-check-fill"></i>
                 </div>
@@ -62,9 +60,9 @@
             </a>
         </div>
 
-        <!-- Produits / Stock -->
         <div class="col">
-            <a href="{% url 'produits_par_categorie' %}" class="app-card" data-aos="zoom-in" data-aos-delay="200">
+            <a href="{% url 'produits_par_categorie' %}" class="app-card" data-aos="zoom-in" data-aos-delay="200"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Gérer les produits et l'inventaire en stock.">
                 <div class="app-icon bg-warning-light">
                     <i class="bi bi-boxes"></i>
                 </div>
@@ -74,9 +72,9 @@
             </a>
         </div>
 
-        <!-- Clôture de caisse -->
         <div class="col">
-            <a href="{% url 'cloturer_caisse' %}" class="app-card" data-aos="zoom-in" data-aos-delay="250">
+            <a href="{% url 'cloturer_caisse' %}" class="app-card" data-aos="zoom-in" data-aos-delay="250"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Effectuer la clôture de caisse quotidienne.">
                 <div class="app-icon bg-danger-light">
                     <i class="bi bi-cash-stack"></i>
                 </div>
@@ -86,9 +84,9 @@
             </a>
         </div>
 
-        <!-- Ventes du jour -->
         <div class="col">
-            <a href="{% url 'ventes_du_jour' %}" class="app-card" data-aos="zoom-in" data-aos-delay="300">
+            <a href="{% url 'ventes_du_jour' %}" class="app-card" data-aos="zoom-in" data-aos-delay="300"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Voir un rapport détaillé des ventes du jour.">
                 <div class="app-icon bg-info-light">
                     <i class="bi bi-receipt-cutoff"></i>
                 </div>
@@ -98,9 +96,9 @@
             </a>
         </div>
 
-        <!-- Paiements -->
         <div class="col">
-            <a href="{% url "ventes:facture_list" %}" class="app-card" data-aos="zoom-in" data-aos-delay="350">
+            <a href="{% url "ventes:facture_list" %}" class="app-card" data-aos="zoom-in" data-aos-delay="350"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Gérer toutes les factures clients.">
                 <div class="app-icon bg-dark-light">
                     <i class="bi bi-credit-card-fill"></i>
                 </div>
@@ -110,9 +108,9 @@
             </a>
         </div>
 
-        <!-- Factures -->
         <div class="col">
-            <a href="{% url 'ventes:devis_list' %}" class="app-card" data-aos="zoom-in" data-aos-delay="400">
+            <a href="{% url 'ventes:devis_list' %}" class="app-card" data-aos="zoom-in" data-aos-delay="400"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Créer et gérer les devis pour les clients.">
                 <div class="app-icon bg-info-light">
                     <i class="bi bi-file-earmark-text-fill"></i>
                 </div>
@@ -121,12 +119,12 @@
                 <div class="app-hover-effect"></div>
             </a>
         </div>
-        
-        <!-- Bons de livraison -->
+
         <div class="col">
-            <a href="{% url 'ventes:livraison_list' %}" class="app-card" data-aos="zoom-in" data-aos-delay="450">
+            <a href="{% url 'ventes:livraison_list' %}" class="app-card" data-aos="zoom-in" data-aos-delay="450"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Suivre les bons de livraison émis.">
                 <div class="app-icon bg-purple-light">
-                    <i class="bi bi-truck"></i>
+                    <i class="bi bi-truck-flatbed"></i>
                 </div>
                 <div class="app-name">Livraisons</div>
                 <div class="app-badge">Bons de livraison</div>
@@ -134,21 +132,9 @@
             </a>
         </div>
 
-        <!-- Clôture stock -->
         <div class="col">
-            <a href="{% url 'clotures_du_jour' %}" class="app-card" data-aos="zoom-in" data-aos-delay="500">
-                <div class="app-icon bg-orange-light">
-                    <i class="bi bi-clipboard-check"></i>
-                </div>
-                <div class="app-name">Clôture</div>
-                <div class="app-badge">Inventaire final</div>
-                <div class="app-hover-effect"></div>
-            </a>
-        </div>
-
-        <!-- Promotions -->
-        <div class="col">
-            <a href="{% url 'liste_promotions' %}" class="app-card" data-aos="zoom-in" data-aos-delay="550">
+            <a href="{% url 'liste_promotions' %}" class="app-card" data-aos="zoom-in" data-aos-delay="550"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Gérer les promotions et remises spéciales.">
                 <div class="app-icon bg-pink-light">
                     <i class="bi bi-percent"></i>
                 </div>
@@ -158,9 +144,9 @@
             </a>
         </div>
 
-        <!-- Retours produits -->
         <div class="col">
-            <a href="{% url 'liste_retours' %}" class="app-card" data-aos="zoom-in" data-aos-delay="600">
+            <a href="{% url 'liste_retours' %}" class="app-card" data-aos="zoom-in" data-aos-delay="600"
+               data-bs-toggle="tooltip" data-bs-placement="top" title="Traiter les retours de produits.">
                 <div class="app-icon bg-teal-light">
                     <i class="bi bi-arrow-return-left"></i>
                 </div>
@@ -172,7 +158,6 @@
     </div>
 </div>
 
-<!-- Styles personnalisés -->
 <style>
     .dashboard-app {
         max-width: 1400px;
@@ -340,8 +325,9 @@
     }
 </style>
 
-<!-- Bibliothèque AOS pour les animations -->
 <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 <script>
@@ -374,15 +360,12 @@
     updateClock();
     setInterval(updateClock, 60000);
     
-    // Animation au survol améliorée
-    document.querySelectorAll('.app-card').forEach(card => {
-        card.addEventListener('mouseenter', function() {
-            this.style.zIndex = '100';
-        });
-        
-        card.addEventListener('mouseleave', function() {
-            this.style.zIndex = '1';
-        });
+    // Initialisation des tooltips
+    document.addEventListener('DOMContentLoaded', function () {
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+      var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+      })
     });
 </script>
 {% endblock %}

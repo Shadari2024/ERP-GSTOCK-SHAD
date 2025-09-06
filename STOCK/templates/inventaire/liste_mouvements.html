@@ -4,7 +4,6 @@
 {% block content %}
 <div class="container-fluid py-4">
     <div class="card shadow-lg border-0">
-        <!-- En-tête -->
         <div class="card-header bg-gradient-dark text-white border-0">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
@@ -22,10 +21,8 @@
             </div>
         </div>
 
-        <!-- Filtres -->
         <div class="card-body border-bottom">
             <form method="get" class="row g-3">
-                <!-- Produit -->
                 <div class="col-md-3">
                     <label class="form-label">Produit</label>
                     <select name="produit" class="form-select">
@@ -38,7 +35,6 @@
                     </select>
                 </div>
 
-                <!-- Type de mouvement -->
                 <div class="col-md-2">
                     <label class="form-label">Type</label>
                     <select name="type" class="form-select">
@@ -48,7 +44,6 @@
                     </select>
                 </div>
 
-                <!-- Utilisateur -->
                 <div class="col-md-2">
                     <label class="form-label">Utilisateur</label>
                     <select name="utilisateur" class="form-select">
@@ -61,7 +56,6 @@
                     </select>
                 </div>
 
-                <!-- Dates -->
                 <div class="col-md-2">
                     <label class="form-label">Date de début</label>
                     <input type="date" name="date_debut" class="form-control" value="{{ filtres.date_debut }}">
@@ -85,7 +79,6 @@
                 </div>
             </form>
             
-            <!-- Résumé des filtres actifs -->
             {% if filtres.produit or filtres.type or filtres.utilisateur or filtres.date_debut or filtres.date_fin %}
             <div class="mt-3">
                 <small class="text-muted">Filtres actifs :</small>
@@ -123,7 +116,6 @@
             {% endif %}
         </div>
 
-        <!-- Tableau -->
         <div class="card-body p-0">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
@@ -172,9 +164,9 @@
                                 {% endif %}
                             </td>
                             <td class="fw-bold">{{ m.quantite }}</td>
-                            <td>{{ m.prix_unitaire_moment }} {{ devise_symbole }}</td>
+                            <td>{{ m.prix_unitaire_moment }} <span class="fw-bold">{{ devise_principale }}</span></td>
                             <td class="fw-bold text-{% if m.type_mouvement == 'entree' %}success{% else %}danger{% endif %}">
-                                {{ m.valeur_mouvement }} {{ devise_symbole }}
+                                {{ m.valeur_mouvement }} <span class="fw-bold">{{ devise_principale }}</span>
                             </td>
                             <td>
                                 <div class="d-flex align-items-center">
@@ -204,7 +196,6 @@
             </div>
         </div>
 
-        <!-- Pagination -->
         {% if mouvements.paginator.num_pages > 1 %}
         <div class="card-footer bg-white border-0">
             <div class="d-flex justify-content-between align-items-center">

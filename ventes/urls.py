@@ -102,7 +102,8 @@ urlpatterns = [
     path('pos/<int:pk>/session/<int:session_pk>/nouvelle-vente/', NouvelleVentePOSView.as_view(), name='nouvelle_vente_pos'),
      # URL simple pour commencer une nouvelle vente (gère la session automatiquement)
     path('pos/<int:pk>/nouvelle-vente/', NouvelleVenteSimpleView.as_view(), name='vente_create'),
-    
+     path('api/search-by-barcode/', api_search_by_barcode, name='api_search_by_barcode'),
+   
 
     # Statistiques
     path('statistiques/ventes/', StatistiquesVentesView.as_view(), name='statistiques_ventes'),

@@ -372,8 +372,13 @@ class FormulaireViewClient(EntrepriseAccessMixin, View):
         from django_countries import countries
         return list(countries)
 
-
-
+from django.shortcuts import get_object_or_404, render
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from django.contrib.auth.mixins import PermissionRequiredMixin
+from django.views import View
+from STOCK.models import Client
+from ventes.models import Commande  # IMPORT CORRIGÉ ICI
 
 @method_decorator([
     login_required,
@@ -382,10 +387,10 @@ class FormulaireViewClient(EntrepriseAccessMixin, View):
 class Detailsclient(EntrepriseAccessMixin, View):
     template_name = 'clients/clientdetails.html'
 
-    def get(self, request, my_id): # On utilise my_id comme discuté précédemment pour l'ID entier
+    def get(self, request, my_id):
         client = get_object_or_404(
             Client,
-            pk=my_id, # Recherche par clé primaire (id)
+            pk=my_id,
             entreprise=request.entreprise
         )
 
@@ -398,12 +403,8 @@ class Detailsclient(EntrepriseAccessMixin, View):
 
     def get_commandes(self, client):
         """Récupère l'historique des commandes du client"""
-        # Assurez-vous que votre modèle Commande a un champ 'client' (ForeignKey vers Client)
-        # et que vous avez importé le modèle Commande
-        return CommandeClient.objects.filter(client=client).order_by('-date_commande')
-
-
-
+        # CORRECTION: Utiliser Commande au lieu de CommandeClient
+        return Commande.objects.filter(client=client).order_by('-date')
 
 # Solution recommandée : Utiliser Django's DeleteView pour simplifier
 from django.views.generic.edit import DeleteView
@@ -3451,6 +3452,19 @@ def create_ecriture_comptable_inventaire(mouvement, quantite_ajustement, ecart, 
     except Exception as e:
         logger.error(f"✗ ERREUR CRITIQUE création écriture: {e}", exc_info=True)
         return None
+# Dans votre fichier STOCK/views.py
+
+import logging
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.contrib.auth import get_user_model
+from django.utils.dateparse import parse_date
+from .models import MouvementStock, Produit
+from parametres.models import ConfigurationSAAS # Assuming ConfigurationSAAS is here
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def liste_mouvements_stock(request):
@@ -3505,19 +3519,26 @@ def liste_mouvements_stock(request):
         mouvementstock__entreprise=request.entreprise
     ).distinct()
 
+    # Get main currency
+    devise_principale = 'USD' # Default currency
+    try:
+        config_saas = ConfigurationSAAS.objects.get(entreprise=request.entreprise)
+        devise_principale = config_saas.devise_principale.symbole
+    except (ConfigurationSAAS.DoesNotExist, AttributeError):
+        pass
+
     context = {
         'mouvements': page_obj,
         'produits': produits,
         'utilisateurs': utilisateurs,
         'filtres': request.GET.dict(),
         'total_mouvements': mouvements.count(),
-        'entreprise': request.entreprise
+        'entreprise': request.entreprise,
+        'devise_principale': devise_principale # Add the main currency to the context
     }
     
     logger.debug(f"Liste mouvements affichée: {len(page_obj)} résultats")
     return render(request, "inventaire/liste_mouvements.html", context)
-    
-
 #rapport mouvement
 @login_required
 @permission_required('STOCK.view_report', raise_exception=True)
