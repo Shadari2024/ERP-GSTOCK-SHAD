@@ -141,9 +141,9 @@ INSTALLED_APPS = [
     'security.apps.SecurityConfig',   
     'STOCK',
     'promotions.apps.PromotionsConfig',  # Utilisez la classe AppConfig
-    'achats.apps.AchatsConfig',  
+    'achats.apps.AchatsConfig', 
+    'comptabilite.apps.ComptabiliteConfig', 
     'ventes.apps.VentesConfig',
-    'comptabilite.apps.ComptabiliteConfig',
     'grh',  # Ajoutez cette ligne
     'django_countries',
     'django.contrib.humanize',

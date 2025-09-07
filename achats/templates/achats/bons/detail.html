@@ -122,7 +122,10 @@
                             <td>{{ ligne.ligne_commande.produit.reference|default:"-" }}</td>
                             <td class="text-end">{{ ligne.quantite|intcomma }}</td>
                             <td class="text-end">{{ ligne.ligne_commande.prix_unitaire|floatformat:2|intcomma }} {{ symbole_devise }}</td>
-                            <td class="text-end">{{ ligne.ligne_commande.get_total|floatformat:2|intcomma }} {{ symbole_devise }}</td>
+                            <td class="text-right" data-tooltip="Montant total hors taxes pour cette ligne de commande.">
+    {{ ligne.total_ht_ligne|floatformat:2 }}
+    {% if devise_principale %}{{ devise_principale.symbole }}{% endif %}
+</td>
                             <td>{{ ligne.conditionnement|default:"-" }}</td>
                         </tr>
                         {% empty %}

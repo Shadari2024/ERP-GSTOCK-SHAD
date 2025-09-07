@@ -130,12 +130,13 @@ from decimal import Decimal
 from django import forms
 from django.forms import BaseInlineFormSet, inlineformset_factory
 from django.db import models # Pour F()
-
-# Assurez-vous que ces imports sont corrects selon votre structure de projet
-# NOTE : J'ai mis 'stock' en minuscules. Si votre dossier d'application est 'STOCK' (en majuscules),
-# vous devrez changer 'stock.models' en 'STOCK.models' ici.
+from django import forms
+from django.forms import BaseInlineFormSet, inlineformset_factory
+from django.db import models
+from decimal import Decimal
 from .models import LigneBonReception, CommandeAchat, LigneCommandeAchat, BonReception
-from STOCK.models import Produit 
+from STOCK.models import Produit
+
 class LigneBonReceptionForm(forms.ModelForm):
     produit_commande = forms.CharField(
         label="Produit sur la Commande",
@@ -262,3 +263,58 @@ class ImportFournisseurForm(forms.Form):
                   "Colonnes requises : Nom, Code, Email, Telephone, Adresse.",
         widget=forms.FileInput(attrs={'accept': '.xlsx, .xls'})
     )
+    
+    
+    
+    
+from django import forms
+from .models import FactureFournisseur, PaiementFournisseur
+
+
+class FactureFournisseurForm(forms.ModelForm):
+    class Meta:
+        model = FactureFournisseur
+        fields = ['fournisseur', 'bon_reception', 'date_facture', 'date_echeance', 
+                 'montant_ht', 'montant_tva', 'montant_ttc', 'notes']
+        widgets = {
+            'date_facture': forms.DateInput(attrs={'type': 'date'}),
+            'date_echeance': forms.DateInput(attrs={'type': 'date'}),
+            'notes': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.entreprise = kwargs.pop('entreprise', None)
+        super().__init__(*args, **kwargs)
+        
+        if self.entreprise:
+            self.fields['fournisseur'].queryset = Fournisseur.objects.filter(entreprise=self.entreprise)
+            self.fields['bon_reception'].queryset = BonReception.objects.filter(entreprise=self.entreprise)
+
+
+class PaiementFournisseurForm(forms.ModelForm):
+    class Meta:
+        model = PaiementFournisseur
+        fields = ['mode_paiement', 'reference', 'montant', 'date_paiement', 'notes']
+        widgets = {
+            'date_paiement': forms.DateInput(attrs={'type': 'date'}),
+            'notes': forms.Textarea(attrs={'rows': 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.entreprise = kwargs.pop('entreprise', None)
+        self.facture_id = kwargs.pop('facture_id', None)
+        super().__init__(*args, **kwargs)
+        
+        if self.facture_id:
+            self.facture = FactureFournisseur.objects.get(id=self.facture_id)
+            self.fields['montant'].widget.attrs['max'] = self.facture.reste_a_payer
+
+    def clean_montant(self):
+        montant = self.cleaned_data.get('montant')
+        if self.facture_id:
+            facture = FactureFournisseur.objects.get(id=self.facture_id)
+            if montant > facture.reste_a_payer:
+                raise forms.ValidationError(
+                    f"Le montant ne peut pas dépasser le reste à payer: {facture.reste_a_payer}"
+                )
+        return montant    

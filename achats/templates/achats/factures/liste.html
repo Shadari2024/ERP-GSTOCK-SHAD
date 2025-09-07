@@ -1,0 +1,80 @@
+{% extends "achats/base_achats.html" %}
+{% load static %}
+
+{% block page_title %}Liste des Factures Fournisseurs{% endblock %}
+
+{% block achats_content %}
+<div class="erp-factures-container">
+    <div class="erp-content-header">
+        <h2 class="erp-content-title">Factures Fournisseurs</h2>
+        
+        <div class="erp-content-actions">
+            {% if perms.achats.add_facturefournisseur %}
+            <a href="{% url 'achats:creer_facture' %}" class="erp-btn erp-btn-primary">
+                <i class="bi bi-plus-circle"></i> Nouvelle Facture
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="erp-table-container">
+        <table class="erp-table">
+            <thead>
+                <tr>
+                    <th>N° Facture</th>
+                    <th>Fournisseur</th>
+                    <th>Date Facture</th>
+                    <th>Échéance</th>
+                    <th>Montant TTC</th>
+                    <th>Reste à payer</th>
+                    <th>Statut</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for facture in factures %}
+                <tr>
+                    <td>{{ facture.numero_facture }}</td>
+                    <td>{{ facture.fournisseur.nom }}</td>
+                    <td>{{ facture.date_facture|date:"d/m/Y" }}</td>
+                    <td class="{% if facture.est_en_retard %}text-danger{% endif %}">
+                        {{ facture.date_echeance|date:"d/m/Y" }}
+                    </td>
+                    <td class="erp-amount">{{ facture.montant_ttc }} {{ devise_principale_symbole }}</td>
+                    <td class="erp-amount">{{ facture.reste_a_payer }} {{ devise_principale_symbole }}</td>
+                    <td>
+                        <span class="erp-status-badge erp-status-{{ facture.statut }}">
+                            {{ facture.get_statut_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="erp-actions">
+                            <a href="{% url 'achats:detail_facture' facture.pk %}" class="erp-action-btn erp-action-view">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if perms.achats.change_facturefournisseur %}
+                            <a href="{% url 'achats:modifier_facture' facture.pk %}" class="erp-action-btn erp-action-edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% endif %}
+                            {% if facture.reste_a_payer > 0 and perms.achats.add_paiementfournisseur %}
+                            <a href="{% url 'achats:creer_paiement' facture.pk %}" class="erp-action-btn erp-action-paiement">
+                                <i class="bi bi-cash-coin"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="erp-empty">
+                        <i class="bi bi-receipt"></i>
+                        <span>Aucune facture trouvée</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

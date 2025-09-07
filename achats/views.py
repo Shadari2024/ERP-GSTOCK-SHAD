@@ -4,8 +4,13 @@ from django.urls import reverse_lazy
 from django.db.models import Sum
 from parametres.mixins import EntrepriseAccessMixin
 from django.http import HttpResponseRedirect
-# In your views.py file
-
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.contrib.messages.views import SuccessMessageMixin
+from django.urls import reverse_lazy
+from django.views.generic import CreateView, UpdateView, DetailView, DeleteView
+from django.db.models import ProtectedError
+from django.shortcuts import redirect
+from django.contrib import messages
 import logging
 import io
 from decimal import Decimal
@@ -1265,71 +1270,73 @@ class CreerFournisseurView(EntrepriseAccessMixin, CreateView):
         kwargs = super().get_form_kwargs()
         kwargs['entreprise'] = self.request.entreprise
         return kwargs
-
-class ModifierFournisseurView(EntrepriseAccessMixin, UpdateView):
+class CreerFournisseurView(LoginRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, CreateView):
     model = Fournisseur
     form_class = FournisseurForm
     template_name = 'achats/fournisseurs/form.html'
+    permission_required = 'achats.add_fournisseur'
     success_url = reverse_lazy('achats:liste_fournisseurs')
-
-    def get_queryset(self):
-        return super().get_queryset().filter(
-            entreprise=self.request.entreprise
-        )
+    success_message = "Le fournisseur '%(nom)s' a été créé avec succès."
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['entreprise'] = self.request.entreprise
+        kwargs['entreprise'] = self.request.user.entreprise
         return kwargs
-
-class DetailFournisseurView(EntrepriseAccessMixin, DetailView):
-    model = Fournisseur
-    template_name = 'achats/fournisseurs/detail.html'
-
-    def get_queryset(self):
-        return super().get_queryset().filter(
-            entreprise=self.request.entreprise
-        )
         
+    def form_valid(self, form):
+        form.instance.entreprise = self.request.user.entreprise
+        return super().form_valid(form)
 
 
-class SupprimerFournisseurView(EntrepriseAccessMixin, DeleteView):
+class ModifierFournisseurView(LoginRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
     model = Fournisseur
-    template_name = 'achats/fournisseurs/delete.html'
+    form_class = FournisseurForm
+    template_name = 'achats/fournisseurs/form.html'
+    permission_required = 'achats.change_fournisseur'
     success_url = reverse_lazy('achats:liste_fournisseurs')
+    success_message = "Le fournisseur '%(nom)s' a été modifié avec succès."
 
     def get_queryset(self):
         # Assurez-vous que seuls les fournisseurs de l'entreprise actuelle peuvent être manipulés
-        return super().get_queryset().filter(
-            entreprise=self.request.entreprise
-        )
+        return super().get_queryset().filter(entreprise=self.request.user.entreprise)
 
-    def post(self, request, *args, **kwargs):
-        self.object = self.get_object() # Récupère l'objet Fournisseur que l'on essaie de supprimer
-        
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['entreprise'] = self.request.user.entreprise
+        return kwargs
+
+class SupprimerFournisseurView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    model = Fournisseur
+    template_name = 'achats/fournisseurs/delete.html'
+    permission_required = 'achats.delete_fournisseur'
+    success_url = reverse_lazy('achats:liste_fournisseurs')
+
+    def get_queryset(self):
+        return super().get_queryset().filter(entreprise=self.request.user.entreprise)
+
+    def form_valid(self, form):
         try:
-            # Tente de supprimer l'objet
-            return super().post(request, *args, **kwargs)
-        except ProtectedError as e:
-            # Si une ProtectedError est levée (le fournisseur a des objets liés)
+            # Tente de supprimer l'objet et affiche un message de succès
+            response = super().form_valid(form)
+            messages.success(self.request, f"Le fournisseur '{self.object.nom}' a été supprimé avec succès.")
+            return response
+        except ProtectedError:
+            # En cas d'erreur de protection (objets liés)
             fournisseur = self.object
-            
-            # Correction ici : Utilisez le related_name correct 'commandes'
-            nombre_achats_lies = fournisseur.commandes.count() 
-
-            # Construire le message personnalisé
-            message = (
-                f"Impossible de supprimer le fournisseur '{fournisseur.nom}'. "
-                f"Il est lié à {nombre_achats_lies} commande{'s' if nombre_achats_lies > 1 else ''} d'achat. "
-                "Veuillez d'abord supprimer ou modifier les commandes d'achat associées à ce fournisseur."
+            messages.error(
+                self.request,
+                f"Impossible de supprimer le fournisseur '{fournisseur.nom}' car il a des commandes liées. "
+                "Veuillez d'abord supprimer les commandes d'achat associées."
             )
-            messages.error(request, message)
-            
-            # Redirigez l'utilisateur vers la page de détails du fournisseur ou la liste des fournisseurs
-            return redirect('achats:detail_fournisseur', pk=fournisseur.pk) # Ou 'achats:liste_fournisseurs'
+            return redirect('achats:detail_fournisseur', pk=fournisseur.pk)
 
-# --- VUES POUR LES BONS DE RÉCEPTION ---
+class DetailFournisseurView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+    model = Fournisseur
+    template_name = 'achats/fournisseurs/detail.html'
+    permission_required = 'achats.view_fournisseur'
 
+    def get_queryset(self):
+        return super().get_queryset().filter(entreprise=self.request.user.entreprise)
 
 logger = logging.getLogger(__name__)
 
@@ -1345,21 +1352,21 @@ class ListeBonsView(EntrepriseAccessMixin, ListView):
         return super().get_queryset().filter(
             entreprise=self.request.entreprise
         ).select_related('commande', 'commande__fournisseur', 'created_by')
-
-
 import logging
-logger = logging.getLogger(__name__)
 from django.db import transaction
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
-from django.views.generic import CreateView
-from django.db.models import F, Sum
+from django.views.generic import CreateView, View
+from django.db.models import F
 from decimal import Decimal
-from comptabilite.models import *
+from .models import BonReception, LigneBonReception, CommandeAchat, LigneCommandeAchat
+from .forms import LigneBonReceptionFormSet
 
-class CreerBonView(EntrepriseAccessMixin, CreateView):
+logger = logging.getLogger(__name__)
+
+class CreerBonView(CreateView,EntrepriseAccessMixin,LoginRequiredMixin, PermissionRequiredMixin):
     model = BonReception
     fields = ['numero_bon', 'date_reception', 'notes']
     template_name = 'achats/bons/form.html'
@@ -1440,27 +1447,43 @@ class CreerBonView(EntrepriseAccessMixin, CreateView):
             formset.instance = self.object 
             lignes_reception_a_sauver = formset.save(commit=False)
             
-            total_montant_bon = Decimal('0')
-
             for ligne_reception in lignes_reception_a_sauver:
                 if ligne_reception.quantite > Decimal('0') and not getattr(ligne_reception, 'DELETE', False): 
                     try:
                         ligne_commande = ligne_reception.ligne_commande
                         produit_recu = ligne_commande.produit
 
-                        # Calcul du montant pour cette ligne
-                        montant_ligne = ligne_reception.quantite * ligne_commande.prix_unitaire
-                        total_montant_bon += montant_ligne
-
                         # Mise à jour du stock
-                        if produit_recu.ajouter_stock(ligne_reception.quantite): 
+                        if hasattr(produit_recu, 'ajouter_stock'):
+                            if produit_recu.ajouter_stock(ligne_reception.quantite): 
+                                messages.info(self.request, f"Stock de '{produit_recu.nom}' augmenté de {ligne_reception.quantite.normalize()}.")
+                                
+                                # Mise à jour de la quantité livrée
+                                LigneCommandeAchat.objects.filter(pk=ligne_commande.pk).update(
+                                    quantite_livree=F('quantite_livree') + ligne_reception.quantite
+                                )
+                                ligne_commande.refresh_from_db() 
+                                
+                                # Mise à jour du statut de livraison
+                                if ligne_commande.quantite_livree >= ligne_commande.quantite:
+                                    ligne_commande.livree = True
+                                    ligne_commande.save(update_fields=['livree'])
+                                    messages.info(self.request, f"Ligne de commande pour '{produit_recu.nom}' est maintenant entièrement livrée.")
+                                
+                                ligne_reception.save() 
+                            else:
+                                raise Exception(f"Impossible d'ajouter le stock pour '{produit_recu.nom}'. Quantité reçue invalide.")
+                        else:
+                            # Méthode alternative si ajouter_stock n'existe pas
+                            produit_recu.quantite_stock += ligne_reception.quantite
+                            produit_recu.save()
                             messages.info(self.request, f"Stock de '{produit_recu.nom}' augmenté de {ligne_reception.quantite.normalize()}.")
                             
                             # Mise à jour de la quantité livrée
                             LigneCommandeAchat.objects.filter(pk=ligne_commande.pk).update(
                                 quantite_livree=F('quantite_livree') + ligne_reception.quantite
                             )
-                            ligne_commande.refresh_from_db() 
+                            ligne_commande.refresh_from_db()
                             
                             # Mise à jour du statut de livraison
                             if ligne_commande.quantite_livree >= ligne_commande.quantite:
@@ -1468,16 +1491,12 @@ class CreerBonView(EntrepriseAccessMixin, CreateView):
                                 ligne_commande.save(update_fields=['livree'])
                                 messages.info(self.request, f"Ligne de commande pour '{produit_recu.nom}' est maintenant entièrement livrée.")
                             
-                            ligne_reception.save() 
-                        else:
-                            raise Exception(f"Impossible d'ajouter le stock pour '{produit_recu.nom}'. Quantité reçue invalide.")
+                            ligne_reception.save()
+                            
                     except Exception as e:
                         logger.error(f"Erreur lors de la mise à jour du stock pour BonReception {self.object.pk}: {e}", exc_info=True)
                         messages.error(self.request, f"Erreur de stock pour {ligne_reception.ligne_commande.produit.nom}: {e}")
                         raise 
-
-            # CRÉATION DES ÉCRITURES COMPTABLES
-            self.create_ecritures_comptables(self.object, total_montant_bon)
 
             # Mise à jour du statut de la commande
             self.commande.refresh_from_db()
@@ -1499,188 +1518,6 @@ class CreerBonView(EntrepriseAccessMixin, CreateView):
             messages.success(self.request, 'Bon de réception créé et stock mis à jour avec succès.')
             return super().form_valid(form)
     
-    def create_ecritures_comptables(self, bon_reception, montant_total):
-        """
-        Crée les écritures comptables pour un bon de réception
-        selon le plan comptable OHADA
-        """
-        try:
-            from comptabilite.models import JournalComptable, PlanComptableOHADA, EcritureComptable, LigneEcriture
-            
-            entreprise = self.request.entreprise
-            fournisseur = bon_reception.commande.fournisseur
-            
-            # Vérifier et initialiser le plan comptable si nécessaire
-            if not PlanComptableOHADA.objects.filter(entreprise=entreprise).exists():
-                PlanComptableOHADA.initialiser_plan_comptable(entreprise)
-            
-            if not JournalComptable.objects.filter(entreprise=entreprise).exists():
-                JournalComptable.initialiser_journaux(entreprise)
-            
-            # Journal des achats
-            journal, created = JournalComptable.objects.get_or_create(
-                code='ACH',
-                entreprise=entreprise,
-                defaults={
-                    'intitule': 'Journal des Achats',
-                    'type_journal': 'achat'
-                }
-            )
-            
-            # Récupérer les comptes comptables avec création si nécessaire
-            compte_stock, created = PlanComptableOHADA.objects.get_or_create(
-                numero='31',
-                entreprise=entreprise,
-                defaults={
-                    'classe': '3',
-                    'intitule': 'Stocks de matières premières',
-                    'type_compte': 'actif',
-                    'description': 'Stocks de matières premières et fournitures'
-                }
-            )
-            
-            compte_fournisseur, created = PlanComptableOHADA.objects.get_or_create(
-                numero='401',
-                entreprise=entreprise,
-                defaults={
-                    'classe': '4',
-                    'intitule': 'Fournisseurs',
-                    'type_compte': 'passif',
-                    'description': 'Compte fournisseurs - dettes fournisseurs'
-                }
-            )
-            
-            # Générer un numéro d'écriture
-            numero_ecriture = self.generate_ecriture_number(journal)
-            
-            # Créer l'écriture comptable SANS le champ bon_reception_lie
-            ecriture = EcritureComptable.objects.create(
-                journal=journal,
-                numero=numero_ecriture,
-                date_ecriture=bon_reception.date_reception,
-                date_comptable=bon_reception.date_reception,
-                libelle=f"Réception bon {bon_reception.numero_bon} - {fournisseur.nom}",
-                piece_justificative=f"BR-{bon_reception.numero_bon}",  # Utiliser le numéro de bon comme pièce justificative
-                montant_devise=montant_total,
-                entreprise=entreprise,
-                created_by=self.request.user
-                # Ne pas inclure bon_reception_lie si le champ n'existe pas
-            )
-            
-            # Ligne au débit : Stock (augmentation de l'actif)
-            LigneEcriture.objects.create(
-                ecriture=ecriture,
-                compte=compte_stock,
-                libelle=f"Entrée stock - {fournisseur.nom}",
-                debit=montant_total,
-                credit=0,
-                entreprise=entreprise
-            )
-            
-            # Ligne au crédit : Fournisseurs (dette fournisseur)
-            LigneEcriture.objects.create(
-                ecriture=ecriture,
-                compte=compte_fournisseur,
-                libelle=f"Dette fournisseur - {fournisseur.nom}",
-                debit=0,
-                credit=montant_total,
-                entreprise=entreprise
-            )
-            
-            logger.info(f"Écriture comptable {numero_ecriture} créée pour le bon de réception {bon_reception.numero_bon}")
-            
-            return ecriture
-            
-        except ImportError:
-            logger.warning("Module comptabilité non installé")
-            return None
-        except Exception as e:
-            logger.error(f"Erreur création écriture comptable: {e}", exc_info=True)
-            messages.warning(self.request, "Paiement enregistré mais erreur lors de la création de l'écriture comptable.")
-            return None
-
-    def create_ecriture_grand_livre(self, bon_reception, montant_total, fournisseur):
-        """
-        Crée une écriture supplémentaire dans le grand livre
-        """
-        try:
-            from comptabilite.models import JournalComptable, PlanComptableOHADA, EcritureComptable, LigneEcriture
-            
-            entreprise = self.request.entreprise
-            
-            # Journal du grand livre
-            journal_gl, created = JournalComptable.objects.get_or_create(
-                code='GL',
-                entreprise=entreprise,
-                defaults={
-                    'intitule': 'Grand Livre',
-                    'type_journal': 'divers'
-                }
-            )
-            
-            # Comptes pour le grand livre
-            compte_stock = PlanComptableOHADA.objects.get(numero='31', entreprise=entreprise)
-            compte_fournisseur = PlanComptableOHADA.objects.get(numero='401', entreprise=entreprise)
-            
-            # Numéro d'écriture pour le grand livre
-            numero_ecriture_gl = f"GL-{bon_reception.numero_bon}"
-            
-            # Écriture du grand livre
-            ecriture_gl = EcritureComptable.objects.create(
-                journal=journal_gl,
-                numero=numero_ecriture_gl,
-                date_ecriture=bon_reception.date_reception,
-                date_comptable=bon_reception.date_reception,
-                libelle=f"GL - Réception {bon_reception.numero_bon}",
-                piece_justificative=bon_reception.numero_bon,
-                montant_devise=montant_total,
-                entreprise=entreprise,
-                created_by=self.request.user
-            )
-            
-            # Lignes d'écriture pour le grand livre
-            LigneEcriture.objects.create(
-                ecriture=ecriture_gl,
-                compte=compte_stock,
-                libelle=f"Stock - {fournisseur.nom}",
-                debit=montant_total,
-                credit=0,
-                entreprise=entreprise
-            )
-            
-            LigneEcriture.objects.create(
-                ecriture=ecriture_gl,
-                compte=compte_fournisseur,
-                libelle=f"Fournisseur - {fournisseur.nom}",
-                debit=0,
-                credit=montant_total,
-                entreprise=entreprise
-            )
-            
-            logger.info(f"Écriture grand livre {numero_ecriture_gl} créée")
-            
-        except Exception as e:
-            logger.error(f"Erreur création écriture grand livre: {e}")
-
-    def generate_ecriture_number(self, journal):
-        """Génère un numéro d'écriture séquentiel"""
-        today = timezone.now().date()
-        last_ecriture = EcritureComptable.objects.filter(
-            journal=journal,
-            date_ecriture=today
-        ).order_by('-numero').first()
-        
-        sequence = 1
-        if last_ecriture:
-            try:
-                parts = last_ecriture.numero.split('-')
-                if len(parts) >= 3:
-                    sequence = int(parts[-1]) + 1
-            except (ValueError, IndexError):
-                pass
-        
-        return f"{journal.code}-{today.strftime('%Y%m%d')}-{sequence:04d}"
-
     def get_success_url(self):
         return reverse_lazy('achats:detail_bon', kwargs={'pk': self.object.pk})
 
@@ -1695,7 +1532,119 @@ class CreerBonView(EntrepriseAccessMixin, CreateView):
         else:
             new_num = 1
         return f"BR-{new_num:05d}"
+
+
+def creer_bon_reception_automatique(commande_id, request):
+    """
+    Crée automatiquement un bon de réception pour une commande
+    avec toutes les lignes livrées en totalité
+    """
+    try:
+        commande = CommandeAchat.objects.get(
+            pk=commande_id, 
+            entreprise=request.entreprise
+        )
+        
+        with transaction.atomic():
+            # Créer le bon de réception
+            bon = BonReception.objects.create(
+                entreprise=request.entreprise,
+                commande=commande,
+                numero_bon=generer_numero_bon(request.entreprise),
+                date_reception=timezone.now().date(),
+                created_by=request.user
+            )
+            
+            # Créer les lignes de réception pour chaque ligne de commande
+            for ligne_commande in commande.lignes.all():
+                quantite_a_livrer = ligne_commande.quantite - ligne_commande.quantite_livree
+                
+                if quantite_a_livrer > 0:
+                    # Créer la ligne de réception
+                    LigneBonReception.objects.create(
+                        bon=bon,
+                        ligne_commande=ligne_commande,
+                        quantite=quantite_a_livrer,
+                        conditionnement="Livraison complète"
+                    )
+                    
+                    # Mettre à jour le stock
+                    if hasattr(ligne_commande.produit, 'ajouter_stock'):
+                        ligne_commande.produit.ajouter_stock(quantite_a_livrer)
+                    else:
+                        # Méthode alternative
+                        ligne_commande.produit.quantite_stock += quantite_a_livrer
+                        ligne_commande.produit.save()
+                    
+                    # Mettre à jour la quantité livrée
+                    ligne_commande.quantite_livree = ligne_commande.quantite
+                    ligne_commande.livree = True
+                    ligne_commande.save()
+            
+            # Mettre à jour le statut de la commande
+            commande.statut = 'livree'
+            commande.save()
+            
+            messages.success(request, f"Bon de réception {bon.numero_bon} créé automatiquement avec succès.")
+            return bon
+            
+    except Exception as e:
+        logger.error(f"Erreur création bon réception automatique: {e}")
+        messages.error(request, f"Erreur lors de la création automatique du bon de réception: {str(e)}")
+        return None
+
+
+def generer_numero_bon(entreprise):
+    """Génère un numéro de bon de réception unique"""
+    last_bon = BonReception.objects.filter(
+        entreprise=entreprise
+    ).order_by('-created_at').first()
     
+    if last_bon and last_bon.numero_bon:
+        try:
+            last_num = int(last_bon.numero_bon.split('-')[-1])
+            new_num = last_num + 1
+        except (ValueError, IndexError):
+            new_num = 1
+    else:
+        new_num = 1
+    
+    return f"BR-{new_num:05d}"
+
+
+class CreerBonAutomatique(View,EntrepriseAccessMixin,LoginRequiredMixin ):
+    """Vue pour créer automatiquement un bon de réception complet"""
+    
+    def post(self, request, *args, **kwargs):
+        commande_id = kwargs.get('commande_pk')
+        
+        bon = creer_bon_reception_automatique(commande_id, request)
+        
+        if bon:
+            return redirect('achats:detail_bon', pk=bon.pk)
+        else:
+            return redirect('achats:detail_commande', pk=commande_id)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class DetailBonView(EntrepriseAccessMixin, DetailView):
     model = BonReception
     template_name = 'achats/bons/detail.html'
@@ -1752,10 +1701,6 @@ def diagnostic_comptabilite(request):
     return render(request, 'comptabilite/diagnostic.html', context)
 
 
-
-
-
-
 # Dans vos views.py
 from django.shortcuts import redirect
 from django.contrib import messages
@@ -1777,3 +1722,141 @@ def init_comptabilite_manuelle(request):
         messages.error(request, f"Erreur lors de l'initialisation: {str(e)}")
     
     return redirect('comptabilite:diagnostic_comptabilite')
+
+
+
+
+
+from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView
+from django.urls import reverse_lazy
+from django.contrib import messages
+from django.db import transaction
+from django.http import HttpResponseRedirect
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.forms import modelformset_factory
+
+from .models import FactureFournisseur, PaiementFournisseur
+from .forms import FactureFournisseurForm, PaiementFournisseurForm
+from parametres.models import ConfigurationSAAS
+
+class FactureListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    model = FactureFournisseur
+    template_name = 'achats/factures/liste.html'
+    permission_required = 'achats.view_facturefournisseur'
+    context_object_name = 'factures'
+    paginate_by = 20
+
+    def get_queryset(self):
+        return FactureFournisseur.objects.filter(
+            entreprise=self.request.user.entreprise
+        ).select_related('fournisseur', 'bon_reception')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Récupérer la devise principale
+        try:
+            config_saas = ConfigurationSAAS.objects.get(entreprise=self.request.user.entreprise)
+            devise_symbole = config_saas.devise_principale.symbole if config_saas.devise_principale else "€"
+        except:
+            devise_symbole = "€"
+        
+        context["devise_principale_symbole"] = devise_symbole
+        return context
+
+
+class FactureCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = FactureFournisseur
+    form_class = FactureFournisseurForm
+    template_name = 'achats/factures/form.html'
+    permission_required = 'achats.add_facturefournisseur'
+    success_url = reverse_lazy('achats:liste_factures')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['entreprise'] = self.request.user.entreprise
+        return kwargs
+
+    def form_valid(self, form):
+        facture = form.save(commit=False)
+        facture.entreprise = self.request.user.entreprise
+        facture.created_by = self.request.user
+        facture.save()
+        
+        messages.success(self.request, 'Facture créée avec succès.')
+        return HttpResponseRedirect(self.success_url)
+
+
+class FactureDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+    model = FactureFournisseur
+    template_name = 'achats/factures/detail.html'
+    permission_required = 'achats.view_facturefournisseur'
+    context_object_name = 'facture'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Récupérer la devise principale
+        try:
+            config_saas = ConfigurationSAAS.objects.get(entreprise=self.request.user.entreprise)
+            devise_symbole = config_saas.devise_principale.symbole if config_saas.devise_principale else "€"
+        except:
+            devise_symbole = "€"
+        
+        context["devise_principale_symbole"] = devise_symbole
+        context["paiements"] = self.object.paiements.all()
+        return context
+
+
+class FactureUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = FactureFournisseur
+    form_class = FactureFournisseurForm
+    template_name = 'achats/factures/form.html'
+    permission_required = 'achats.change_facturefournisseur'
+    success_url = reverse_lazy('achats:liste_factures')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['entreprise'] = self.request.user.entreprise
+        return kwargs
+
+
+class PaiementCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = PaiementFournisseur
+    form_class = PaiementFournisseurForm
+    template_name = 'achats/paiements/form.html'
+    permission_required = 'achats.add_paiementfournisseur'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['entreprise'] = self.request.user.entreprise
+        kwargs['facture_id'] = self.kwargs.get('facture_id')
+        return kwargs
+
+    def get_success_url(self):
+        return reverse_lazy('achats:detail_facture', kwargs={'pk': self.object.facture.id})
+
+    def form_valid(self, form):
+        paiement = form.save(commit=False)
+        paiement.entreprise = self.request.user.entreprise
+        paiement.created_by = self.request.user
+        paiement.save()
+        
+        messages.success(self.request, 'Paiement enregistré avec succès.')
+        return HttpResponseRedirect(self.get_success_url())
+
+
+class PaiementUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = PaiementFournisseur
+    form_class = PaiementFournisseurForm
+    template_name = 'achats/paiements/form.html'
+    permission_required = 'achats.change_paiementfournisseur'
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['entreprise'] = self.request.user.entreprise
+        kwargs['facture_id'] = self.object.facture.id
+        return kwargs
+
+    def get_success_url(self):
+        return reverse_lazy('achats:detail_facture', kwargs={'pk': self.object.facture.id})

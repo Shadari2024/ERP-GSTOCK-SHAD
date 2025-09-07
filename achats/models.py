@@ -2,11 +2,11 @@ from django.db import models
 from django.conf import settings
 from parametres.models import Entreprise, Devise
 from STOCK.models import Produit
-from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from decimal import Decimal, ROUND_HALF_UP # Important pour les calculs de précision
 from django.utils import timezone
-
+    
+    
 
 # Ajoutez cette ligne au début de votre fichier models.py
 from decimal import Decimal 
@@ -234,10 +234,20 @@ class LigneCommandeAchat(models.Model):
             self.montant_tva_ligne = Decimal('0.00') # Valeur par défaut si des champs sont manquants
 
         super().save(*args, **kwargs)
-    
+        
+
+from django.conf import settings
+from parametres.models import Entreprise
+from STOCK.models import Produit
+from django.utils.translation import gettext_lazy as _
+from decimal import Decimal, ROUND_HALF_UP
+from django.utils import timezone
+import random
+import string
+
 class BonReception(models.Model):
     entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
-    numero_bon = models.CharField(max_length=50, unique=True)
+    numero_bon = models.CharField(max_length=50)  # Retirer unique=True ici
     commande = models.ForeignKey('CommandeAchat', on_delete=models.PROTECT)
     date_reception = models.DateField()
     notes = models.TextField(blank=True)
@@ -254,9 +264,47 @@ class BonReception(models.Model):
         ordering = ['-date_reception']
         verbose_name = "Bon de réception"
         verbose_name_plural = "Bons de réception"
+        # Ajouter une contrainte d'unicité par entreprise
+        constraints = [
+            models.UniqueConstraint(
+                fields=['entreprise', 'numero_bon'],
+                name='unique_numero_bon_par_entreprise'
+            )
+        ]
 
     def __str__(self):
         return f"BR-{self.numero_bon}"
+    
+    def save(self, *args, **kwargs):
+        # Générer le numéro de bon automatiquement s'il n'existe pas
+        if not self.numero_bon:
+            self.numero_bon = self.generer_numero_unique()
+        super().save(*args, **kwargs)
+    
+    def generer_numero_unique(self):
+        """Génère un numéro de bon unique pour cette entreprise"""
+        from django.db import models
+        
+        # Format: BR-YYYY-NNNN (BR-2024-0001)
+        annee = timezone.now().year
+        
+        # Trouver le dernier numéro pour cette entreprise et cette année
+        dernier_bon = BonReception.objects.filter(
+            entreprise=self.entreprise,
+            numero_bon__startswith=f"BR-{annee}-"
+        ).order_by('-numero_bon').first()
+        
+        if dernier_bon:
+            try:
+                # Extraire le numéro séquentiel
+                dernier_numero = int(dernier_bon.numero_bon.split('-')[-1])
+                nouveau_numero = dernier_numero + 1
+            except (ValueError, IndexError):
+                nouveau_numero = 1
+        else:
+            nouveau_numero = 1
+        
+        return f"BR-{annee}-{nouveau_numero:04d}"
     
 class LigneBonReception(models.Model):
     bon = models.ForeignKey(BonReception, on_delete=models.CASCADE, related_name='lignes')
@@ -270,15 +318,10 @@ class LigneBonReception(models.Model):
     notes = models.TextField(blank=True)
 
     def save(self, *args, **kwargs):
-        # La logique de mise à jour du stock et de la quantité livrée
-        # a été déplacée vers la vue (form_valid)
-        # pour éviter la double mise à jour.
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Ligne BR {self.bon.numero_bon} - {self.ligne_commande.produit.nom} ({self.quantite.normalize()})"
-
-
 class FactureFournisseur(models.Model):
     """Modèle pour les factures fournisseurs"""
     STATUT_CHOICES = [
@@ -333,3 +376,82 @@ class FactureFournisseur(models.Model):
                 pass
 
         return f"FF-{today.year}-{sequence:04d}"
+    
+
+class PaiementFournisseur(models.Model):
+    """Modèle pour les paiements des factures fournisseurs"""
+    MODE_PAIEMENT_CHOICES = [
+        ('virement', 'Virement bancaire'),
+        ('cheque', 'Chèque'),
+        ('espece', 'Espèces'),
+        ('carte', 'Carte bancaire'),
+        ('autre', 'Autre'),
+    ]
+
+    STATUT_CHOICES = [
+        ('brouillon', 'Brouillon'),
+        ('valide', 'Validé'),
+        ('annule', 'Annulé'),
+    ]
+
+    entreprise = models.ForeignKey('parametres.Entreprise', on_delete=models.CASCADE)
+    facture = models.ForeignKey(FactureFournisseur, on_delete=models.CASCADE, related_name='paiements')
+    mode_paiement = models.CharField(max_length=20, choices=MODE_PAIEMENT_CHOICES, default='virement')
+    reference = models.CharField(max_length=100, blank=True)
+    montant = models.DecimalField(max_digits=12, decimal_places=2)
+    date_paiement = models.DateField()
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='brouillon')
+    notes = models.TextField(blank=True, null=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Paiement Fournisseur"
+        verbose_name_plural = "Paiements Fournisseurs"
+        ordering = ['-date_paiement', '-created_at']
+
+    def __str__(self):
+        return f"Paiement {self.reference} - {self.montant}"
+
+    def save(self, *args, **kwargs):
+        if not self.reference:
+            self.reference = self.generate_reference()
+        super().save(*args, **kwargs)
+
+        # Mettre à jour le statut de la facture après sauvegarde
+        self.update_statut_facture()
+
+    def generate_reference(self):
+        """Génère une référence de paiement unique"""
+        today = timezone.now().date()
+        last_paiement = PaiementFournisseur.objects.filter(
+            entreprise=self.entreprise,
+            reference__startswith=f"PAY-{today.year}-"
+        ).order_by('-reference').first()
+
+        sequence = 1
+        if last_paiement:
+            try:
+                sequence = int(last_paiement.reference.split('-')[-1]) + 1
+            except (ValueError, IndexError):
+                pass
+
+        return f"PAY-{today.year}-{sequence:04d}"
+
+    def update_statut_facture(self):
+        """Met à jour le statut de la facture associée"""
+        total_paiements = self.facture.paiements.filter(
+            statut='valide'
+        ).aggregate(
+            total=models.Sum('montant', output_field=models.DecimalField(max_digits=12, decimal_places=2))
+        )['total'] or Decimal('0.00')
+
+        if total_paiements >= self.facture.montant_ttc:
+            self.facture.statut = 'payee'
+        elif total_paiements > 0:
+            self.facture.statut = 'partiellement_payee'
+        elif self.facture.statut != 'annulee':
+            self.facture.statut = 'validee'
+
+        self.facture.save()

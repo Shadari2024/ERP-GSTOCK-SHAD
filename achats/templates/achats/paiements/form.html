@@ -1,0 +1,30 @@
+{% extends "achats/base_achats.html" %}
+{% load crispy_forms_tags %}
+
+{% block page_title %}Enregistrer un Paiement{% endblock %}
+
+{% block achats_content %}
+<div class="erp-paiement-form-container">
+    <div class="erp-content-header">
+        <h2 class="erp-content-title">Enregistrer un Paiement</h2>
+    </div>
+
+    <div class="erp-card">
+        <div class="erp-card-body">
+            <form method="post">
+                {% csrf_token %}
+                {{ form|crispy }}
+                
+                <div class="erp-form-actions">
+                    <button type="submit" class="erp-btn erp-btn-primary">
+                        <i class="bi bi-check-circle"></i> Enregistrer
+                    </button>
+                    <a href="{% url 'achats:detail_facture' facture_id %}" class="erp-btn erp-btn-secondary">
+                        <i class="bi bi-x-circle"></i> Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -32,6 +32,18 @@ urlpatterns = [
     path('bons/', ListeBonsView.as_view(), name='liste_bons'),
     path('bons/creer/<int:commande_pk>/', CreerBonView.as_view(), name='creer_bon'),
     path('bons/<int:pk>/', DetailBonView.as_view(), name='detail_bon'),
-     path('diagnostic/', diagnostic_comptabilite, name='diagnostic_comptabilite'),
-     path('init-comptabilite/', init_comptabilite_manuelle, name='init_comptabilite'),
+    path('diagnostic/', diagnostic_comptabilite, name='diagnostic_comptabilite'),
+    path('init-comptabilite/', init_comptabilite_manuelle, name='init_comptabilite'),
+    path('commandes/<int:commande_pk>/bon/automatique/', 
+         CreerBonAutomatique.as_view(), 
+         name='creer_bon_automatique'),
+      # URLs pour les factures
+    path('factures/', FactureListView.as_view(), name='liste_factures'),
+    path('factures/nouvelle/', FactureCreateView.as_view(), name='creer_facture'),
+    path('factures/<int:pk>/', FactureDetailView.as_view(), name='detail_facture'),
+    path('factures/<int:pk>/modifier/', FactureUpdateView.as_view(), name='modifier_facture'),
+    
+    # URLs pour les paiements
+    path('factures/<int:facture_id>/paiement/nouveau/', PaiementCreateView.as_view(), name='creer_paiement'),
+    path('paiements/<int:pk>/modifier/', PaiementUpdateView.as_view(), name='modifier_paiement'),
 ]

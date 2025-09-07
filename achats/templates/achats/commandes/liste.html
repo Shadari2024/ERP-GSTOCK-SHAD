@@ -23,20 +23,20 @@
                 </button>
             </div>
 
-            {% if perms.achats.add_commandeachat %}
-            <a href="{% url 'achats:creer_commande' %}" class="erp-btn erp-btn-primary"
+         
+            <a href="{% url 'achats:creer_commande' %}" class="erp-btn erp-btn-primary erp-btn-new-commande"
                 data-tooltip="Cliquez ici pour créer une nouvelle commande d'achat.">
                 <i class="bi bi-plus-circle"></i> Nouvelle Commande
             </a>
-            {% endif %}
+          
             
-            {% if perms.achats.exporter_commandeachat %}
+         
             <a href="{% url 'achats:exporter_commandes_excel_all' %}{% if request.GET %}?{{ request.GET.urlencode }}{% endif %}" 
                 class="erp-btn erp-btn-secondary"
                 data-tooltip="Exporter la liste actuelle des commandes (avec les filtres appliqués) au format Excel.">
                 <i class="bi bi-file-earmark-excel"></i> Exporter
             </a>
-            {% endif %}
+         
         </div>
     </div>
 
@@ -376,49 +376,7 @@
 </div>
 
 {% endblock %}
-{# Ajoutez ceci là où vous voulez voir vos contrôles de pagination, par exemple après votre tableau de commandes #}
 
-{% if is_paginated %}
-    <nav aria-label="Page navigation">
-        <ul class="pagination justify-content-center">
-            {% if page_obj.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{{ request.GET.urlencode }}" aria-label="Précédent">
-                        <span aria-hidden="true">&laquo;</span>
-                    </a>
-                </li>
-            {% else %}
-                <li class="page-item disabled">
-                    <span class="page-link" aria-hidden="true">&laquo;</span>
-                </li>
-            {% endif %}
-
-            {% for i in paginator.page_range %}
-                {% if page_obj.number == i %}
-                    <li class="page-item active" aria-current="page">
-                        <span class="page-link">{{ i }} <span class="sr-only">(current)</span></span>
-                    </li>
-                {% else %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ i }}{{ request.GET.urlencode }}">{{ i }}</a>
-                    </li>
-                {% endif %}
-            {% endfor %}
-
-            {% if page_obj.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{{ request.GET.urlencode }}" aria-label="Suivant">
-                        <span aria-hidden="true">&raquo;</span>
-                    </a>
-                </li>
-            {% else %}
-                <li class="page-item disabled">
-                    <span class="page-link" aria-hidden="true">&raquo;</span>
-                </li>
-            {% endif %}
-        </ul>
-    </nav>
-{% endif %}
 {% block extra_css %}
 <style>
     /* Global Variables for Dark Mode */
@@ -534,6 +492,34 @@
         background-color: var(--secondary-color);
         transform: translateY(-2px);
         box-shadow: 0 6px 16px rgba(var(--primary-color-rgb), 0.5);
+    }
+
+    /* Special style for the "Nouvelle Commande" button */
+    .erp-btn-new-commande {
+        background: linear-gradient(135deg, var(--primary-color), #8a2be2);
+        box-shadow: 0 4px 15px rgba(var(--primary-color-rgb), 0.4);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .erp-btn-new-commande::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: 0.5s;
+    }
+
+    .erp-btn-new-commande:hover::before {
+        left: 100%;
+    }
+
+    .erp-btn-new-commande:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 8px 20px rgba(var(--primary-color-rgb), 0.6);
     }
 
     .erp-btn-secondary {
@@ -698,281 +684,187 @@
     }
     
     .erp-status-brouillon {
-        background: rgba(255, 193, 7, 0.15); /* Orange (warning) */
-        color: #ffc107;
+        background-color: #f0ad4e; /* Orange for draft */
+        color: #333;
     }
-    
     .erp-status-validee {
-        background: rgba(0, 123, 255, 0.15); /* Blue (info) */
-        color: #007bff;
+        background-color: var(--accent-color); /* Green for validated */
+        color: #fff;
     }
-    
     .erp-status-livree {
-        background: rgba(40, 167, 69, 0.15); /* Green (success) */
-        color: #28a745;
+        background-color: #5cb85c; /* Green for delivered */
+        color: #fff;
+    }
+    .erp-status-annulee {
+        background-color: #d9534f; /* Red for cancelled */
+        color: #fff;
+    }
+
+    .erp-badge-id {
+        background-color: var(--dark-color);
+        color: var(--primary-color);
+        font-weight: 700;
+        border: 1px solid var(--primary-color);
+        padding: 0.35rem 0.75rem;
+        border-radius: 50px;
     }
     
-    .erp-status-annulee {
-        background: rgba(220, 53, 69, 0.15); /* Red (danger) */
-        color: #dc3545;
-    }
-
-    /* Order Number Badge */
-    .erp-badge-id {
-        display: inline-block;
-        background-color: rgba(var(--accent-color-rgb), 0.1);
-        color: var(--accent-color);
-        padding: 0.2rem 0.6rem;
-        border-radius: 4px;
-        font-weight: 600;
-        font-size: 0.85rem;
-    }
-
     .erp-amount {
         font-weight: 600;
-        color: var(--accent-color);
-        font-size: 1.05rem; /* Slightly larger amount text */
+        color: #a5f3fc; /* Light blue for amounts */
     }
     
-    /* Actions */
+    /* Action Buttons */
     .erp-actions {
         display: flex;
-        gap: 0.75rem; /* Increased gap for actions */
-        align-items: center;
+        gap: 0.5rem;
     }
-    
     .erp-action-btn {
-        width: 38px; /* Slightly larger and more prominent */
-        height: 38px;
+        background: transparent;
+        border: 1px solid var(--border-color);
+        color: var(--text-color-dark);
+        padding: 0.5rem;
         border-radius: 50%;
+        width: 40px;
+        height: 40px;
         display: flex;
-        align-items: center;
         justify-content: center;
-        border: none;
-        cursor: pointer;
+        align-items: center;
         transition: var(--transition);
-        font-size: 1rem;
-        color: var(--text-color-light);
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Subtle shadow for action buttons */
+        text-decoration: none;
     }
-    
-    .erp-action-view {
-        background: rgba(var(--primary-color-rgb), 0.15); /* Slightly more opaque for dark theme */
-        color: var(--primary-color);
-    }
-    .erp-action-view:hover {
+    .erp-action-btn:hover {
         background: var(--primary-color);
+        border-color: var(--primary-color);
         color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(var(--primary-color-rgb), 0.4);
+        transform: scale(1.1);
+        box-shadow: 0 2px 8px rgba(var(--primary-color-rgb), 0.3);
     }
 
-    .erp-action-bon { /* New style for the "Bon de réception" button */
-        background: rgba(23, 162, 184, 0.15); /* Info color */
-        color: #17a2b8;
-    }
-    .erp-action-bon:hover {
-        background: #17a2b8;
-        color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(23, 162, 184, 0.4);
-    }
-    
-    .erp-action-edit {
-        background: rgba(255, 193, 7, 0.15);
-        color: #ffc107;
-    }
-    .erp-action-edit:hover {
-        background: #ffc107;
-        color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(255, 193, 7, 0.4);
-    }
-    
-    .erp-action-validate {
-        background: rgba(40, 167, 69, 0.15);
-        color: #28a745;
-    }
-    .erp-action-validate:hover {
-        background: #28a745;
-        color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.4);
-    }
-    
-    .erp-action-export {
-        background: rgba(108, 117, 125, 0.15); /* Grey for export */
-        color: #6c757d;
-    }
-    .erp-action-export:hover {
-        background: #6c757d;
-        color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(108, 117, 125, 0.4);
-    }
+    /* Specific action button colors */
+    .erp-action-view:hover { background-color: var(--primary-color); border-color: var(--primary-color); }
+    .erp-action-bon:hover { background-color: #20c997; border-color: #20c997; } /* Teal/green for bons */
+    .erp-action-edit:hover { background-color: #ffc107; border-color: #ffc107; } /* Yellow for edit */
+    .erp-action-validate:hover { background-color: var(--accent-color); border-color: var(--accent-color); }
+    .erp-action-export:hover { background-color: #17a2b8; border-color: #17a2b8; } /* Cyan for export */
 
-    /* Dropdown for Export Actions */
+    /* Dropdown for export button */
     .erp-dropdown {
         position: relative;
         display: inline-block;
     }
-
     .erp-dropdown-content {
         display: none;
         position: absolute;
-        background-color: var(--dark-color); /* Darker background for dropdown */
+        right: 0;
+        background-color: var(--dark-color);
         min-width: 160px;
-        box-shadow: var(--box-shadow);
-        border-radius: var(--border-radius);
+        box-shadow: 0 8px 16px 0px rgba(0,0,0,0.6);
         z-index: 1;
-        right: 0; /* Align dropdown to the right */
-        top: 100%; /* Position below the button */
-        margin-top: 8px; /* Spacing from the button */
+        border-radius: var(--border-radius);
+        padding: 0.5rem 0;
         border: 1px solid var(--border-color);
-        padding: 8px 0;
     }
-
-    .erp-dropdown-content a {
-        color: var(--text-color-light);
-        padding: 10px 16px;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        transition: background-color 0.2s ease, color 0.2s ease;
-    }
-
-    .erp-dropdown-content a:hover {
-        background-color: var(--primary-color);
-        color: white;
-    }
-
     .erp-dropdown:hover .erp-dropdown-content {
         display: block;
     }
-
+    .erp-dropdown-content a {
+        color: var(--text-color-light);
+        padding: 12px 16px;
+        text-decoration: none;
+        display: block;
+        transition: background-color 0.2s ease;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .erp-dropdown-content a:hover {
+        background-color: var(--card-background);
+        color: var(--primary-color);
+    }
+    
     /* List View Styles */
     .erp-list-container {
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
+        gap: 1rem;
     }
 
     .erp-list-item {
-        background: var(--card-background);
+        background: var(--dark-color);
+        padding: 1.5rem;
         border-radius: var(--border-radius);
         box-shadow: var(--box-shadow);
-        padding: 1.5rem;
         border: 1px solid var(--border-color);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
     }
-
     .erp-list-item:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+        transform: translateY(-4px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.5);
     }
-
     .erp-list-item-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 1rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid var(--border-color);
     }
-
     .erp-list-item-body p {
         margin: 0.5rem 0;
-        font-size: 1rem;
-        color: var(--text-color-light);
-    }
-
-    .erp-list-item-body strong {
         color: var(--text-color-dark);
     }
-
+    .erp-list-item-body strong {
+        color: var(--text-color-light);
+    }
     .erp-list-item-actions {
         margin-top: 1rem;
-        padding-top: 1rem;
-        border-top: 1px solid var(--border-color);
         display: flex;
-        justify-content: flex-end; /* Align actions to the right */
+        justify-content: flex-end;
     }
-
+    
     /* Grid View Styles */
     .erp-grid-container {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Responsive grid */
-        gap: 1.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Responsive grid */
+        gap: 2rem; /* Increased gap */
     }
 
     .erp-grid-item {
-        background: var(--card-background);
+        background: var(--dark-color);
+        padding: 2rem;
         border-radius: var(--border-radius);
         box-shadow: var(--box-shadow);
-        padding: 1.5rem;
         border: 1px solid var(--border-color);
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
     }
-
     .erp-grid-item:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+        transform: translateY(-4px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.5);
     }
-
     .erp-grid-item-header {
         display: flex;
         justify-content: space-between;
-        align-items: center;
+        align-items: flex-start;
         margin-bottom: 1rem;
-        padding-bottom: 1rem;
-        border-bottom: 1px solid var(--border-color);
     }
-
     .erp-grid-item-body h3 {
         margin-top: 0;
         margin-bottom: 0.5rem;
-        color: var(--text-color-light);
-        font-size: 1.25rem;
+        color: var(--primary-color);
     }
-
     .erp-grid-item-body p {
-        margin: 0.25rem 0;
+        margin: 0.5rem 0;
         color: var(--text-color-dark);
     }
-
     .erp-grid-item-actions {
-        margin-top: 1.5rem;
-        padding-top: 1.5rem;
-        border-top: 1px solid var(--border-color);
+        margin-top: 1rem;
         display: flex;
         justify-content: flex-end;
     }
 
-    /* Empty State */
-    .erp-empty {
-        text-align: center;
-        padding: 3rem;
-        background: var(--dark-color);
-        border-radius: var(--border-radius);
-        color: var(--text-color-dark);
-        font-size: 1.2rem;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 1rem;
-        box-shadow: var(--box-shadow);
-        border: 1px solid var(--border-color);
-    }
-    .erp-empty i {
-        font-size: 3rem;
-        color: var(--text-color-dark);
-    }
-
-    /* Pagination Styles */
+    /* Pagination */
     .erp-pagination {
         display: flex;
         justify-content: center;
@@ -980,178 +872,71 @@
         gap: 1rem;
         margin-top: 2rem;
     }
-
     .erp-pagination-btn {
-        background-color: var(--card-background);
-        color: var(--text-color-light);
+        background: var(--dark-color);
+        color: var(--text-color-dark);
         border: 1px solid var(--border-color);
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
+        border-radius: var(--border-radius);
+        padding: 0.75rem 1rem;
         display: flex;
         align-items: center;
-        justify-content: center;
         text-decoration: none;
         transition: var(--transition);
-        font-size: 1.1rem;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
     }
-
     .erp-pagination-btn:hover {
-        background-color: var(--primary-color);
+        background: var(--primary-color);
+        border-color: var(--primary-color);
         color: white;
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(var(--primary-color-rgb), 0.4);
     }
-
     .erp-pagination-info {
         color: var(--text-color-dark);
-        font-size: 0.95rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Empty State */
+    .erp-empty {
+        text-align: center;
+        padding: 3rem 0;
+        color: var(--text-color-dark);
+        font-size: 1.2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+    .erp-empty i {
+        font-size: 3rem;
+        color: var(--border-color);
     }
 
-    /* Tooltip Styles */
+    /* Tooltip styles (already present in the original code but can be enhanced) */
     [data-tooltip] {
         position: relative;
-        cursor: help; /* Indicate interactable element */
+        cursor: pointer;
     }
-
-    [data-tooltip]:hover::before,
-    [data-tooltip]:hover::after {
-        display: block;
-    }
-
-    /* The tooltip itself */
     [data-tooltip]::before {
         content: attr(data-tooltip);
         position: absolute;
-        bottom: 100%; /* Position above the element */
+        top: 120%; /* Position below the element */
         left: 50%;
         transform: translateX(-50%);
-        background-color: var(--dark-color); /* Darker background for tooltip */
+        background-color: var(--dark-color);
         color: white;
         padding: 8px 12px;
-        border-radius: 6px;
+        border-radius: 4px;
         font-size: 0.8rem;
         white-space: nowrap;
         opacity: 0;
         visibility: hidden;
-        transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
-        z-index: 1000; /* Ensure tooltip is on top */
-        pointer-events: none; /* Allows clicks on underlying elements */
-        box-shadow: 0 4px 15px rgba(0,0,0,0.5); /* Stronger shadow for tooltip */
+        transition: opacity 0.3s, visibility 0.3s;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        z-index: 10;
         border: 1px solid var(--border-color);
     }
-
-    /* The arrow of the tooltip */
-    [data-tooltip]::after {
-        content: '';
-        position: absolute;
-        bottom: calc(100% - 4px); /* Position arrow slightly below tooltip content */
-        left: 50%;
-        transform: translateX(-50%) rotate(45deg); /* Rotate for triangle shape */
-        width: 10px;
-        height: 10px;
-        background-color: var(--dark-color); /* Match tooltip background */
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.3s ease, visibility 0.3s ease;
-        z-index: 999;
-        pointer-events: none;
-        border-bottom: 1px solid var(--border-color); /* Add border to arrow */
-        border-right: 1px solid var(--border-color);
-    }
-
-    /* Show tooltip on hover */
     [data-tooltip]:hover::before {
         opacity: 1;
         visibility: visible;
-        transform: translateX(-50%) translateY(-10px); /* Move up slightly on hover */
-    }
-
-    [data-tooltip]:hover::after {
-        opacity: 1;
-        visibility: visible;
-        transform: translateX(-50%) translateY(0px) rotate(45deg); /* Adjust arrow position */
-    }
-
-    /* Responsive Adjustments */
-    @media (max-width: 768px) {
-        .erp-content-header {
-            flex-direction: column;
-            align-items: flex-start;
-        }
-
-        .erp-content-actions {
-            width: 100%;
-            justify-content: flex-start;
-        }
-
-        .erp-filter-row {
-            flex-direction: column;
-            align-items: stretch;
-        }
-
-        .erp-filter-group {
-            min-width: unset;
-            width: 100%;
-        }
-
-        .erp-table thead {
-            display: none; /* Hide table headers on small screens */
-        }
-
-        .erp-table, .erp-table tbody, .erp-table tr, .erp-table td {
-            display: block;
-            width: 100%;
-        }
-
-        .erp-table tr {
-            margin-bottom: 1rem;
-            border: 1px solid var(--border-color);
-            border-radius: var(--border-radius);
-            overflow: hidden;
-            background-color: var(--card-background);
-            box-shadow: var(--box-shadow);
-        }
-
-        .erp-table td {
-            text-align: right;
-            position: relative;
-            padding-left: 50%;
-            border: none;
-            border-bottom: 1px dashed var(--border-color); /* Dashed border for readability */
-        }
-
-        .erp-table td:last-child {
-            border-bottom: none;
-        }
-
-        .erp-table td::before {
-            content: attr(data-label); /* Use data-label for pseudo-elements */
-            position: absolute;
-            left: 0;
-            width: 50%;
-            padding-left: 1rem;
-            font-weight: 600;
-            text-align: left;
-            color: var(--text-color-dark);
-            font-size: 0.9rem;
-        }
-
-        /* Set data-label for each table cell */
-        .erp-table td:nth-of-type(1)::before { content: "N° Commande"; }
-        .erp-table td:nth-of-type(2)::before { content: "Fournisseur"; }
-        .erp-table td:nth-of-type(3)::before { content: "Date"; }
-        .erp-table td:nth-of-type(4)::before { content: "Montant HT"; }
-        .erp-table td:nth-of-type(5)::before { content: "TVA"; }
-        .erp-table td:nth-of-type(6)::before { content: "Montant TTC"; }
-        .erp-table td:nth-of-type(7)::before { content: "Statut"; }
-        .erp-table td:nth-of-type(8)::before { content: "Actions"; }
-
-        .erp-table .erp-actions {
-            justify-content: flex-end;
-            padding-right: 1rem;
-        }
     }
 </style>
 {% endblock %}
@@ -1159,74 +944,44 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const listViewBtn = document.getElementById('listViewBtn');
-        const tableViewBtn = document.getElementById('tableViewBtn');
-        const gridViewBtn = document.getElementById('gridViewBtn');
+        const viewToggles = document.querySelectorAll('.erp-view-toggles .erp-btn-secondary');
+        const displayViews = document.querySelectorAll('.erp-display-area > div');
 
-        const tableView = document.getElementById('tableView');
-        const listView = document.getElementById('listView');
-        const gridView = document.getElementById('gridView');
+        viewToggles.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active class from all buttons and add to the clicked one
+                viewToggles.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
 
-        // Function to set the active view and store in localStorage
-        function setActiveView(viewName) {
-            // Remove 'active' class from all buttons
-            listViewBtn.classList.remove('active');
-            tableViewBtn.classList.remove('active');
-            gridViewBtn.classList.remove('active');
+                // Hide all views and show the selected one
+                const viewToShow = this.getAttribute('data-view') + 'View';
+                displayViews.forEach(view => {
+                    if (view.id === viewToShow) {
+                        view.style.display = 'block';
+                    } else {
+                        view.style.display = 'none';
+                    }
+                });
 
-            // Hide all views
-            tableView.style.display = 'none';
-            listView.style.display = 'none';
-            gridView.style.display = 'none';
+                // Update URL parameter to remember the view preference (optional)
+                const url = new URL(window.location);
+                url.searchParams.set('view', this.getAttribute('data-view'));
+                history.replaceState(null, '', url);
+            });
+        });
 
-            // Set active button and display corresponding view
-            if (viewName === 'list') {
-                listViewBtn.classList.add('active');
-                listView.style.display = 'block';
-            } else if (viewName === 'table') {
-                tableViewBtn.classList.add('active');
-                tableView.style.display = 'block';
-            } else if (viewName === 'grid') {
-                gridViewBtn.classList.add('active');
-                gridView.style.display = 'grid'; // Use 'grid' for grid display
+        // Check URL for view preference on page load
+        const urlParams = new URLSearchParams(window.location.search);
+        const preferredView = urlParams.get('view');
+        if (preferredView) {
+            const preferredButton = document.querySelector(`#${preferredView}ViewBtn`);
+            if (preferredButton) {
+                preferredButton.click();
             }
-            // Store the active view in localStorage
-            localStorage.setItem('activePurchaseOrderView', viewName);
-        }
-
-        // Event Listeners for view toggle buttons
-        listViewBtn.addEventListener('click', () => setActiveView('list'));
-        tableViewBtn.addEventListener('click', () => setActiveView('table'));
-        gridViewBtn.addEventListener('click', () => setActiveView('grid'));
-
-        // Load preferred view from localStorage on page load
-        const storedView = localStorage.getItem('activePurchaseOrderView');
-        if (storedView) {
-            setActiveView(storedView);
         } else {
-            // Default to table view if no preference is stored
-            setActiveView('table');
+            // Default to 'table' view if no preference is set
+            document.querySelector('#tableViewBtn').click();
         }
-
-        // Handle dropdowns (for export buttons)
-        document.querySelectorAll('.erp-dropdown').forEach(dropdown => {
-            const button = dropdown.querySelector('.erp-action-export');
-            const content = dropdown.querySelector('.erp-dropdown-content');
-
-            button.addEventListener('click', function(event) {
-                event.stopPropagation(); // Prevent document click from closing immediately
-                content.style.display = content.style.display === 'block' ? 'none' : 'block';
-            });
-        });
-
-        // Close dropdowns if clicked outside
-        document.addEventListener('click', function(event) {
-            document.querySelectorAll('.erp-dropdown-content').forEach(content => {
-                if (content.style.display === 'block' && !content.parentElement.contains(event.target)) {
-                    content.style.display = 'none';
-                }
-            });
-        });
     });
 </script>
 {% endblock %}

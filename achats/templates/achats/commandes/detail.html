@@ -18,6 +18,17 @@
                 </span>
             </div>
             
+            {% if commande.statut != 'livree' and perms.achats.add_bonreception %}
+<div class="mt-3">
+    <form action="{% url 'achats:creer_bon_automatique' commande.pk %}" method="post">
+        {% csrf_token %}
+        <button type="submit" class="erp-btn erp-btn-success"
+                data-tooltip="Créer automatiquement un bon de réception pour toutes les lignes non livrées">
+            <i class="bi bi-magic"></i> Créer bon de réception automatique
+        </button>
+    </form>
+</div>
+{% endif %}
             <div class="erp-btn-group">
                 {% if commande.statut == 'brouillon' %}
                 <a href="{% url 'achats:modifier_commande' commande.pk %}" class="erp-btn erp-btn-warning"
@@ -136,9 +147,9 @@
                                 </td>
                                 <td class="text-right" data-tooltip="Pourcentage de remise appliqué à cette ligne.">{{ ligne.remise|default:"0" }}%</td>
                                 <td class="text-right" data-tooltip="Montant total hors taxes pour cette ligne de commande.">
-                                    {{ ligne.montant_total|floatformat:2 }}
-                                    {% if devise_principale %}{{ devise_principale.symbole }}{% endif %}
-                                </td>
+    {{ ligne.total_ht_ligne|floatformat:2 }}
+    {% if devise_principale %}{{ devise_principale.symbole }}{% endif %}
+</td>
                             </tr>
                             {% empty %}
                             <tr>

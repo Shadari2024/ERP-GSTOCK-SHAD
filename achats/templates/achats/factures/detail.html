@@ -1,0 +1,107 @@
+{% extends "achats/base_achats.html" %}
+{% load static %}
+
+{% block page_title %}Détail de la Facture {{ facture.numero_facture }}{% endblock %}
+
+{% block achats_content %}
+<div class="erp-facture-detail-container">
+    <div class="erp-content-header">
+        <h2 class="erp-content-title">Facture {{ facture.numero_facture }}</h2>
+        
+        <div class="erp-content-actions">
+            {% if perms.achats.change_facturefournisseur %}
+            <a href="{% url 'achats:modifier_facture' facture.pk %}" class="erp-btn erp-btn-secondary">
+                <i class="bi bi-pencil"></i> Modifier
+            </a>
+            {% endif %}
+            {% if facture.reste_a_payer > 0 and perms.achats.add_paiementfournisseur %}
+            <a href="{% url 'achats:creer_paiement' facture.pk %}" class="erp-btn erp-btn-primary">
+                <i class="bi bi-cash-coin"></i> Enregistrer Paiement
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="erp-grid">
+        <div class="erp-card">
+            <div class="erp-card-header">
+                <h3 class="erp-card-title">Informations Facture</h3>
+            </div>
+            <div class="erp-card-body">
+                <div class="erp-info-grid">
+                    <div class="erp-info-item">
+                        <strong>Fournisseur:</strong> {{ facture.fournisseur.nom }}
+                    </div>
+                    <div class="erp-info-item">
+                        <strong>Date Facture:</strong> {{ facture.date_facture|date:"d/m/Y" }}
+                    </div>
+                    <div class="erp-info-item">
+                        <strong>Échéance:</strong> {{ facture.date_echeance|date:"d/m/Y" }}
+                    </div>
+                    <div class="erp-info-item">
+                        <strong>Statut:</strong>
+                        <span class="erp-status-badge erp-status-{{ facture.statut }}">
+                            {{ facture.get_statut_display }}
+                        </span>
+                    </div>
+                    <div class="erp-info-item">
+                        <strong>Montant HT:</strong> {{ facture.montant_ht }} {{ devise_principale_symbole }}
+                    </div>
+                    <div class="erp-info-item">
+                        <strong>TVA:</strong> {{ facture.montant_tva }} {{ devise_principale_symbole }}
+                    </div>
+                    <div class="erp-info-item">
+                        <strong>Montant TTC:</strong> {{ facture.montant_ttc }} {{ devise_principale_symbole }}
+                    </div>
+                    <div class="erp-info-item">
+                        <strong>Reste à payer:</strong> {{ facture.reste_a_payer }} {{ devise_principale_symbole }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="erp-card">
+            <div class="erp-card-header">
+                <h3 class="erp-card-title">Historique des Paiements</h3>
+            </div>
+            <div class="erp-card-body">
+                {% if paiements %}
+                <div class="erp-table-responsive">
+                    <table class="erp-table">
+                        <thead>
+                            <tr>
+                                <th>Référence</th>
+                                <th>Mode</th>
+                                <th>Date</th>
+                                <th>Montant</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for paiement in paiements %}
+                            <tr>
+                                <td>{{ paiement.reference }}</td>
+                                <td>{{ paiement.get_mode_paiement_display }}</td>
+                                <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
+                                <td class="erp-amount">{{ paiement.montant }} {{ devise_principale_symbole }}</td>
+                                <td>
+                                    <span class="erp-status-badge erp-status-{{ paiement.statut }}">
+                                        {{ paiement.get_statut_display }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="erp-empty">
+                    <i class="bi bi-cash"></i>
+                    <span>Aucun paiement enregistré</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
