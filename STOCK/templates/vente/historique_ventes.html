@@ -49,15 +49,15 @@
                 <div class="row g-3">
                     <div class="col-md-2">
                         <label class="form-label fw-semibold">Date</label>
-                        <input type="date" class="form-control" name="date" value="{{ selected_date }}">
+                        <input type="date" class="form-control" name="date" value="{{ selected_date|date:'Y-m-d' }}">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold">Caissier</label>
                         <select class="form-select" name="vendeur">
                             <option value="">Tous les caissiers</option>
                             {% for vendeur in vendeurs %}
-                                <option value="{{ vendeur.vendeur__id }}" {% if vendeur.vendeur__id|stringformat:"s" == selected_vendeur %}selected{% endif %}>
-                                    {{ vendeur.vendeur__username }}
+                                <option value="{{ vendeur.created_by__id }}" {% if vendeur.created_by__id|stringformat:"s" == selected_vendeur %}selected{% endif %}>
+                                    {{ vendeur.created_by__username }}
                                 </option>
                             {% endfor %}
                         </select>
@@ -75,7 +75,7 @@
                         <label class="form-label fw-semibold">Devise</label>
                         <select class="form-select" name="devise">
                             {% for devise in devises_disponibles %}
-                            <option value="{{ devise.code }}" {% if devise_affichee == devise.code %}selected{% endif %}>
+                            <option value="{{ devise.code }}" {% if devise_affichee.code == devise.code %}selected{% endif %}>
                                 {{ devise.code }} ({{ devise.symbole }})
                             </option>
                             {% endfor %}
@@ -101,73 +101,69 @@
                             <th>Caissier</th>
                             <th>Client</th>
                             <th>Montant ({{ devise_entreprise.code }})</th>
-                            {% if devise_affichee != devise_entreprise.code %}
-                            <th>Montant ({{ devise_affichee }})</th>
+                            {% if devise_affichee.code != devise_entreprise.code %}
+                            <th>Montant ({{ devise_affichee.code }})</th>
                             {% endif %}
                             <th>Paiement</th>
                             <th class="text-end pe-4">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for vente in ventes_converties %}
+                        {% for item in ventes_converties %}
                         <tr>
-                            <td class="ps-4">{{ vente.vente.date_commande|date:"d/m/Y H:i" }}</td>
+                            <td class="ps-4">{{ item.vente.date_commande|date:"d/m/Y H:i" }}</td>
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="avatar bg-info bg-opacity-10 text-info me-2">
-                                        {{ vente.vente.vendeur.username|slice:":1"|upper }}
+                                        {{ item.vente.created_by.username|slice:":1"|upper }}
                                     </div>
-                                    <span>{{ vente.vente.vendeur.username }}</span>
+                                    <span>{{ item.vente.created_by.username }}</span>
                                 </div>
                             </td>
                             <td>
-                                {% if vente.vente.client %}
-                                    {{ vente.vente.client.nom }}
+                                {% if item.vente.client %}
+                                    {{ item.vente.client.nom }}
                                 {% else %}
                                     Client non spécifié
                                 {% endif %}
                             </td>
                             <td>
                                 {% if devise_entreprise.symbole_avant %}{{ devise_entreprise.symbole }}{% endif %}
-                                {{ vente.vente.montant_total|floatformat:2|intcomma }}
+                                {{ item.vente.total_ttc|floatformat:2|intcomma }}
                                 {% if not devise_entreprise.symbole_avant %}{{ devise_entreprise.code }}{% endif %}
                             </td>
-                            {% if devise_affichee != devise_entreprise.code %}
+                            {% if devise_affichee.code != devise_entreprise.code %}
                             <td class="fw-bold text-success">
-                                {% if vente.devise_cible.symbole_avant %}{{ vente.devise_cible.symbole }}{% endif %}
-                                {{ vente.montant_converti|floatformat:2|intcomma }}
-                                {% if not vente.devise_cible.symbole_avant %}{{ devise_affichee }}{% endif %}
+                                {% if devise_affichee.symbole_avant %}{{ devise_affichee.symbole }}{% endif %}
+                                {{ item.montant_converti|floatformat:2|intcomma }}
+                                {% if not devise_affichee.symbole_avant %}{{ devise_affichee.code }}{% endif %}
                             </td>
                             {% endif %}
                             <td>
                                 <span class="badge bg-light text-dark">
-                                    <i class="bi bi-{{ vente.vente.type_paiement|yesno:'cash-coin,credit-card,wallet' }} me-1"></i> 
-                                    {{ vente.vente.type_paiement|capfirst }}
+                                    {% if item.vente.mode_paiement == 'espece' %}
+                                    <i class="bi bi-cash-coin me-1"></i> Espèces
+                                    {% elif item.vente.mode_paiement == 'carte' %}
+                                    <i class="bi bi-credit-card me-1"></i> Carte
+                                    {% elif item.vente.mode_paiement == 'cheque' %}
+                                    <i class="bi bi-wallet me-1"></i> Chèque
+                                    {% endif %}
                                 </span>
                             </td>
                             <td class="text-end pe-4">
-                                <div class="btn-group btn-group-sm" role="group">
-                                    {% if perms.STOCK.view_commande %}
-                                    <a href="{% url 'detail_commande' vente.vente.id %}" target="_blank" class="btn btn-light" data-bs-toggle="tooltip" title="Voir ticket">
-                                        <i class="bi bi-receipt text-primary"></i>
+                                {% comment %} <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{% url 'ventes:detail_commande' pk=item.vente.id %}" class="btn btn-light" target="_blank" data-bs-toggle="tooltip" title="Ticket PDF">
+                                        <i class="bi bi-file-earmark-pdf text-primary"></i>
                                     </a>
-                                    {% endif %}
-                                    {% if perms.STOCK.change_commande %}
-                                    <a href="#" class="btn btn-light" data-bs-toggle="tooltip" title="Échanger">
-                                        <i class="bi bi-arrow-left-right text-warning"></i>
+                                    <a href="{% url 'ventes:detail_commande' pk=item.vente.id %}" class="btn btn-light" data-bs-toggle="tooltip" title="Détails">
+                                        <i class="bi bi-eye text-info"></i>
                                     </a>
-                                    {% endif %}
-                                    {% if perms.STOCK.delete_commande %}
-                                    <a href="#" class="btn btn-light" data-bs-toggle="tooltip" title="Annuler">
-                                        <i class="bi bi-x-circle text-danger"></i>
-                                    </a>
-                                    {% endif %}
-                                </div>
+                                </div> {% endcomment %}
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="{% if devise_affichee != devise_entreprise.code %}7{% else %}6{% endif %}" class="text-center py-5">
+                            <td colspan="{% if devise_affichee.code != devise_entreprise.code %}7{% else %}6{% endif %}" class="text-center py-5">
                                 <div class="empty-state">
                                     <i class="bi bi-cart-x fs-1 text-muted"></i>
                                     <h5 class="mt-3">Aucune vente trouvée</h5>
@@ -181,7 +177,7 @@
             </div>
         </div>
     </div>
-
+    
     {% if is_paginated %}
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mt-4">
         <div class="mb-3 mb-md-0">
@@ -190,57 +186,52 @@
                 sur <strong>{{ page_obj.paginator.count }}</strong> ventes
             </p>
         </div>
-
         <nav>
             <ul class="pagination pagination-sm">
                 {% if page_obj.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page=1{% if selected_date %}&date={{ selected_date }}{% endif %}{% if selected_vendeur %}&vendeur={{ selected_vendeur }}{% endif %}{% if selected_paiement %}&paiement={{ selected_paiement }}{% endif %}{% if devise_affichee %}&devise={{ devise_affichee }}{% endif %}" aria-label="First">
+                        <a class="page-link" href="?page=1{% if selected_date %}&date={{ selected_date }}{% endif %}{% if selected_vendeur %}&vendeur={{ selected_vendeur }}{% endif %}{% if selected_paiement %}&paiement={{ selected_paiement }}{% endif %}{% if devise_affichee %}&devise={{ devise_affichee.code }}{% endif %}" aria-label="First">
                             <i class="bi bi-chevron-double-left"></i>
                         </a>
                     </li>
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_date %}&date={{ selected_date }}{% endif %}{% if selected_vendeur %}&vendeur={{ selected_vendeur }}{% endif %}{% if selected_paiement %}&paiement={{ selected_paiement }}{% endif %}{% if devise_affichee %}&devise={{ devise_affichee }}{% endif %}" aria-label="Previous">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if selected_date %}&date={{ selected_date }}{% endif %}{% if selected_vendeur %}&vendeur={{ selected_vendeur }}{% endif %}{% if selected_paiement %}&paiement={{ selected_paiement }}{% endif %}{% if devise_affichee %}&devise={{ devise_affichee.code }}{% endif %}" aria-label="Previous">
                             <i class="bi bi-chevron-left"></i>
                         </a>
                     </li>
                 {% endif %}
-
                 {% for num in page_obj.paginator.page_range %}
                     {% if page_obj.number == num %}
                         <li class="page-item active"><span class="page-link">{{ num }}</span></li>
                     {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                        <li class="page-item"><a class="page-link" href="?page={{ num }}{% if selected_date %}&date={{ selected_date }}{% endif %}{% if selected_vendeur %}&vendeur={{ selected_vendeur }}{% endif %}{% if selected_paiement %}&paiement={{ selected_paiement }}{% endif %}{% if devise_affichee %}&devise={{ devise_affichee }}{% endif %}">{{ num }}</a></li>
+                        <li class="page-item"><a class="page-link" href="?page={{ num }}{% if selected_date %}&date={{ selected_date }}{% endif %}{% if selected_vendeur %}&vendeur={{ selected_vendeur }}{% endif %}{% if selected_paiement %}&paiement={{ selected_paiement }}{% endif %}{% if devise_affichee %}&devise={{ devise_affichee.code }}{% endif %}">{{ num }}</a></li>
                     {% endif %}
                 {% endfor %}
-
                 {% if page_obj.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_date %}&date={{ selected_date }}{% endif %}{% if selected_vendeur %}&vendeur={{ selected_vendeur }}{% endif %}{% if selected_paiement %}&paiement={{ selected_paiement }}{% endif %}{% if devise_affichee %}&devise={{ devise_affichee }}{% endif %}" aria-label="Next">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if selected_date %}&date={{ selected_date }}{% endif %}{% if selected_vendeur %}&vendeur={{ selected_vendeur }}{% endif %}{% if selected_paiement %}&paiement={{ selected_paiement }}{% endif %}{% if devise_affichee %}&devise={{ devise_affichee.code }}{% endif %}" aria-label="Next">
                             <i class="bi bi-chevron-right"></i>
                         </a>
                     </li>
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if selected_date %}&date={{ selected_date }}{% endif %}{% if selected_vendeur %}&vendeur={{ selected_vendeur }}{% endif %}{% if selected_paiement %}&paiement={{ selected_paiement }}{% endif %}{% if devise_affichee %}&devise={{ devise_affichee }}{% endif %}" aria-label="Last">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if selected_date %}&date={{ selected_date }}{% endif %}{% if selected_vendeur %}&vendeur={{ selected_vendeur }}{% endif %}{% if selected_paiement %}&paiement={{ selected_paiement }}{% endif %}{% if devise_affichee %}&devise={{ devise_affichee.code }}{% endif %}" aria-label="Last">
                             <i class="bi bi-chevron-double-right"></i>
                         </a>
                     </li>
                 {% endif %}
             </ul>
         </nav>
-        {% endif %}
     </div>
+    {% endif %}
 </div>
 
 <script>
-    // Tooltip initialization
     document.addEventListener('DOMContentLoaded', function() {
         const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
         tooltipTriggerList.map(function (tooltipTriggerEl) {
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
 
-        // Automatic form submission on currency change
         const deviseSelect = document.querySelector('select[name="devise"]');
         if (deviseSelect) {
             deviseSelect.addEventListener('change', function() {

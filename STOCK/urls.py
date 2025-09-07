@@ -59,6 +59,7 @@ urlpatterns = [
     path('saisie/', saisie_inventaire, name='saisie_inventaire'),
     path('liste/', liste_inventaires, name='liste_inventaires'),
     path('valider/', valider_inventaire, name='valider_inventaire'),
+     path('test-ecriture/', test_creation_ecriture, name='test_ecriture'),
     path("rapports/",rapport, name="rapport"),
     path("rapports/mouvements/",rapport_mouvements, name="rapport_mouvements"),
     path('ticket/<int:commande_id>/',ticket_caisse, name='ticket_caisse'),

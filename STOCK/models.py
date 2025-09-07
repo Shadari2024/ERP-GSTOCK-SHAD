@@ -652,10 +652,18 @@ class MouvementStock(models.Model):
         """Retourne la valeur monétaire du mouvement"""
         return self.quantite * self.prix_unitaire_moment
 
+# STOCK/models.py
+from django.db import models, transaction
+from django.utils import timezone
+from django.conf import settings
+from decimal import Decimal
 
-#INVENTAIRE PHYSIQUE
+# Import des modèles externes
+from parametres.models import Entreprise
+from STOCK.models import Produit, MouvementStock
+from comptabilite.models import EcritureComptable, PlanComptableOHADA, JournalComptable, LigneEcriture
 
-# models.py
+# Votre modèle InventairePhysique
 class InventairePhysique(models.Model):
     STATUT_CHOICES = [
         ('brouillon', 'Brouillon'),
@@ -669,7 +677,7 @@ class InventairePhysique(models.Model):
     stock_theorique = models.IntegerField()
     stock_physique = models.IntegerField()
     ecart = models.IntegerField()
-    valeur_ecart = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # Nouveau champ
+    valeur_ecart = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     utilisateur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     date = models.DateTimeField(auto_now_add=True)
     valide = models.BooleanField(default=False)
@@ -682,36 +690,33 @@ class InventairePhysique(models.Model):
         ordering = ['-date']
 
     def save(self, *args, **kwargs):
-        # Calculer automatiquement l'écart
         self.ecart = self.calculer_ecart()
         
-        # Calculer la valeur de l'écart
         if self.produit:
-            self.valeur_ecart = abs(self.ecart) * self.produit.prix_achat
+            # Assurez-vous que le prix d'achat est un Decimal pour le calcul
+            prix_achat = Decimal(str(self.produit.prix_achat))
+            self.valeur_ecart = abs(Decimal(str(self.ecart))) * prix_achat
         
         super().save(*args, **kwargs)
 
     def calculer_ecart(self):
         return self.stock_physique - self.stock_theorique
 
-    def __str__(self):
-        return f"{self.produit.nom} - Ecart: {self.ecart}"
-
     @property
     def type_ecart(self):
-        """Retourne le type d'écart"""
         if self.ecart > 0:
             return "excédent"
         elif self.ecart < 0:
-            return "deficit"
-        else:
-            return "neutre"
+            return "déficit"
+        return "neutre"
 
     def marquer_comptabilise(self, ecriture):
-        """Marque l'inventaire comme comptabilisé"""
         self.statut = 'comptabilise'
         self.ecriture_comptable = ecriture
-        self.save(update_fields=['statut', 'ecriture_comptable'])
+        self.save(update_fields=['statut', 'ecriture_comptable', 'updated_at'])
+
+    def __str__(self):
+        return f"{self.produit.nom} - Ecart: {self.ecart}"
     
 #remise et promotions
 from django.db import models

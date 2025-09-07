@@ -1240,24 +1240,26 @@ def produit_detail(request, id):
     }
     
     return render(request, 'produit/fiche_produit.html', context)
-    
+# E:\PROJET FSJ SOLUTION\venv\Scripts\ERP-GSTOCK-CLEAN\STOCK\views.py
 
-
-from django.db.models import Sum, Count
-from django.contrib.auth.decorators import login_required, permission_required
 from django.shortcuts import render
-from django.utils import timezone
-from django.core.exceptions import ObjectDoesNotExist
-import logging
-logger = logging.getLogger(__name__)
+from django.db.models import Sum
+from django.db.models.functions import TruncDate
+from datetime import date
+from django.contrib.auth.decorators import login_required
 
+# Assurez-vous d'importer les modèles de ventes
+from ventes.models import Commande, Facture, BonLivraison
+
+# Assurez-vous d'importer les modèles de stock
+from STOCK.models import MouvementStock, Produit
 @login_required
 @permission_required('STOCK.view_commande', raise_exception=True)
 def ventes_du_jour(request):
     """
     Vue SAAS pour afficher les ventes du jour avec gestion multi-devises
     """
-    # 1. Vérification de l'entreprise (doit être géré par middleware SAAS)
+    # 1. Vérification de l'entreprise
     if not hasattr(request, 'entreprise') or not request.entreprise:
         logger.error("Accès sans entreprise définie")
         return redirect('security:acces_refuse')
@@ -1275,25 +1277,27 @@ def ventes_du_jour(request):
         messages.error(request, "Configuration commerciale incomplète")
         return redirect('security:acces_refuse')
 
-    # 3. Filtrage SAAS des ventes du jour
+    # 3. Filtrage SAAS des ventes du jour - CORRECTION DE LA SYNTAXE DATE
     today = timezone.now().date()
-    ventes = CommandeClient.objects.filter(
-        entreprise=entreprise,  # Filtrage SAAS critique
-        date_commande__date=today,
-        vente_confirmee=True
-    ).select_related('client', 'vendeur')
+    
+    # CORRECTION: Utiliser la syntaxe correcte pour filtrer par date
+    ventes = Commande.objects.filter(
+        entreprise=entreprise,
+        date=today,  # CORRECTION: Utiliser directement le champ date
+        statut='livre'
+    ).select_related('client', 'created_by')
 
     # 4. Gestion multi-devises
     devise_code = request.GET.get('devise', devise_entreprise.code)
     conversion_data = handle_currency_conversion(
         ventes, 
-        from_currency=devise_entreprise,  # On passe l'objet Devise directement
-        to_currency_code=devise_code     # Nom du paramètre corrigé
+        from_currency=devise_entreprise,
+        to_currency_code=devise_code
     )
 
     # 5. Calcul des totaux
     totals = ventes.aggregate(
-        total_original=Sum('montant_total'),
+        total_original=Sum('total_ttc'),
         count=Count('id')
     )
 
@@ -1308,59 +1312,10 @@ def ventes_du_jour(request):
         'devises_disponibles': Devise.objects.filter(active=True),
         'nombre_ventes': totals['count'] or 0,
         'date_jour': today,
-        'config_saas': config_saas  # Pour accès aux autres paramètres
+        'config_saas': config_saas
     }
 
     return render(request, 'vente/ventes_du_jour.html', context)
-
-def handle_currency_conversion(ventes, from_currency, to_currency_code):
-    """
-    Helper SAAS pour gérer les conversions de devises
-    from_currency: Objet Devise (la devise principale de l'entreprise)
-    to_currency_code: Code de la devise cible (string)
-    """
-    if to_currency_code == from_currency.code:
-        return {
-            'ventes': [{
-                'vente': v, 
-                'montant_converti': v.montant_total,
-                'devise_cible': from_currency
-            } for v in ventes],
-            'total_converti': sum(v.montant_total for v in ventes) if ventes else 0,
-            'devise_cible': from_currency,
-            'taux': 1.0,
-            'sens': f"1 {from_currency.code} = 1 {from_currency.code}"
-        }
-
-    try:
-        devise_cible = Devise.objects.get(code=to_currency_code, active=True)
-        taux = devise_cible.taux_par_defaut / from_currency.taux_par_defaut
-        
-        ventes_converties = []
-        total_converti = 0
-        
-        for vente in ventes:
-            montant = vente.montant_total * taux
-            ventes_converties.append({
-                'vente': vente,
-                'montant_converti': round(montant, devise_cible.decimales),
-                'devise_cible': devise_cible
-            })
-            total_converti += montant
-
-        return {
-            'ventes': ventes_converties,
-            'total_converti': round(total_converti, devise_cible.decimales),
-            'devise_cible': devise_cible,
-            'taux': taux,
-            'sens': f"1 {from_currency.code} = {taux:.4f} {devise_cible.code}"
-        }
-
-    except Devise.DoesNotExist:
-        logger.warning(f"Devise {to_currency_code} non trouvée, utilisation de {from_currency.code}")
-        return handle_currency_conversion(ventes, from_currency, from_currency.code)
-    
-    
 def ticket_pdf(request, commande_id):
     commande = get_object_or_404(Commande, id=commande_id)
     parametre = getattr(commande, 'parametre', None)
@@ -1412,14 +1367,22 @@ def chercher_produit_par_code_barres(request):
 
 
         return JsonResponse({'error': 'Produit non trouvé'}, status=404)
-   
+    
+from django.db.models import Q, Sum, Count
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required, permission_required
+from django.core.exceptions import ObjectDoesNotExist
+from django.contrib import messages
+import logging
+
+logger = logging.getLogger(__name__)
+
 @login_required
 @permission_required('security.historique_vente', raise_exception=True)
 def historique_ventes(request):
     """
     Vue SAAS pour l'historique des ventes avec gestion multi-devises
     """
-    # 1. Vérification de l'entreprise
     if not hasattr(request, 'entreprise') or not request.entreprise:
         logger.error("Accès sans entreprise définie")
         messages.error(request, "Accès non autorisé - entreprise non définie")
@@ -1427,7 +1390,6 @@ def historique_ventes(request):
 
     entreprise = request.entreprise
 
-    # 2. Récupération de la configuration SAAS
     try:
         config_saas = ConfigurationSAAS.objects.get(entreprise=entreprise)
         devise_entreprise = config_saas.devise_principale
@@ -1438,39 +1400,42 @@ def historique_ventes(request):
         messages.error(request, "Configuration commerciale incomplète")
         return redirect('config:completement_config')
 
-    # 3. Filtrage SAAS des ventes
-    ventes = CommandeClient.objects.filter(
+    # Filtrage des ventes
+    ventes = Commande.objects.filter(
         entreprise=entreprise,
-        vente_confirmee=True
-    ).select_related('client', 'vendeur')
+        statut='livre'
+    ).select_related('client', 'created_by')
 
     # Appliquer les filtres supplémentaires
     date = request.GET.get('date')
     vendeur = request.GET.get('vendeur')
+    paiement = request.GET.get('paiement')
     search_query = request.GET.get('search', '').strip()
 
     if date:
         ventes = ventes.filter(date_commande__date=date)
     if vendeur:
-        ventes = ventes.filter(vendeur__id=vendeur)
+        ventes = ventes.filter(created_by__id=vendeur)
+    if paiement:
+        ventes = ventes.filter(mode_paiement=paiement)
     if search_query:
         ventes = ventes.filter(
-            Q(id__icontains=search_query) |
+            Q(numero__icontains=search_query) |
             Q(client__nom__icontains=search_query) |
-            Q(vendeur__username__icontains=search_query)
+            Q(created_by__username__icontains=search_query)
         )
 
-    # 4. Gestion multi-devises - Utilisation de la devise principale de la config SAAS
+    # Gestion multi-devises
     devise_code = request.GET.get('devise', devise_entreprise.code)
     conversion_data = handle_currency_conversion(
         ventes, 
-        from_currency=devise_entreprise,  # On passe l'objet Devise directement
+        from_currency=devise_entreprise,
         to_currency_code=devise_code
     )
 
-    # 5. Calcul des totaux (optimisé)
+    # Calcul des totaux
     totals = ventes.aggregate(
-        total_original=Sum('montant_total'),
+        total_original=Sum('total_ttc'),
         count=Count('id')
     )
 
@@ -1482,12 +1447,13 @@ def historique_ventes(request):
         'devise_affichee': conversion_data['devise_cible'],
         'taux_conversion': conversion_data['taux'],
         'sens_conversion': conversion_data['sens'],
-        'vendeurs': CommandeClient.objects.filter(entreprise=entreprise)
-                          .values('vendeur__id', 'vendeur__username')
+        'vendeurs': Commande.objects.filter(entreprise=entreprise)
+                          .values('created_by__id', 'created_by__username')
                           .distinct(),
         'devises_disponibles': Devise.objects.filter(active=True),
         'selected_date': date,
         'selected_vendeur': vendeur,
+        'selected_paiement': paiement,  # Ajout de cette ligne
         'search_query': search_query,
         'config_saas': config_saas,
         'entreprise': entreprise,
@@ -1495,21 +1461,20 @@ def historique_ventes(request):
     }
 
     return render(request, 'vente/historique_ventes.html', context)
-
 def handle_currency_conversion(ventes, from_currency, to_currency_code):
     """
     Helper SAAS pour gérer les conversions de devises
     from_currency: Objet Devise (la devise principale de l'entreprise)
-    to_currency_code: Code de la devise cible
+    to_currency_code: Code de la devise cible (string)
     """
     if to_currency_code == from_currency.code:
         return {
             'ventes': [{
                 'vente': v, 
-                'montant_converti': v.montant_total,
+                'montant_converti': v.total_ttc,  # CORRECTION: Utiliser total_ttc au lieu de montant_total
                 'devise_cible': from_currency
             } for v in ventes],
-            'total_converti': sum(v.montant_total for v in ventes) if ventes else 0,
+            'total_converti': sum(v.total_ttc for v in ventes) if ventes else 0,  # CORRECTION: Utiliser total_ttc
             'devise_cible': from_currency,
             'taux': 1.0,
             'sens': f"1 {from_currency.code} = 1 {from_currency.code}"
@@ -1523,7 +1488,7 @@ def handle_currency_conversion(ventes, from_currency, to_currency_code):
         total_converti = 0
         
         for vente in ventes:
-            montant = vente.montant_total * taux
+            montant = vente.total_ttc * taux  # CORRECTION: Utiliser total_ttc au lieu de montant_total
             ventes_converties.append({
                 'vente': vente,
                 'montant_converti': round(montant, devise_cible.decimales),
@@ -3110,7 +3075,103 @@ from django.core.paginator import Paginator
 from STOCK.models import Produit, MouvementStock, InventairePhysique
 import logging
 
-logger = logging.getLogger(__name__)
+
+@login_required
+def test_creation_ecriture(request):
+    """
+    Vue de test pour créer une écriture comptable manuellement
+    """
+    try:
+        logger.info("=== TEST MANUEL CRÉATION ÉCRITURE ===")
+        
+        if not hasattr(request, 'entreprise'):
+            messages.error(request, "Entreprise non définie")
+            return redirect("liste_inventaires")
+        
+        # Prendre le premier produit disponible
+        produit = Produit.objects.filter(entreprise=request.entreprise).first()
+        if not produit:
+            messages.error(request, "Aucun produit trouvé")
+            return redirect("liste_inventaires")
+        
+        # Créer un mouvement de test
+        mouvement = MouvementStock.objects.create(
+            produit=produit,
+            type_mouvement="ajustement",
+            quantite=5,
+            commentaire="Test manuel création écriture",
+            utilisateur=request.user,
+            entreprise=request.entreprise,
+            prix_unitaire_moment=produit.prix_achat
+        )
+        
+        # Tester la création d'écriture
+        ecriture = create_ecriture_comptable_inventaire(mouvement, 5, 5, request)
+        
+        if ecriture:
+            success_msg = f"Écriture de test créée avec succès: {ecriture.numero}"
+            logger.info(success_msg)
+            messages.success(request, success_msg)
+        else:
+            error_msg = "Échec de création d'écriture de test"
+            logger.error(error_msg)
+            messages.error(request, error_msg)
+            
+        return redirect("liste_inventaires")
+        
+    except Exception as e:
+        error_msg = f"Erreur lors du test: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        messages.error(request, error_msg)
+        return redirect("liste_inventaires")
+    
+def debug_ecriture_comptable():
+    """
+    Fonction de débogage pour vérifier pourquoi les écritures ne se créent pas
+    """
+    try:
+        logger.info("=== DÉBUT DÉBOGAGE ÉCRITURE COMPTABLE ===")
+        
+        # Vérifier si les modèles existent
+        try:
+            from comptabilite.models import JournalComptable, PlanComptableOHADA, EcritureComptable, LigneEcriture
+            logger.info("✓ Import des modèles comptables réussi")
+        except ImportError as e:
+            logger.error(f"✗ Erreur import modèles comptables: {e}")
+            return False
+        
+        # Vérifier les journaux
+        try:
+            journaux = JournalComptable.objects.all()
+            logger.info(f"Journaux existants: {journaux.count()}")
+            for journal in journaux:
+                logger.info(f"  - {journal.code}: {journal.intitule}")
+        except Exception as e:
+            logger.error(f"✗ Erreur lecture journaux: {e}")
+        
+        # Vérifier les comptes
+        try:
+            comptes = PlanComptableOHADA.objects.all()
+            logger.info(f"Comptes existants: {comptes.count()}")
+            for compte in comptes[:5]:  # Afficher seulement les 5 premiers
+                logger.info(f"  - {compte.numero}: {compte.intitule}")
+        except Exception as e:
+            logger.error(f"✗ Erreur lecture comptes: {e}")
+        
+        # Vérifier les écritures existantes
+        try:
+            écritures = EcritureComptable.objects.all()
+            logger.info(f"Écritures existantes: {écritures.count()}")
+        except Exception as e:
+            logger.error(f"✗ Erreur lecture écritures: {e}")
+        
+        logger.info("=== FIN DÉBOGAGE ÉCRITURE COMPTABLE ===")
+        return True
+        
+    except Exception as e:
+        logger.error(f"✗ ERREUR DÉBOGAGE: {e}", exc_info=True)
+        return False    
+
 @require_POST
 @login_required
 def valider_inventaire(request):
@@ -3119,13 +3180,19 @@ def valider_inventaire(request):
     """
     try:
         logger.info(f"=== DÉBUT VALIDATION INVENTAIRE ===")
-        logger.info(f"Utilisateur: {request.user.username}")
-        logger.info(f"Entreprise: {request.entreprise.nom if hasattr(request, 'entreprise') else 'Non définie'}")
-        logger.info(f"Données POST: {dict(request.POST)}")
+        
+        # Vérification de débogage
+        debug_ecriture_comptable()
         
         if not hasattr(request, 'entreprise'):
-            logger.error("ERREUR: Aucune entreprise définie dans la request")
+            logger.error("ERREUR: Aucune entreprise définie")
             messages.error(request, "Entreprise non définie")
+            return redirect("liste_inventaires")
+        
+        # Vérifier les permissions
+        if not request.user.has_perm('comptabilite.add_ecriturecomptable'):
+            logger.warning("Utilisateur sans permission pour créer des écritures comptables")
+            messages.error(request, "Vous n'avez pas la permission de créer des écritures comptables")
             return redirect("liste_inventaires")
         
         with transaction.atomic():
@@ -3137,7 +3204,6 @@ def valider_inventaire(request):
                 if key.startswith("quantite_physique_"):
                     produits_traites += 1
                     produit_id = key.split("_")[-1]
-                    logger.info(f"Traitement produit ID: {produit_id}, valeur: {value}")
                     
                     try:
                         produit = Produit.objects.get(id=produit_id, entreprise=request.entreprise)
@@ -3166,8 +3232,8 @@ def valider_inventaire(request):
                             produit.save()
                             logger.info(f"Stock du produit {produit.nom} mis à jour: {ancien_stock} → {quantite_physique}")
 
-                            # Créer l'écriture comptable
-                            logger.info(f"Appel create_ecriture_comptable_inventaire...")
+                            # Créer l'écriture comptable - APPEL CORRIGÉ
+                            logger.info("Tentative de création d'écriture comptable...")
                             ecriture = create_ecriture_comptable_inventaire(mouvement, abs(ecart), ecart, request)
                             
                             if ecriture:
@@ -3177,15 +3243,45 @@ def valider_inventaire(request):
                                     'ecriture': ecriture.numero
                                 })
                                 logger.info(f"SUCCÈS: Écriture comptable créée: {ecriture.numero}")
+                                
+                                # Mettre à jour l'inventaire physique si nécessaire
+                                try:
+                                    inventaire = InventairePhysique.objects.get(
+                                        produit=produit, 
+                                        entreprise=request.entreprise,
+                                        statut='en_cours'
+                                    )
+                                    inventaire.marquer_comptabilise(ecriture)
+                                    logger.info(f"Inventaire marqué comme comptabilisé")
+                                except InventairePhysique.DoesNotExist:
+                                    # Créer un nouvel inventaire physique
+                                    InventairePhysique.objects.create(
+                                        entreprise=request.entreprise,
+                                        produit=produit,
+                                        stock_theorique=ancien_stock,
+                                        stock_physique=quantite_physique,
+                                        ecart=ecart,
+                                        valeur_ecart=abs(ecart) * produit.prix_achat,
+                                        utilisateur=request.user,
+                                        valide=True,
+                                        statut='comptabilise',
+                                        ecriture_comptable=ecriture
+                                    )
+                                    logger.info(f"Nouvel inventaire physique créé et comptabilisé")
+                                    
                             else:
-                                logger.warning(f"ÉCHEC: Aucune écriture comptable créée pour le produit {produit.nom}")
+                                error_msg = f"ÉCHEC: Aucune écriture comptable créée pour le produit {produit.nom}"
+                                logger.error(error_msg)
+                                erreurs_produits.append(error_msg)
+                                # Annuler les modifications si l'écriture échoue
+                                raise ValidationError(error_msg)
 
                     except Produit.DoesNotExist:
                         erreur_msg = f"Produit avec ID {produit_id} non trouvé"
                         logger.warning(erreur_msg)
                         erreurs_produits.append(erreur_msg)
                     except ValueError as e:
-                        erreur_msg = f"Valeur invalide pour le produit {produit_id}: {value} - {e}"
+                        erreur_msg = f"Valeur invalide pour le produit {produit_id}: {value}"
                         logger.warning(erreur_msg)
                         erreurs_produits.append(erreur_msg)
                     except Exception as e:
@@ -3193,18 +3289,16 @@ def valider_inventaire(request):
                         logger.error(erreur_msg, exc_info=True)
                         erreurs_produits.append(erreur_msg)
 
-            logger.info(f"Produits traités: {produits_traites}")
-            logger.info(f"Ajustements créés: {len(inventaires_crees)}")
-            logger.info(f"Erreurs: {len(erreurs_produits)}")
-
             # Gestion des messages de résultat
             if inventaires_crees:
                 success_msg = f"Inventaire validé: {len(inventaires_crees)} ajustements comptabilisés."
                 logger.info(success_msg)
                 messages.success(request, success_msg)
                 
+                # Afficher les détails des écritures créées
                 for ajustement in inventaires_crees:
-                    logger.info(f"Ajustement - Produit: {ajustement['produit']}, Écart: {ajustement['ecart']}, Écriture: {ajustement['ecriture']}")
+                    detail_msg = f"- {ajustement['produit']}: Écart {ajustement['ecart']}, Écriture {ajustement['ecriture']}"
+                    messages.info(request, detail_msg)
                     
             else:
                 info_msg = "Inventaire validé - aucun écart significatif."
@@ -3224,234 +3318,7 @@ def valider_inventaire(request):
         logger.error(error_msg, exc_info=True)
         messages.error(request, f"Erreur lors de la validation: {str(e)}")
         return redirect("liste_inventaires")
-def create_ecriture_comptable_inventaire(mouvement, quantite_ajustement, ecart, request):
-    """
-    Crée une écriture comptable pour un ajustement d'inventaire
-    """
-    try:
-        logger.info(f"=== DÉBUT CRÉATION ÉCRITURE COMPTABLE ===")
-        logger.info(f"Mouvement ID: {mouvement.id}, Produit: {mouvement.produit.nom}")
-        
-        # Import des modèles comptables avec vérification
-        try:
-            from comptabilite.models import JournalComptable, PlanComptableOHADA, EcritureComptable, LigneEcriture
-            logger.info("✓ Import des modèles comptables réussi")
-        except ImportError as e:
-            logger.error(f"✗ Erreur import modèles comptables: {e}")
-            return None
-        
-        # Vérifier que l'utilisateur a les permissions
-        if not hasattr(request.user, 'has_perm') or not request.user.has_perm('comptabilite.add_ecriturecomptable'):
-            logger.warning("✗ Utilisateur sans permission pour créer des écritures")
-            return None
-        
-        entreprise = request.entreprise
-        produit = mouvement.produit
-        
-        # Calcul de la valeur
-        valeur_ajustement = quantite_ajustement * mouvement.prix_unitaire_moment
-        logger.info(f"Valeur ajustement: {valeur_ajustement}")
-        
-        # Déterminer le type d'ajustement
-        libelle_ecriture = f"{'Excédent' if ecart > 0 else 'Déficit'} inventaire - {produit.nom}"
-        
-        # Journal des stocks - création si nécessaire
-        journal, created = JournalComptable.objects.get_or_create(
-            code='STK',
-            entreprise=entreprise,
-            defaults={
-                'intitule': 'Journal des Stocks',
-                'type_journal': 'divers'
-            }
-        )
-        
-        # Comptes comptables - création si nécessaire
-        compte_stock, created = PlanComptableOHADA.objects.get_or_create(
-            numero='31',
-            entreprise=entreprise,
-            defaults={
-                'classe': '3',
-                'intitule': 'Stocks',
-                'type_compte': 'actif',
-                'description': 'Stocks de matières et marchandises'
-            }
-        )
-        
-        compte_variation, created = PlanComptableOHADA.objects.get_or_create(
-            numero='6037',
-            entreprise=entreprise,
-            defaults={
-                'classe': '6',
-                'intitule': 'Variation des stocks (inventaires)',
-                'type_compte': 'charge',
-                'description': 'Ajustements de stocks suite aux inventaires'
-            }
-        )
-        
-        # Générer un numéro d'écriture simple
-        from django.utils import timezone
-        numero_ecriture = f"STK-{timezone.now().strftime('%Y%m%d')}-{EcritureComptable.objects.filter(journal=journal, date_ecriture__date=timezone.now().date()).count() + 1:04d}"
-        
-        # Créer l'écriture comptable
-        ecriture = EcritureComptable.objects.create(
-            journal=journal,
-            numero=numero_ecriture,
-            date_ecriture=timezone.now(),
-            date_comptable=timezone.now().date(),
-            libelle=libelle_ecriture,
-            piece_justificative=f"INV-{mouvement.id}",
-            montant_devise=valeur_ajustement,
-            entreprise=entreprise,
-            created_by=request.user,
-            mouvement_stock_lie=mouvement
-        )
-        
-        # Créer les lignes d'écriture
-        if ecart > 0:  # Excédent
-            LigneEcriture.objects.create(
-                ecriture=ecriture,
-                compte=compte_stock,
-                libelle=f"Excédent inventaire - {produit.nom}",
-                debit=valeur_ajustement,
-                credit=0,
-                entreprise=entreprise
-            )
-            
-            LigneEcriture.objects.create(
-                ecriture=ecriture,
-                compte=compte_variation,
-                libelle=f"Excédent inventaire - {produit.nom}",
-                debit=0,
-                credit=valeur_ajustement,
-                entreprise=entreprise
-            )
-        else:  # Déficit
-            LigneEcriture.objects.create(
-                ecriture=ecriture,
-                compte=compte_variation,
-                libelle=f"Déficit inventaire - {produit.nom}",
-                debit=valeur_ajustement,
-                credit=0,
-                entreprise=entreprise
-            )
-            
-            LigneEcriture.objects.create(
-                ecriture=ecriture,
-                compte=compte_stock,
-                libelle=f"Déficit inventaire - {produit.nom}",
-                debit=0,
-                credit=valeur_ajustement,
-                entreprise=entreprise
-            )
-        
-        logger.info(f"✓ Écriture créée avec succès: {ecriture.numero}")
-        return ecriture
-        
-    except Exception as e:
-        logger.error(f"✗ Erreur création écriture: {e}", exc_info=True)
-        return None
-        
-        # Générer un numéro d'écriture
-        try:
-            numero_ecriture = generate_ecriture_number(journal)
-            logger.info(f"Numéro d'écriture généré: {numero_ecriture}")
-        except Exception as e:
-            logger.error(f"✗ Erreur génération numéro: {e}", exc_info=True)
-            numero_ecriture = f"STK-{mouvement.id}-ERR"
-        
-        # Créer l'écriture comptable
-        try:
-            ecriture = EcritureComptable.objects.create(
-                journal=journal,
-                numero=numero_ecriture,
-                date_ecriture=mouvement.date_mouvement,
-                date_comptable=mouvement.date_mouvement.date(),
-                libelle=libelle_ecriture,
-                piece_justificative=f"INV-{mouvement.id}",
-                montant_devise=valeur_ajustement,
-                entreprise=entreprise,
-                created_by=request.user,
-                mouvement_stock_lie=mouvement
-            )
-            logger.info(f"✓ Écriture comptable créée: {ecriture.numero}")
-        except Exception as e:
-            logger.error(f"✗ Erreur création écriture: {e}", exc_info=True)
-            return None
-        
-        # Créer les lignes d'écriture
-        try:
-            if type_ajustement == "excédent":
-                # EXCÉDENT D'INVENTAIRE
-                ligne1 = LigneEcriture.objects.create(
-                    ecriture=ecriture,
-                    compte=compte_stock,
-                    libelle=f"Excédent inventaire - {produit.nom}",
-                    debit=valeur_ajustement,
-                    credit=0,
-                    entreprise=entreprise
-                )
-                
-                ligne2 = LigneEcriture.objects.create(
-                    ecriture=ecriture,
-                    compte=compte_variation,
-                    libelle=f"Excédent inventaire - {produit.nom}",
-                    debit=0,
-                    credit=valeur_ajustement,
-                    entreprise=entreprise
-                )
-                logger.info(f"✓ Lignes créées: Débit {ligne1.debit} sur {compte_stock.numero}, Crédit {ligne2.credit} sur {compte_variation.numero}")
-                
-            else:
-                # DÉFICIT D'INVENTAIRE
-                ligne1 = LigneEcriture.objects.create(
-                    ecriture=ecriture,
-                    compte=compte_variation,
-                    libelle=f"Déficit inventaire - {produit.nom}",
-                    debit=valeur_ajustement,
-                    credit=0,
-                    entreprise=entreprise
-                )
-                
-                ligne2 = LigneEcriture.objects.create(
-                    ecriture=ecriture,
-                    compte=compte_stock,
-                    libelle=f"Déficit inventaire - {produit.nom}",
-                    debit=0,
-                    credit=valeur_ajustement,
-                    entreprise=entreprise
-                )
-                logger.info(f"✓ Lignes créées: Débit {ligne1.debit} sur {compte_variation.numero}, Crédit {ligne2.credit} sur {compte_stock.numero}")
-                
-        except Exception as e:
-            logger.error(f"✗ Erreur création lignes: {e}", exc_info=True)
-            # Supprimer l'écriture incomplète
-            try:
-                ecriture.delete()
-                logger.info("Écriture supprimée à cause d'erreur de lignes")
-            except:
-                pass
-            return None
-        
-        # Mise à jour des documents comptables
-        try:
-            update_grand_livre(ecriture, entreprise)
-            logger.debug("✓ Grand Livre mis à jour")
-            
-            update_balance(entreprise, mouvement.date_mouvement.date())
-            logger.debug("✓ Balance mise à jour")
-            
-            update_bilan(entreprise, mouvement.date_mouvement.date())
-            logger.debug("✓ Bilan mis à jour")
-            
-        except Exception as e:
-            logger.warning(f"⚠ Erreur mise à jour documents comptables: {e}")
-        
-        logger.info(f"=== SUCCÈS: Écriture {ecriture.numero} créée ===")
-        return ecriture
-        
-    except Exception as e:
-        logger.error(f"✗ ERREUR CRITIQUE création écriture: {e}", exc_info=True)
-        return None
+    
 # Dans votre fichier STOCK/views.py
 
 import logging
@@ -3466,10 +3333,24 @@ from parametres.models import ConfigurationSAAS # Assuming ConfigurationSAAS is 
 
 logger = logging.getLogger(__name__)
 
+# STOCK/views.py
+import logging
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.contrib.auth import get_user_model
+from django.utils.dateparse import parse_date
+from django.db.models import Sum, DecimalField
+from .models import MouvementStock, Produit
+from parametres.models import ConfigurationSAAS
+
+logger = logging.getLogger(__name__)
+
 @login_required
 def liste_mouvements_stock(request):
     """
-    Liste des mouvements de stock avec filtres
+    Lists stock movements with filters and calculates total value.
     """
     if not hasattr(request, 'entreprise'):
         messages.error(request, "Entreprise non définie")
@@ -3479,14 +3360,13 @@ def liste_mouvements_stock(request):
         entreprise=request.entreprise
     ).select_related('produit', 'utilisateur').order_by('-date_mouvement')
 
-    # Filtres
+    # Apply filters
     produit_id = request.GET.get("produit")
     type_mouvement = request.GET.get("type")
     utilisateur_id = request.GET.get("utilisateur")
     date_debut = request.GET.get("date_debut")
     date_fin = request.GET.get("date_fin")
 
-    # Appliquer les filtres
     if produit_id and produit_id != '':
         mouvements = mouvements.filter(produit_id=produit_id)
     if type_mouvement and type_mouvement != '':
@@ -3508,19 +3388,52 @@ def liste_mouvements_stock(request):
         except (ValueError, TypeError):
             pass
 
-    # Pagination
+    # --- NOUVEAUX CALCULS DES VALEURS TOTALES ---
+    # Utilisez une annotation pour calculer la valeur de chaque mouvement
+    # avant de faire l'agrégation.
+    mouvements_valorises = mouvements.annotate(
+        valeur_totale=models.F('quantite') * models.F('prix_unitaire_moment')
+    )
+    
+    # Calculez la somme des valeurs pour les mouvements d'entrée et de sortie
+    montant_total_entrees = mouvements_valorises.filter(
+        type_mouvement='entree'
+    ).aggregate(
+        total=Sum('valeur_totale', output_field=DecimalField())
+    )['total'] or 0
+
+    montant_total_sorties = mouvements_valorises.filter(
+        type_mouvement='sortie'
+    ).aggregate(
+        total=Sum('valeur_totale', output_field=DecimalField())
+    )['total'] or 0
+    
+    montant_total_inventaire = mouvements_valorises.filter(
+        type_mouvement='inventaire'
+    ).aggregate(
+        total=Sum('valeur_totale', output_field=DecimalField())
+    )['total'] or 0
+    
+    montant_total_ajustement = mouvements_valorises.filter(
+        type_mouvement='ajustement'
+    ).aggregate(
+        total=Sum('valeur_totale', output_field=DecimalField())
+    )['total'] or 0
+    
+    
+    # Pagination (utilisez le queryset original, non annoté pour la pagination)
     paginator = Paginator(mouvements, 25)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
-    # Données pour les filtres
+    # Data for filters
     produits = Produit.objects.filter(entreprise=request.entreprise)
     utilisateurs = get_user_model().objects.filter(
         mouvementstock__entreprise=request.entreprise
     ).distinct()
 
     # Get main currency
-    devise_principale = 'USD' # Default currency
+    devise_principale = 'USD'
     try:
         config_saas = ConfigurationSAAS.objects.get(entreprise=request.entreprise)
         devise_principale = config_saas.devise_principale.symbole
@@ -3534,11 +3447,16 @@ def liste_mouvements_stock(request):
         'filtres': request.GET.dict(),
         'total_mouvements': mouvements.count(),
         'entreprise': request.entreprise,
-        'devise_principale': devise_principale # Add the main currency to the context
+        'devise_principale': devise_principale,
+        'montant_total_entrees': montant_total_entrees,
+        'montant_total_sorties': montant_total_sorties,
+        'montant_total_inventaire': montant_total_inventaire,
+        'montant_total_ajustement': montant_total_ajustement,
     }
     
     logger.debug(f"Liste mouvements affichée: {len(page_obj)} résultats")
     return render(request, "inventaire/liste_mouvements.html", context)
+
 #rapport mouvement
 @login_required
 @permission_required('STOCK.view_report', raise_exception=True)
