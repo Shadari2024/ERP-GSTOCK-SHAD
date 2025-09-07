@@ -575,13 +575,13 @@ class GrandLivreView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAcce
         date_debut = self.request.GET.get('date_debut')
         date_fin = self.request.GET.get('date_fin')
         
-        # Récupérer les écritures filtrées
+        # Récupérer les écritures filtrées - CORRECTION: Inclure toutes les écritures de l'entreprise
         ecritures = EcritureComptable.objects.filter(entreprise=entreprise)
         
         if date_debut:
-            ecritures = ecritures.filter(date_ecriture__gte=date_debut)
+            ecritures = ecritures.filter(date_comptable__gte=date_debut)  # Utiliser date_comptable au lieu de date_ecriture
         if date_fin:
-            ecritures = ecritures.filter(date_ecriture__lte=date_fin)
+            ecritures = ecritures.filter(date_comptable__lte=date_fin)    # Utiliser date_comptable au lieu de date_ecriture
         
         # Si un compte est spécifié, filtrer les lignes de ce compte
         if compte:
@@ -593,7 +593,7 @@ class GrandLivreView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAcce
                 lignes = LigneEcriture.objects.filter(
                     compte=compte_obj,
                     ecriture__in=ecritures
-                ).select_related('ecriture', 'ecriture__journal').order_by('ecriture__date_ecriture', 'ecriture__numero')
+                ).select_related('ecriture', 'ecriture__journal').order_by('ecriture__date_comptable', 'ecriture__numero')
                 
                 # Calculer le solde
                 solde = 0
@@ -601,9 +601,9 @@ class GrandLivreView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAcce
                 total_credit = 0
                 
                 for ligne in lignes:
-                    solde += ligne.debit - ligne.credit
-                    total_debit += ligne.debit
-                    total_credit += ligne.credit
+                    solde += float(ligne.debit) - float(ligne.credit)
+                    total_debit += float(ligne.debit)
+                    total_credit += float(ligne.credit)
                     ligne.solde_cumule = solde
                 
                 context['lignes'] = lignes
@@ -625,7 +625,6 @@ class GrandLivreView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAcce
         }
         
         return context
-
 # Balance View
 class BalanceView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMixin, TemplateView):
     template_name = "comptabilite/balance/list.html"
@@ -658,10 +657,10 @@ class BalanceView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessM
         context['date_debut'] = date_debut
         context['date_fin'] = date_fin
         
-        # Récupérer les écritures dans la période
+        # Récupérer les écritures dans la période - CORRECTION: Utiliser date_comptable
         ecritures = EcritureComptable.objects.filter(
             entreprise=entreprise,
-            date_ecriture__range=[date_debut, date_fin]
+            date_comptable__range=[date_debut, date_fin]  # CHANGÉ: date_comptable au lieu de date_ecriture
         )
         
         # Récupérer tous les comptes (filtrer par classe si spécifié)
@@ -692,9 +691,9 @@ class BalanceView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessM
             
             # Solde final selon le type de compte
             if compte.type_compte in ['actif', 'charge']:
-                solde_final = solde_initial + total_debit_compte - total_credit_compte
+                solde_final = solde_initial + float(total_debit_compte) - float(total_credit_compte)
             else:  # passif, produit
-                solde_final = solde_initial + total_credit_compte - total_debit_compte
+                solde_final = solde_initial + float(total_credit_compte) - float(total_debit_compte)
             
             balance_data.append({
                 'compte': compte,
@@ -706,8 +705,8 @@ class BalanceView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessM
             
             # Totaux généraux
             total_solde_initial += solde_initial
-            total_debit += total_debit_compte
-            total_credit += total_credit_compte
+            total_debit += float(total_debit_compte)
+            total_credit += float(total_credit_compte)
             total_solde_final += solde_final
         
         context['balance_data'] = balance_data
@@ -916,10 +915,10 @@ class BilanView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMix
         
         context['date_fin'] = date_fin
         
-        # Récupérer les écritures jusqu'à la date spécifiée
+        # Récupérer les écritures jusqu'à la date spécifiée - CORRECTION: Utiliser date_comptable
         ecritures = EcritureComptable.objects.filter(
             entreprise=entreprise,
-            date_ecriture__lte=date_fin
+            date_comptable__lte=date_fin  # CHANGÉ: date_comptable au lieu de date_ecriture
         )
         
         # Calculer les totaux par classe de comptes
@@ -946,9 +945,9 @@ class BilanView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMix
                 
                 # Déterminer le solde selon le type de compte
                 if compte.type_compte in ['actif', 'charge']:
-                    solde = total_debit - total_credit
+                    solde = float(total_debit) - float(total_credit)
                 else:  # passif, produit
-                    solde = total_credit - total_debit
+                    solde = float(total_credit) - float(total_debit)
                 
                 total_classe += solde
                 
@@ -985,7 +984,6 @@ class BilanView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMix
         context['equilibre'] = abs(difference) < 0.01  # Tolérance de 0.01 pour les arrondis
         
         return context
-
 class CompteResultatView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMixin, TemplateView):
     template_name = "comptabilite/etat_financier/compte_resultat.html"
     permission_required = "comptabilite.view_ecriturecomptable"
@@ -1018,10 +1016,10 @@ class CompteResultatView(LoginRequiredMixin, PermissionRequiredMixin, Entreprise
         context['date_fin'] = date_fin
         context['detail_level'] = detail_level
         
-        # Récupérer les écritures dans la période
+        # Récupérer les écritures dans la période - CORRECTION: Utiliser date_comptable
         ecritures = EcritureComptable.objects.filter(
             entreprise=entreprise,
-            date_ecriture__range=[date_debut, date_fin]
+            date_comptable__range=[date_debut, date_fin]  # CHANGÉ: date_comptable au lieu de date_ecriture
         )
         
         # Calculer les produits (classe 7)
@@ -1043,7 +1041,7 @@ class CompteResultatView(LoginRequiredMixin, PermissionRequiredMixin, Entreprise
             total_credit = lignes.aggregate(Sum('credit'))['credit__sum'] or 0
             
             # Pour les comptes de produits, le solde est crédit - débit
-            solde = total_credit - total_debit
+            solde = float(total_credit) - float(total_debit)
             total_produits += solde
             
             if abs(solde) > 0.01:  # Seulement les comptes avec montant significatif
@@ -1071,7 +1069,7 @@ class CompteResultatView(LoginRequiredMixin, PermissionRequiredMixin, Entreprise
             total_credit = lignes.aggregate(Sum('credit'))['credit__sum'] or 0
             
             # Pour les comptes de charges, le solde est débit - crédit
-            solde = total_debit - total_credit
+            solde = float(total_debit) - float(total_credit)
             total_charges += solde
             
             if abs(solde) > 0.01:  # Seulement les comptes avec montant significatif

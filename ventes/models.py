@@ -18,6 +18,10 @@ from django.forms import inlineformset_factory
 from parametres.models import Entreprise # <-- Keep this import
 from STOCK.models import Produit, Client # <-- Keep these imports
 import datetime
+from comptabilite.models import *
+from django.db import transaction, IntegrityError
+from django.core.exceptions import ValidationError
+
 
 logger = logging.getLogger(__name__)
 
@@ -422,18 +426,26 @@ class CommandeAuditLog(models.Model):
     def __str__(self):
         return f"[{self.performed_at.strftime('%Y-%m-%d %H:%M')}] {self.action} sur Commande #{self.commande.numero if self.commande else 'N/A'} par {self.performed_by}"
 
+from django.db import models, transaction, IntegrityError
+from django.utils import timezone
+from django.conf import settings
+from decimal import Decimal
+import logging
+
+logger = logging.getLogger(__name__)
+
 class BonLivraison(models.Model):
     STATUT_CHOICES = [
-       ('brouillon', 'Brouillon'),
+        ('brouillon', 'Brouillon'),
         ('prepare', 'Préparé'),
         ('expedie', 'Expédié'),
-        ('livre', 'Livré'),  # 'livre' sans accent
+        ('livre', 'Livré'),
         ('annule', 'Annulé'),
     ]
 
-    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
-    commande = models.ForeignKey(Commande, on_delete=models.CASCADE, related_name='livraisons')
-    numero = models.CharField(max_length=50, unique=True, blank=True)
+    entreprise = models.ForeignKey('parametres.Entreprise', on_delete=models.CASCADE)
+    commande = models.ForeignKey('ventes.Commande', on_delete=models.CASCADE, related_name='livraisons')
+    numero = models.CharField(max_length=50, blank=True)
     date = models.DateField(default=timezone.now)
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='prepare')
     notes = models.TextField(blank=True, null=True)
@@ -441,74 +453,104 @@ class BonLivraison(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    # Correction: Transformez les propriétés en champs de modèle pour le stockage4
-    total_ht = models.DecimalField(max_digits=10, decimal_places=2, default=decimal.Decimal('0.00'))
-    total_tva = models.DecimalField(max_digits=10, decimal_places=2, default=decimal.Decimal('0.00'))
-    total_ttc = models.DecimalField(max_digits=10, decimal_places=2, default=decimal.Decimal('0.00'))
+    total_ht = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    total_tva = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    total_ttc = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+
+    class Meta:
+        unique_together = ['entreprise', 'numero']  # Numéro unique par entreprise
 
     def generate_bl_number(self):
-        # ... (votre code existant pour générer le numéro)
+        """
+        Génère un numéro de BL unique pour l'entreprise
+        """
         today = timezone.now().date()
         prefix = f"BL-{today.year}-"
+        
+        # Trouver le dernier numéro utilisé pour cette entreprise
         last_bl = BonLivraison.objects.filter(
             entreprise=self.entreprise,
             numero__startswith=prefix
-        ).aggregate(models.Max('numero'))['numero__max']
-
-        next_num = 1
-        if last_bl:
+        ).order_by('-numero').first()
+        
+        if last_bl and last_bl.numero:
             try:
-                num_part = int(last_bl.split('-')[-1])
+                num_part = int(last_bl.numero.split('-')[-1])
                 next_num = num_part + 1
-            except ValueError:
-                pass
+            except (ValueError, IndexError):
+                next_num = 1
+        else:
+            next_num = 1
+        
         return f"{prefix}{next_num:04d}"
 
     def update_totals(self):
-        # Nouvelle méthode pour mettre à jour les totaux
+        """
+        Met à jour les totaux à partir des lignes
+        """
         total_ht_sum = sum(
-            item.montant_ht for item in self.items.all() if item.montant_ht is not None
+            (item.montant_ht for item in self.items.all() if item.montant_ht is not None),
+            Decimal('0.00')
         )
         total_tva_sum = sum(
-            item.montant_tva for item in self.items.all() if item.montant_tva is not None
+            (item.montant_tva for item in self.items.all() if item.montant_tva is not None),
+            Decimal('0.00')
         )
+        
         self.total_ht = total_ht_sum
         self.total_tva = total_tva_sum
         self.total_ttc = total_ht_sum + total_tva_sum
 
     def save(self, *args, **kwargs):
+        """
+        Sauvegarde avec gestion des numéros uniques
+        """
         if not self.numero:
-            max_attempts = 10
-            for _ in range(max_attempts):
-                new_numero = self.generate_bl_number()
-                if not BonLivraison.objects.filter(numero=new_numero).exists():
-                    self.numero = new_numero
-                    break
-            else:
-                raise ValueError("Impossible de générer un numéro de bon de livraison unique")
+            # Générer le numéro avant de sauvegarder
+            self.numero = self.generate_bl_number()
+        
+        # Essayer de sauvegarder avec gestion des conflits
+        max_attempts = 5
+        for attempt in range(max_attempts):
+            try:
+                super().save(*args, **kwargs)
+                return
+            except IntegrityError as e:
+                if 'numero' in str(e) and attempt < max_attempts - 1:
+                    # Regénérer un nouveau numéro en cas de conflit
+                    today = timezone.now().date()
+                    prefix = f"BL-{today.year}-"
+                    timestamp = int(time.time() % 1000)
+                    self.numero = f"{prefix}{timestamp:04d}"
+                    continue
+                else:
+                    raise
 
-        # Supprimez les lignes qui causaient l'erreur
-        # Les totaux seront mis à jour dans un signal ou dans la vue `form_valid`.
-        super().save(*args, **kwargs)
-
-    # Laissez les propriétés si vous voulez qu'elles restent accessibles en lecture seule
-    # pour un calcul dynamique.
-    # Assurez-vous qu'elles ne sont pas utilisées pour l'écriture.
     @property
     def total_ht_calc(self):
         return sum(
             (item.montant_ht for item in self.items.all() if item.montant_ht is not None),
-            decimal.Decimal('0.00')
+            Decimal('0.00')
         )
-    # Répétez pour total_tva et total_ttc si vous le souhaitez.
-
+    
+    @property
+    def total_tva_calc(self):
+        return sum(
+            (item.montant_tva for item in self.items.all() if item.montant_tva is not None),
+            Decimal('0.00')
+        )
+    
+    @property
+    def total_ttc_calc(self):
+        return self.total_ht_calc + self.total_tva_calc
+    
     def __str__(self):
         return f"BL {self.numero} - {self.commande.client.nom}"
 
     def update_status(self, new_status, changed_by, comment=""):
-        # Votre méthode de changement de statut est correcte,
-        # elle n'écrit pas sur les totaux. L'erreur vient de la méthode save().
-        # ... (votre code de la méthode update_status)
+        """
+        Met à jour le statut du bon de livraison
+        """
         if new_status not in [choice[0] for choice in self.STATUT_CHOICES]:
             raise ValueError(f"Statut '{new_status}' invalide pour le bon de livraison.")
 
@@ -518,14 +560,15 @@ class BonLivraison(models.Model):
             self.statut = new_status
             self.save(update_fields=['statut', 'updated_at'])
 
-            # Create status history
-            # ... (code existant) ...
+            # Historique du statut
+            BonLivraisonStatutHistory.objects.create(
+                bon_livraison=self,
+                ancien_statut=old_status,
+                nouveau_statut=new_status,
+                changed_by=changed_by,
+                commentaire=comment
+            )
             
-            # Create audit log
-            # ... (code existant) ...
-            return True
-        return False
-
 
 class LigneBonLivraison(models.Model):
     bon_livraison = models.ForeignKey(BonLivraison, related_name='items', on_delete=models.CASCADE)
@@ -601,21 +644,27 @@ class BonLivraisonAuditLog(models.Model):
     def __str__(self):
         return f"[{self.performed_at.strftime('%Y-%m-%d %H:%M')}] {self.action} sur BL #{self.bon_livraison.numero if self.bon_livraison else 'N/A'} par {self.performed_by}"
 
-
- # --- Facture Model ---
-from django.db import models
+# ventes/models.py
+from django.db import models, transaction
 from django.utils import timezone
 from django.conf import settings
+from decimal import Decimal
+import logging
 from django.urls import reverse
-import decimal
+
+# Assurez-vous d'importer les autres modèles nécessaires
+from parametres.models import Entreprise
+from STOCK.models import Client
+
+logger = logging.getLogger(__name__)
 
 class Facture(models.Model):
     STATUT_CHOICES = [
         ('brouillon', 'Brouillon'),
-        ('validee', 'Validée'),  # Changé de 'valide' à 'validee' pour correspondre à votre code
+        ('validee', 'Validée'),
         ('paye_partiel', 'Payé partiellement'),
         ('paye', 'Payé'),
-        ('annulee', 'Annulée'),  # Changé de 'annule' à 'annulee'
+        ('annulee', 'Annulée'),
     ]
 
     MODE_PAIEMENT_CHOICES = [
@@ -628,11 +677,9 @@ class Facture(models.Model):
         ('autre', 'Autre'),
     ]
 
-    # Relations principales
-    entreprise = models.ForeignKey('parametres.Entreprise', on_delete=models.CASCADE)
-    client = models.ForeignKey('STOCK.Client', on_delete=models.PROTECT)
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
+    client = models.ForeignKey(Client, on_delete=models.PROTECT)
     
-    # Documents liés (tous optionnels)
     devis = models.ForeignKey('Devis', on_delete=models.SET_NULL, null=True, blank=True)
     commande = models.ForeignKey('Commande', on_delete=models.SET_NULL, null=True, blank=True)
     bon_livraison = models.ForeignKey(
@@ -643,14 +690,12 @@ class Facture(models.Model):
         related_name='factures'
     )
     
-    # Informations de base
-    numero = models.CharField(max_length=50, unique=True, blank=True)
-    date_facture = models.DateField(default=timezone.now)  # Renommé de 'date' à 'date_facture'
-    date_echeance = models.DateField()  # Renommé de 'echeance' à 'date_echeance'
+    numero = models.CharField(max_length=50, blank=True)
+    date_facture = models.DateField(default=timezone.now)
+    date_echeance = models.DateField()
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='brouillon')
     mode_paiement = models.CharField(max_length=20, choices=MODE_PAIEMENT_CHOICES, blank=True, null=True)
     
-    # Champs manquants pour la validation
     date_validation = models.DateTimeField(null=True, blank=True)
     validated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
@@ -660,19 +705,16 @@ class Facture(models.Model):
         related_name='factures_validees'
     )
     
-    # Informations financières
     remise = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     total_ht = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_tva = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_ttc = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     montant_restant = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
-    # Informations supplémentaires
     notes = models.TextField(blank=True, null=True)
     conditions_paiement = models.TextField(blank=True, null=True)
     reference_client = models.CharField(max_length=100, blank=True, null=True)
     
-    # Métadonnées
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
         on_delete=models.SET_NULL, 
@@ -688,21 +730,22 @@ class Facture(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # Internationalisation
     devise = models.CharField(max_length=3, default='EUR')
     langue = models.CharField(max_length=10, default='fr')
     
     @property
     def montant_paye(self):
-        """Calcule le montant total payé"""
         return (self.total_ttc or 0) - (self.montant_restant or 0)
 
     @property
     def pourcentage_paye(self):
-        """Calcule le pourcentage payé"""
         if self.total_ttc == 0:
             return 0
         return (self.montant_paye / self.total_ttc) * 100
+
+    @property
+    def reste_a_payer(self):
+        return self.montant_restant or 0
 
     class Meta:
         verbose_name = "Facture"
@@ -712,64 +755,79 @@ class Facture(models.Model):
             ('exporter_facture', 'Peut exporter les factures'),
             ('envoyer_facture', 'Peut envoyer les factures par email'),
         ]
+        # CORRECTION: Utilisez unique_together pour garantir l'unicité par entreprise
+        unique_together = ['entreprise', 'numero']
 
-    def generate_facture_number(self):
-        """Génère un numéro de facture unique"""
+    def generate_facture_number_atomic(self):
+        """
+        Génère un numéro de facture unique par entreprise de manière sécurisée.
+        """
         today = timezone.now().date()
         prefix = f"FAC-{today.year}-{today.month:02d}-"
         
-        last_facture = Facture.objects.filter(
-            entreprise=self.entreprise,
-            numero__startswith=prefix
-        ).order_by('-numero').first()
+        # Le verrouillage est crucial pour éviter les conflits dans un système multi-utilisateurs
+        with transaction.atomic():
+            last_facture = Facture.objects.filter(
+                entreprise=self.entreprise,
+                numero__startswith=prefix
+            ).select_for_update().order_by('-numero').first()
 
-        sequence = 1
-        if last_facture:
-            try:
-                num_part = int(last_facture.numero.split('-')[-1])
-                sequence = num_part + 1
-            except (ValueError, IndexError):
-                pass
-        
-        return f"{prefix}{sequence:04d}"
+            sequence = 1
+            if last_facture:
+                try:
+                    num_part = int(last_facture.numero.split('-')[-1])
+                    sequence = num_part + 1
+                except (ValueError, IndexError):
+                    pass
+            
+            return f"{prefix}{sequence:04d}"
 
     def save(self, *args, **kwargs):
-        # Génération du numéro de facture
+        """
+        Surcharge la méthode save pour générer un numéro unique si nécessaire.
+        """
         if not self.numero:
-            self.numero = self.generate_facture_number()
+            self.numero = self.generate_facture_number_atomic()
         
-        # Calcul des totaux
+        # Le calcul des totaux doit se faire avant la sauvegarde initiale
+        # pour éviter un appel 'save' récursif.
         self.calculate_totals()
         
         super().save(*args, **kwargs)
 
     def calculate_totals(self):
-        """Calcule et met à jour les totaux de la facture"""
+        """
+        Calcule et met à jour les totaux de la facture.
+        Cette méthode ne sauvegarde pas, elle met simplement à jour les attributs.
+        """
         if not self.pk:
             return
         
-        items = self.items.all()  # Changé de 'items' à 'lignes'
+        items = self.items.all()
         
-        self.total_ht = sum(item.montant_ht for item in items if item.montant_ht is not None)
-        self.total_tva = sum(item.montant_tva for item in items if item.montant_tva is not None)
+        total_ht = sum(item.montant_ht for item in items if item.montant_ht is not None)
+        total_tva = sum(item.montant_tva for item in items if item.montant_tva is not None)
         
-        # Calcul du montant après remise
-        montant_avant_remise = self.total_ht + self.total_tva
-        montant_remise = montant_avant_remise * (self.remise / decimal.Decimal('100.00')) if self.remise else decimal.Decimal('0.00')
-        self.total_ttc = montant_avant_remise - montant_remise
+        montant_avant_remise = total_ht + total_tva
+        montant_remise = montant_avant_remise * (self.remise / Decimal('100.00')) if self.remise else Decimal('0.00')
+        total_ttc = montant_avant_remise - montant_remise
         
-        # Calcul du montant restant
         total_paiements = sum(p.montant for p in self.paiements.all() if p.montant is not None)
-        self.montant_restant = max(self.total_ttc - total_paiements, decimal.Decimal('0.00'))
+        montant_restant = max(total_ttc - total_paiements, Decimal('0.00'))
+
+        self.total_ht = total_ht
+        self.total_tva = total_tva
+        self.total_ttc = total_ttc
+        self.montant_restant = montant_restant
 
     def update_statut(self):
-        """Met à jour le statut en fonction des paiements"""
+        """Met à jour le statut en fonction des paiements et sauvegarde."""
         if self.statut == 'annulee':
             return
-            
+        
         self.calculate_totals()
-
-        if self.montant_restant <= decimal.Decimal('0.00'):
+        
+        if self.montant_restant <= Decimal('0.00'):
             self.statut = 'paye'
         elif self.montant_restant < self.total_ttc:
             self.statut = 'paye_partiel'
@@ -781,33 +839,8 @@ class Facture(models.Model):
     def get_absolute_url(self):
         return reverse('ventes:facture_detail', kwargs={'pk': self.pk})
     
-
-    def get_statut_display(self):
-        """Retourne le libellé du statut"""
-        statuts_dict = dict(self.STATUT_CHOICES)
-        return statuts_dict.get(self.statut, self.statut)
-
     def __str__(self):
         return f"Facture {self.numero} - {self.client} - {self.total_ttc} {self.devise}"
-    
-    @property
-    def reste_a_payer(self):
-        """Alias pour montant_restant pour compatibilité"""
-        return self.montant_restant or 0
-    
-    def update_statut(self):
-        """Met à jour le statut de la facture"""
-        self.calculate_totals()
-        
-        if self.montant_restant <= decimal.Decimal('0.00'):
-            self.statut = 'paye'
-        elif self.montant_restant < self.total_ttc:
-            self.statut = 'paye_partiel'
-        elif self.total_ttc > 0 and self.statut == 'brouillon':
-            self.statut = 'validee'
-        
-        self.save(update_fields=['statut', 'montant_restant', 'updated_at'])
-
 class LigneFacture(models.Model):
     facture = models.ForeignKey(Facture, related_name='items', on_delete=models.CASCADE)
     produit = models.ForeignKey('STOCK.Produit', on_delete=models.PROTECT)  # Changé de 'article' à 'produit'
@@ -1051,6 +1084,7 @@ class LigneVentePOS(models.Model):
 
     def __str__(self):
         return f"{self.produit.nom} - {self.quantite} x {self.prix_unitaire}"
+
     
 class PaiementPOS(models.Model):
     MODE_PAIEMENT_CHOICES = [
@@ -1070,8 +1104,117 @@ class PaiementPOS(models.Model):
 
     def __str__(self):
         return f"Paiement POS de {self.montant}"
-    
-    
+
+    def enregistrer_ecriture_comptable(self):
+        """Enregistre le paiement dans la comptabilité"""
+        from comptabilite.models import JournalComptable, EcritureComptable, LigneEcriture, PlanComptableOHADA
+        from django.contrib.auth import get_user_model
+        from django.utils import timezone
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        User = get_user_model()
+        
+        try:
+            logger.info(f"=== DÉBUT création écriture comptable pour paiement POS {self.id} ===")
+            
+            entreprise = self.session.point_de_vente.entreprise
+            utilisateur = self.session.utilisateur
+            
+            logger.info(f"Entreprise: {entreprise.nom}, Utilisateur: {utilisateur.username}")
+            
+            # Déterminer le journal comptable en fonction du mode de paiement
+            if self.mode_paiement == 'espece':
+                journal_code = 'CA'  # Journal de caisse
+                compte_numero = '53'
+            elif self.mode_paiement == 'carte':
+                journal_code = 'BQ'  # Journal de banque
+                compte_numero = '51'
+            else:
+                journal_code = 'OD'  # Journal des opérations diverses
+                compte_numero = '53'
+            
+            logger.info(f"Mode paiement: {self.mode_paiement}, Journal: {journal_code}, Compte: {compte_numero}")
+            
+            # Vérifier l'existence des comptes et journaux
+            try:
+                compte_caisse = PlanComptableOHADA.objects.get(numero=compte_numero, entreprise=entreprise)
+                logger.info(f"Compte {compte_numero} trouvé: {compte_caisse.intitule}")
+            except PlanComptableOHADA.DoesNotExist:
+                logger.error(f"❌ Compte {compte_numero} non trouvé pour l'entreprise {entreprise.nom}")
+                return None
+            except Exception as e:
+                logger.error(f"❌ Erreur recherche compte {compte_numero}: {e}")
+                return None
+            
+            try:
+                journal = JournalComptable.objects.get(code=journal_code, entreprise=entreprise)
+                logger.info(f"Journal {journal_code} trouvé: {journal.intitule}")
+            except JournalComptable.DoesNotExist:
+                logger.error(f"❌ Journal {journal_code} non trouvé pour l'entreprise {entreprise.nom}")
+                return None
+            except Exception as e:
+                logger.error(f"❌ Erreur recherche journal {journal_code}: {e}")
+                return None
+            
+            try:
+                compte_ventes = PlanComptableOHADA.objects.get(numero='70', entreprise=entreprise)
+                logger.info(f"Compte 70 trouvé: {compte_ventes.intitule}")
+            except PlanComptableOHADA.DoesNotExist:
+                logger.error(f"❌ Compte 70 non trouvé pour l'entreprise {entreprise.nom}")
+                return None
+            except Exception as e:
+                logger.error(f"❌ Erreur recherche compte 70: {e}")
+                return None
+            
+            # Créer l'écriture comptable
+            ecriture_data = {
+                'journal': journal,
+                'numero': f"PAY-POS-{self.id}-{timezone.now().strftime('%Y%m%d%H%M%S')}",
+                'date_ecriture': timezone.now(),
+                'date_comptable': timezone.now().date(),
+                'libelle': f"Paiement POS vente {self.vente.numero}",
+                'piece_justificative': f"PV-POS-{self.id}",
+                'montant_devise': self.montant,
+                'entreprise': entreprise,
+                'created_by': utilisateur,
+                'vente_liee': self.vente,
+                'paiement_pos': self
+            }
+            
+            logger.info(f"Données écriture: {ecriture_data}")
+            
+            ecriture = EcritureComptable.objects.create(**ecriture_data)
+            logger.info(f"✅ Écriture comptable créée: {ecriture.numero}")
+            
+            # Créer les lignes d'écriture
+            ligne1 = LigneEcriture.objects.create(
+                ecriture=ecriture,
+                compte=compte_caisse,
+                libelle=f"Encaissement POS vente {self.vente.numero}",
+                debit=self.montant,
+                credit=0,
+                entreprise=entreprise
+            )
+            logger.info(f"✅ Ligne débit créée: {ligne1.id}")
+            
+            ligne2 = LigneEcriture.objects.create(
+                ecriture=ecriture,
+                compte=compte_ventes,
+                libelle=f"Vente POS {self.vente.numero}",
+                debit=0,
+                credit=self.montant,
+                entreprise=entreprise
+            )
+            logger.info(f"✅ Ligne crédit créée: {ligne2.id}")
+            
+            logger.info(f"=== FIN création écriture comptable réussie ===")
+            return ecriture
+            
+        except Exception as e:
+            logger.error(f"❌ ERREUR CRITIQUE lors de l'enregistrement comptable: {str(e)}")
+            logger.exception("Détails de l'erreur:")
+            return None
     
 # ventes/models.py
 class EcartCaisse(models.Model):

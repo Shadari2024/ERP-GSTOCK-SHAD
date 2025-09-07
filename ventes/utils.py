@@ -347,12 +347,17 @@ def update_devis_status(devis, new_status, user, commande_numero):
         pass
     
     
-    
-    
-    
+from django.db import transaction, IntegrityError
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from decimal import Decimal
+import logging
+
+logger = logging.getLogger(__name__)
+
 def convert_commande_to_bon_livraison(commande_id, user):
     """
-    Convertit une commande confirmée en bon de livraison avec toutes les lignes de produits
+    Convertit une commande confirmée en bon de livraison avec vérification du stock
     """
     try:
         with transaction.atomic():
@@ -366,7 +371,12 @@ def convert_commande_to_bon_livraison(commande_id, user):
             # Vérifications préalables
             if not can_convert_commande(commande):
                 error_msg = get_commande_conversion_error_message(commande)
-                return None, error_msg
+                raise ValidationError(error_msg)
+
+            # VÉRIFICATION DU STOCK AVANT TOUTE CHOSE
+            stock_errors = check_stock_availability(commande)
+            if stock_errors:
+                raise ValidationError("Stock insuffisant: " + "; ".join(stock_errors))
 
             # Générer le numéro de bon de livraison
             bon_livraison_numero = generate_bon_livraison_number(commande.entreprise)
@@ -377,7 +387,7 @@ def convert_commande_to_bon_livraison(commande_id, user):
             # Copier les items de la commande vers le bon de livraison
             lignes_copied = copy_items_to_bon_livraison(commande, new_bon_livraison)
             if not lignes_copied:
-                return None, "Aucune ligne à copier"
+                raise ValidationError("Aucune ligne à copier")
 
             # Mettre à jour les totaux du bon de livraison
             new_bon_livraison.update_totals()
@@ -386,17 +396,94 @@ def convert_commande_to_bon_livraison(commande_id, user):
             # Mettre à jour le statut de la commande
             update_commande_status(commande, 'livre', user, new_bon_livraison.numero)
             
-            # Mettre à jour le stock (sortie de stock)
-            update_stock_on_delivery(new_bon_livraison.items.all(), user, action_type='out')
+            # Mettre à jour le stock (sortie de stock) - MAINTENANT SÉCURISÉ
+            stock_update_errors = update_stock_on_delivery(new_bon_livraison.items.all(), user, action_type='out')
+            if stock_update_errors:
+                raise ValidationError("Erreurs de mise à jour stock: " + "; ".join(stock_update_errors))
             
             return new_bon_livraison, None
 
     except Commande.DoesNotExist:
+        logger.error(f"Commande {commande_id} non trouvée")
         return None, "Commande non trouvée"
+    
+    except IntegrityError as e:
+        logger.error(f"Erreur d'intégrité: {str(e)}")
+        return None, f"Erreur de duplication: {str(e)}"
+    
+    except ValidationError as e:
+        logger.error(f"Erreur de validation: {str(e)}")
+        return None, str(e)
         
     except Exception as e:
+        logger.error(f"Erreur inattendue: {str(e)}", exc_info=True)
         return None, f"Erreur lors de la conversion: {str(e)}"
 
+def check_stock_availability(commande):
+    """
+    Vérifie la disponibilité du stock pour tous les produits de la commande
+    Retourne une liste d'erreurs si stock insuffisant
+    """
+    errors = []
+    
+    for item in commande.items.all():
+        produit = item.produit
+        quantite_demandee = item.quantite
+        stock_disponible = produit.stock
+        
+        if stock_disponible < quantite_demandee:
+            errors.append(
+                f"{produit.nom}: stock {stock_disponible}, "
+                f"demandé {quantite_demandee}"
+            )
+    
+    return errors
+
+def update_stock_on_delivery(lignes_bon_livraison, user, action_type='out'):
+    """
+    Met à jour le stock après livraison avec vérification de sécurité
+    """
+    errors = []
+    
+    for ligne in lignes_bon_livraison:
+        try:
+            produit = ligne.produit
+            quantite = ligne.quantite
+            
+            if action_type == 'out':
+                # VÉRIFICATION DE SÉCURITÉ - ne pas descendre en dessous de 0
+                if produit.stock < quantite:
+                    errors.append(f"Stock insuffisant pour {produit.nom}")
+                    continue
+                
+                produit.stock -= quantite
+            elif action_type == 'in':
+                produit.stock += quantite
+            
+            produit.save()
+            
+            # Créer le mouvement de stock avec les bons champs
+            mouvement_data = {
+                'produit': produit,
+                'quantite': quantite,
+                'type_mouvement': 'sortie' if action_type == 'out' else 'entree',
+                'utilisateur': user,
+                'entreprise': user.entreprise,
+                'commentaire': f"BL-{ligne.bon_livraison.numero}"
+            }
+            
+            # Ajouter le prix unitaire si disponible
+            if hasattr(produit, 'prix_achat'):
+                mouvement_data['prix_unitaire_moment'] = produit.prix_achat
+            
+            MouvementStock.objects.create(**mouvement_data)
+            
+        except Exception as e:
+            errors.append(f"Erreur sur {getattr(produit, 'nom', 'produit inconnu')}: {str(e)}")
+    
+    return errors
+
+# Les autres fonctions restent inchangées mais doivent utiliser raise au lieu de return
 
 def can_convert_commande(commande):
     """
@@ -414,7 +501,6 @@ def can_convert_commande(commande):
     return (commande.statut in allowed_statuses and 
             commande.statut not in blocked_statuses)
 
-
 def get_commande_conversion_error_message(commande):
     """
     Retourne un message d'erreur approprié selon le statut de la commande
@@ -429,52 +515,70 @@ def get_commande_conversion_error_message(commande):
     return status_messages.get(commande.statut, 
         f"Le statut '{commande.get_statut_display()}' ne permet pas la conversion en bon de livraison.")
 
-
 def generate_bon_livraison_number(entreprise):
     """
-    Génère un numéro de bon de livraison unique en utilisant la même logique que le modèle
+    Génère un numéro de bon de livraison unique
     """
     from datetime import date
+    import time
     
     today = date.today()
     prefix = f"BL-{today.year}-"
     
-    # Utiliser la même logique que la méthode generate_bl_number du modèle
-    last_bl = BonLivraison.objects.filter(
-        entreprise=entreprise,
-        numero__startswith=prefix
-    ).order_by('-numero').first()
-    
-    if last_bl and last_bl.numero:
-        try:
-            num_part = int(last_bl.numero.split('-')[-1])
-            next_num = num_part + 1
-        except (ValueError, IndexError):
+    max_attempts = 10
+    for attempt in range(max_attempts):
+        last_bl = BonLivraison.objects.filter(
+            entreprise=entreprise,
+            numero__startswith=prefix
+        ).order_by('-numero').first()
+        
+        if last_bl and last_bl.numero:
+            try:
+                num_part = int(last_bl.numero.split('-')[-1])
+                next_num = num_part + 1
+            except (ValueError, IndexError):
+                next_num = 1
+        else:
             next_num = 1
-    else:
-        next_num = 1
+        
+        proposed_number = f"{prefix}{next_num:04d}"
+        
+        if not BonLivraison.objects.filter(entreprise=entreprise, numero=proposed_number).exists():
+            return proposed_number
+        
+        time.sleep(0.1)
     
-    return f"{prefix}{next_num:04d}"
-
+    timestamp = int(time.time() % 10000)
+    return f"{prefix}{timestamp:04d}"
 
 def create_bon_livraison_from_commande(commande, numero, user):
     """
     Crée un nouveau bon de livraison à partir d'une commande
-    Basé sur la structure exacte de votre modèle BonLivraison
     """
-    return BonLivraison.objects.create(
-        entreprise=commande.entreprise,
-        commande=commande,  # Champ essentiel pour la relation
-        date=timezone.now().date(),
-        numero=numero,
-        total_ht=commande.total_ht or Decimal('0.00'),
-        total_tva=commande.total_tva or Decimal('0.00'),
-        total_ttc=commande.total_ttc or Decimal('0.00'),
-        notes=build_bon_livraison_notes(commande),
-        statut='prepare',  # Statut initial 'prepare' comme défini dans votre modèle
-        created_by=user,
-    )
-
+    max_attempts = 3
+    for attempt in range(max_attempts):
+        try:
+            return BonLivraison.objects.create(
+                entreprise=commande.entreprise,
+                commande=commande,
+                date=timezone.now().date(),
+                numero=numero,
+                total_ht=commande.total_ht or Decimal('0.00'),
+                total_tva=commande.total_tva or Decimal('0.00'),
+                total_ttc=commande.total_ttc or Decimal('0.00'),
+                notes=build_bon_livraison_notes(commande),
+                statut='prepare',
+                created_by=user,
+            )
+        except IntegrityError as e:
+            if 'numero' in str(e) and attempt < max_attempts - 1:
+                from datetime import date
+                today = date.today()
+                timestamp = int(time.time() % 1000)
+                numero = f"BL-{today.year}-{timestamp:04d}"
+                continue
+            else:
+                raise
 
 def build_bon_livraison_notes(commande):
     """
@@ -485,11 +589,9 @@ def build_bon_livraison_notes(commande):
         return f"{base_note}\n\nNotes de la commande:\n{commande.notes}"
     return base_note
 
-
 def copy_items_to_bon_livraison(commande, bon_livraison):
     """
     Copie les items de la commande vers le bon de livraison
-    Utilise le related_name 'items' pour les deux modèles
     """
     items_commande = commande.items.all()
     
@@ -509,7 +611,6 @@ def copy_items_to_bon_livraison(commande, bon_livraison):
     
     return True
 
-
 def update_commande_status(commande, new_status, user, bon_livraison_numero):
     """
     Met à jour le statut de la commande
@@ -527,38 +628,5 @@ def update_commande_status(commande, new_status, user, bon_livraison_numero):
             changed_by=user,
             commentaire=f"Converti en bon de livraison #{bon_livraison_numero}"
         )
-    except:
-        pass
-
-
-def update_stock_on_delivery(lignes_bon_livraison, user, action_type='out'):
-    """
-    Met à jour le stock après livraison
-    """
-    for ligne in lignes_bon_livraison:
-        try:
-            produit = ligne.produit
-            quantite = ligne.quantite
-            
-            if action_type == 'out':
-                # Sortie de stock
-                produit.stock -= quantite
-            elif action_type == 'in':
-                # Entrée de stock (retour)
-                produit.stock += quantite
-            
-            produit.save()
-            
-            # Log de mouvement de stock
-            MouvementStock.objects.create(
-                produit=produit,
-                quantite=quantite,
-                type_mouvement='sortie' if action_type == 'out' else 'entree',
-                reference=f"BL-{ligne.bon_livraison.numero}",
-                created_by=user,
-                entreprise=user.entreprise
-            )
-            
-        except Exception as e:
-            # Continuer avec les autres produits même en cas d'erreur sur un
-            continue
+    except Exception as e:
+        logger.error(f"Erreur création historique statut: {str(e)}")

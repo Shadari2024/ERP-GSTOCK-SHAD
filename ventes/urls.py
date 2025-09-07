@@ -92,8 +92,6 @@ urlpatterns = [
     
      # Paiement et ticket
     path('vente/<int:vente_id>/paiement/', PaiementVenteView.as_view(), name='paiement_vente'),
-       path('vente/<int:vente_id>/paiement/', PaiementVenteView.as_view(), 
-         name='paiement_vente'),
     path('vente/<int:vente_id>/impression/', ImpressionTicketView.as_view(), 
          name='impression_ticket'),
     path('vente/<int:vente_id>/ticket-pdf/', GenererTicketPDFView.as_view(), 

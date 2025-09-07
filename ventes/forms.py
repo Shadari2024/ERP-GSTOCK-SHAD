@@ -177,10 +177,8 @@ class SessionPOSForm(forms.ModelForm):
         model = SessionPOS
         fields = ['fonds_ouverture']
 
+
 class VentePOSForm(forms.ModelForm):
-    """
-    Formulaire pour la création d'une Vente en Point de Vente.
-    """
     client = forms.ModelChoiceField(
         queryset=Client.objects.none(),
         required=False,
@@ -192,9 +190,10 @@ class VentePOSForm(forms.ModelForm):
         model = VentePOS
         fields = ['client', 'remise', 'notes']
         widgets = {
-            'notes': forms.Textarea(attrs={'rows': 2}),
+            'remise': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'step': '0.01'}),
+            'notes': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
         }
-    
+   
     def __init__(self, *args, **kwargs):
         entreprise = kwargs.pop('entreprise', None)
         super().__init__(*args, **kwargs)
@@ -205,79 +204,74 @@ class VentePOSForm(forms.ModelForm):
             ).order_by('nom')
 
 class LigneVentePOSForm(forms.ModelForm):
-    """
-    Formulaire pour une ligne de produit dans une Vente POS.
-    """
     produit = forms.ModelChoiceField(
         queryset=Produit.objects.none(),
         label=("Produit"),
         widget=forms.Select(attrs={'class': 'form-select select2-produit'})
     )
-    
+   
     class Meta:
         model = LigneVentePOS
-        fields = ['produit', 'quantite', 'prix_unitaire', 'taux_tva']  # Garder produit si le modèle est corrigé
+        fields = ['produit', 'quantite', 'prix_unitaire', 'taux_tva']
         widgets = {
-            'quantite': forms.NumberInput(attrs={'min': '0.01', 'step': '0.01', 'class': 'form-control'}),
-            'prix_unitaire': forms.NumberInput(attrs={'min': '0', 'step': '0.01', 'class': 'form-control'}),
+            'quantite': forms.NumberInput(attrs={'min': '0.01', 'step': '0.01', 'class': 'form-control quantite-input'}),
+            'prix_unitaire': forms.NumberInput(attrs={'min': '0', 'step': '0.01', 'class': 'form-control prix-input'}),
             'taux_tva': forms.NumberInput(attrs={'min': '0', 'step': '0.01', 'class': 'form-control'}),
         }
-        
+       
     def __init__(self, *args, **kwargs):
         entreprise = kwargs.pop('entreprise', None)
         super().__init__(*args, **kwargs)
-        
+       
         if entreprise:
             produits = Produit.objects.filter(
                 entreprise=entreprise,
                 actif=True
             ).order_by('nom')
-            
+           
             if produits.exists():
                 self.fields['produit'].queryset = produits
-    
+   
     def clean(self):
         cleaned_data = super().clean()
-        produit = cleaned_data.get('produit')  # Changé de article à produit
+        produit = cleaned_data.get('produit')
         quantite = cleaned_data.get('quantite', 0)
-        
+       
         if produit and quantite:
             if quantite <= 0:
                 raise forms.ValidationError(_("La quantité doit être supérieure à zéro."))
-            
+           
             # Vérifier le stock
             if produit.stock < quantite:
                 raise forms.ValidationError(
                     _(f"Stock insuffisant. Disponible: {produit.stock}")
                 )
-        
+       
         return cleaned_data
-
-
 
 class LigneVentePOSFormSet(BaseInlineFormSet):
     def __init__(self, *args, **kwargs):
         self.entreprise = kwargs.pop('entreprise', None)
         super().__init__(*args, **kwargs)
-    
+   
     def _construct_form(self, i, **kwargs):
         kwargs['entreprise'] = self.entreprise
         return super()._construct_form(i, **kwargs)
 
-
+# CORRECTION CRITIQUE : Utilisez cette définition du formset
 LigneVentePOSFormSet = inlineformset_factory(
-    VentePOS, 
-    LigneVentePOS, 
+    VentePOS,
+    LigneVentePOS,
     form=LigneVentePOSForm,
     formset=LigneVentePOSFormSet,
+    fields=['produit', 'quantite', 'prix_unitaire', 'taux_tva'],
     extra=1,
-    can_delete=True
+    can_delete=True,
+    min_num=1,
+    validate_min=True
 )
 
 class PaiementPOSForm(forms.ModelForm):
-    """
-    Formulaire pour un Paiement associé à une Vente POS.
-    """
     class Meta:
         model = PaiementPOS
         fields = ['montant', 'mode_paiement', 'reference']
@@ -286,13 +280,12 @@ class PaiementPOSForm(forms.ModelForm):
             'montant': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'step': 0.01}),
             'reference': forms.TextInput(attrs={'class': 'form-control'}),
         }
-    
+   
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Optionnel: ajouter des labels personnalisés si nécessaire
-        self.fields['montant'].label = "Montant à payer"
-        self.fields['mode_paiement'].label = "Mode de paiement"
-        self.fields['reference'].label = "Référence (optionnel)"
+        self.fields['montant'].label = _("Montant à payer")
+        self.fields['mode_paiement'].label = _("Mode de paiement")
+        self.fields['reference'].label = _("Référence (optionnel)")
         
 # Commande
 # NEW FORM FOR STATUS UPDATE

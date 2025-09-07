@@ -25,3 +25,12 @@ def abs(value):
         return abs(float(value))
     except ValueError:
         return 0
+    
+    
+    
+    
+    
+    
+    
+    
+    

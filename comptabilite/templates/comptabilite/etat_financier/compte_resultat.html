@@ -1,6 +1,7 @@
 {% extends "comptabilite/base.html" %}
 {% load static %}
 {% load math_filters %}
+{% load filter_abs %}
 {% block title %}Compte de Résultat{% endblock %}
 
 {% block breadcrumb %}
@@ -251,9 +252,9 @@
                             <div class="progress-bar bg-danger" style="width: {% if total_produits > 0 %}{{ total_charges|div:total_produits|multiply:100 }}%{% else %}0%{% endif %}">
                                 Charges: {% if total_produits > 0 %}{{ total_charges|div:total_produits|multiply:100|floatformat:0 }}%{% else %}0%{% endif %}
                             </div>
-                            <div class="progress-bar {% if benefice %}bg-success{% else %}bg-warning{% endif %}" style="width: {% if total_produits > 0 %}{{ resultat|abs|div:total_produits|multiply:100 }}%{% else %}0%{% endif %}">
-                                Résultat: {% if total_produits > 0 %}{{ resultat|abs|div:total_produits|multiply:100|floatformat:0 }}%{% else %}0%{% endif %}
-                            </div>
+                           <div class="progress-bar {% if benefice %}bg-success{% else %}bg-warning{% endif %}" style="width: {% if total_produits > 0 %}{{ resultat|absolute_value|div:total_produits|multiply:100 }}%{% else %}0%{% endif %}">
+    Résultat: {% if total_produits > 0 %}{{ resultat|absolute_value|div:total_produits|multiply:100|floatformat:0 }}%{% else %}0%{% endif %}
+</div>
                         </div>
                     </div>
                 </div>

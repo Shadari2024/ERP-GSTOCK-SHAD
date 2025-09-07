@@ -1319,31 +1319,33 @@ class BonLivraisonCreateView(LoginRequiredMixin, PermissionRequiredMixin, Entrep
 
 
 
-
 class CommandeConvertToBLView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMixin, View):
     permission_required = 'ventes.add_bonlivraison'
 
     def post(self, request, pk, *args, **kwargs):
-        commande = get_object_or_404(Commande, pk=pk, entreprise=request.entreprise)
+        try:
+            commande = get_object_or_404(Commande, pk=pk, entreprise=request.entreprise)
 
-        # Vérification supplémentaire côté vue
-        if not can_convert_commande(commande):
-            messages.error(request, get_commande_conversion_error_message(commande))
-            return redirect('ventes:commande_detail', pk=commande.pk)
+            # Vérification supplémentaire côté vue
+            if not can_convert_commande(commande):
+                messages.error(request, get_commande_conversion_error_message(commande))
+                return redirect('ventes:commande_detail', pk=commande.pk)
 
-        new_bon_livraison, error_message = convert_commande_to_bon_livraison(commande.pk, request.user)
+            new_bon_livraison, error_message = convert_commande_to_bon_livraison(commande.pk, request.user)
 
-        if new_bon_livraison:
-            messages.success(
-                request, 
-                f"✅ La commande #{commande.numero} a été convertie en bon de livraison #{new_bon_livraison.numero} avec succès."
-            )
-            return redirect('ventes:livraison_detail', pk=new_bon_livraison.pk)
-        else:
-            messages.error(request, error_message or "Erreur lors de la conversion.")
-            return redirect('ventes:commande_detail', pk=commande.pk)
-
-
+            if new_bon_livraison:
+                messages.success(
+                    request, 
+                    f"✅ La commande #{commande.numero} a été convertie en bon de livraison #{new_bon_livraison.numero} avec succès."
+                )
+                return redirect('ventes:livraison_detail', pk=new_bon_livraison.pk)
+            else:
+                messages.error(request, error_message or "Erreur lors de la conversion.")
+                return redirect('ventes:commande_detail', pk=commande.pk)
+                
+        except Exception as e:
+            messages.error(request, f"Erreur critique: {str(e)}")
+            return redirect('ventes:commande_detail', pk=pk)
 
 
 class BonLivraisonDetailView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMixin, DetailView):
@@ -4673,6 +4675,19 @@ from ventes.forms import VentePOSForm, LigneVentePOSFormSet, PaiementPOSForm
 from parametres.models import ConfigurationSAAS, Devise
 
 
+from django.db import transaction
+from django.shortcuts import get_object_or_404, render, redirect
+from django.http import JsonResponse, HttpResponseRedirect
+from django.urls import reverse
+from django.contrib import messages
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+from django.views import View
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from decimal import Decimal
+import logging
+
+logger = logging.getLogger(__name__)
 
 class NouvelleVentePOSView(LoginRequiredMixin, PermissionRequiredMixin, View):
     template_name = 'ventes/pos/nouvelle_vente.html'
@@ -4753,7 +4768,7 @@ class NouvelleVentePOSView(LoginRequiredMixin, PermissionRequiredMixin, View):
                             total_ligne = prix_unitaire * quantite
                             total_vente += total_ligne
 
-                    # Première passe : vérifier les stocks
+                    # Vérifier les stocks
                     produits_insuffisants = []
                     for ligne_form in formset:
                         cleaned_data = ligne_form.cleaned_data
@@ -4775,16 +4790,14 @@ class NouvelleVentePOSView(LoginRequiredMixin, PermissionRequiredMixin, View):
                             _("Stock insuffisant pour: ") + ", ".join(produits_insuffisants)
                         )
                     
-                    # Sauvegarde de la vente avec les totaux calculés
+                    # Sauvegarde de la vente
                     vente = form.save(commit=False)
                     vente.session = session
-                    vente.numero = f"V{datetime.now().strftime('%Y%m%d%H%M%S')}"
-                    vente.sous_total = total_vente
-                    vente.total = total_vente # Pour l'instant, pas de taxes ou remises
-                    vente.devise = devise_principale # Assigner la devise principale à la vente
+                    vente.numero = f"V{timezone.now().strftime('%Y%m%d%H%M%S')}"
+                    vente.devise = devise_principale
                     vente.save()
                     
-                    # Deuxième passe : enregistrer les lignes et mettre à jour le stock
+                    # Enregistrer les lignes de vente
                     for ligne_form in formset:
                         cleaned_data = ligne_form.cleaned_data
                         if (cleaned_data.get('produit') and 
@@ -4793,21 +4806,30 @@ class NouvelleVentePOSView(LoginRequiredMixin, PermissionRequiredMixin, View):
                             
                             produit = cleaned_data['produit']
                             quantite_demandee = cleaned_data['quantite']
+                            prix_unitaire = cleaned_data.get('prix_unitaire', Decimal('0.00'))
                             
                             ligne = ligne_form.save(commit=False)
                             ligne.vente = vente
+                            ligne.prix_unitaire = prix_unitaire
+                            ligne.quantite = quantite_demandee
+                            
+                            # Sauvegarder pour déclencher le calcul automatique
                             ligne.save()
                             
+                            # Mettre à jour le stock
                             Produit.objects.filter(pk=produit.pk).update(
                                 stock=F('stock') - quantite_demandee
                             )
 
-                    # Si c'est une requête AJAX, retourner JSON
+                    # Recalculer le total après sauvegarde de toutes les lignes
+                    vente.refresh_from_db()
+                    
                     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                         return JsonResponse({
                             'success': True,
                             'vente_id': vente.id,
                             'numero': vente.numero,
+                            'total_vente': float(vente.total_ht),
                             'message': _("Vente enregistrée avec succès"),
                             'redirect_url': reverse('ventes:paiement_vente', kwargs={'vente_id': vente.id})
                         })
@@ -4815,6 +4837,7 @@ class NouvelleVentePOSView(LoginRequiredMixin, PermissionRequiredMixin, View):
                         return HttpResponseRedirect(reverse('ventes:paiement_vente', kwargs={'vente_id': vente.id}))
                     
             except Exception as e:
+                logger.error(f"Erreur création vente: {str(e)}")
                 if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                     return JsonResponse({
                         'success': False,
@@ -4953,12 +4976,17 @@ class PaiementVenteView(LoginRequiredMixin, View):
             session__point_de_vente__entreprise=request.user.entreprise
         )
         
+        # DEBUG: Vérifier le calcul du total
+        logger.info(f"Paiement - Vente {vente.numero}")
+        logger.info(f"Paiement - Nombre d'items: {vente.items.count()}")
+        logger.info(f"Paiement - Total HT: {vente.total_ht}")
+        
         # Calculer le montant déjà payé
         montant_deja_paye = vente.paiementpos_set.aggregate(
             total=Sum('montant')
         )['total'] or 0
         
-        # Utiliser le total HT comme base pour les paiements (TVA = 0)
+        # Utiliser le total HT comme base pour les paiements
         montant_restant = vente.total_ht - montant_deja_paye
         
         # Récupérer la devise
@@ -4968,7 +4996,7 @@ class PaiementVenteView(LoginRequiredMixin, View):
         except ConfigurationSAAS.DoesNotExist:
             devise_symbole = "€"
         
-        # Obtenir le nom du client de manière sécurisée
+        # Obtenir le nom du client
         nom_client = "NON RENSEIGNÉ"
         if vente.client:
             nom_client = vente.client.nom
@@ -5007,7 +5035,17 @@ class PaiementVenteView(LoginRequiredMixin, View):
                 paiement.session = vente.session
                 paiement.save()
                 
-                # Vérifier si la vente est complètement payée (basé sur HT)
+                # Enregistrement comptable
+                try:
+                    ecriture = paiement.enregistrer_ecriture_comptable()
+                    if ecriture:
+                        messages.success(request, _("Paiement et écriture comptable enregistrés avec succès."))
+                    else:
+                        messages.warning(request, _("Paiement enregistré mais erreur lors de l'écriture comptable."))
+                except Exception as e:
+                    messages.warning(request, _("Paiement enregistré mais erreur comptable: {}").format(str(e)))
+                
+                # Vérifier si la vente est complètement payée
                 montant_total_paye = vente.paiementpos_set.aggregate(
                     total=Sum('montant')
                 )['total'] or 0
@@ -5015,9 +5053,9 @@ class PaiementVenteView(LoginRequiredMixin, View):
                 if montant_total_paye >= vente.total_ht:
                     vente.est_payee = True
                     vente.save()
-                    messages.success(request, _("Paiement complet enregistré avec succès."))
+                    messages.success(request, _("Vente complètement payée."))
                 else:
-                    messages.success(request, _("Paiement partiel enregistré avec succès."))
+                    messages.success(request, _("Paiement partiel enregistré."))
                 
                 # Générer le ticket si demandé
                 if request.POST.get('imprimer_ticket'):
@@ -5025,7 +5063,7 @@ class PaiementVenteView(LoginRequiredMixin, View):
                 
                 return redirect('ventes:pos_dashboard', pk=vente.session.point_de_vente.id)
         
-        # Recalculer les montants en cas d'erreur
+        # En cas d'erreur du formulaire
         montant_deja_paye = vente.paiementpos_set.aggregate(
             total=Sum('montant')
         )['total'] or 0
@@ -5037,7 +5075,6 @@ class PaiementVenteView(LoginRequiredMixin, View):
         except ConfigurationSAAS.DoesNotExist:
             devise_symbole = "€"
         
-        # Obtenir le nom du client de manière sécurisée
         nom_client = "NON RENSEIGNÉ"
         if vente.client:
             nom_client = vente.client.nom

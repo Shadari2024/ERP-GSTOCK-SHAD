@@ -284,6 +284,16 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # ✅ Retirez le slash final
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+
+
+
+
+
+BL_NUMBER_FORMAT = "BL-{year}-{seq:04d}"
+BL_NUMBER_MAX_ATTEMPTS = 10
+
+
+
 # settings.py
 # Configuration des prévisions
 # settings.py

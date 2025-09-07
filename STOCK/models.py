@@ -623,7 +623,7 @@ class MouvementStock(models.Model):
     utilisateur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     commentaire = models.TextField(blank=True, null=True)
     entreprise = models.ForeignKey('parametres.Entreprise', on_delete=models.CASCADE)
-    
+    reference = models.CharField(max_length=100, blank=True, null=True, verbose_name="Référence (BL, Facture, etc.)")
     # Prix unitaire au moment du mouvement pour la valorisation
     prix_unitaire_moment = models.DecimalField(
         max_digits=12, 

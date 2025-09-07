@@ -203,6 +203,15 @@ class EcritureComptable(models.Model):
         blank=True,
         verbose_name=_("Paiement lié")
     )
+    
+      # CORRECTION: Changez le nom et le verbose_name
+    paiement_pos = models.ForeignKey(  # CHANGÉ DE 'paiementPost' À 'paiement_pos'
+        'ventes.PaiementPOS',  # Pour les paiements POS
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        verbose_name=_("Paiement lié (POS)")  # VERBOSE_NAME CORRIGÉ
+    )
     mouvement_stock_lie = models.ForeignKey(
         'STOCK.MouvementStock',
         on_delete=models.SET_NULL,

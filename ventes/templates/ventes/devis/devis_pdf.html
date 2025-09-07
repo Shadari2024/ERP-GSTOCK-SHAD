@@ -3,142 +3,280 @@
 <head>
     <meta charset="utf-8">
     <style>
+        /* STYLE OPTIMISÉ POUR IMPRIMANTES THERMIQUES */
         body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 10px;
+            line-height: 1.2;
+            color: #000;
             margin: 0;
-            padding: 20px;
+            padding: 2mm;
+            width: 80mm; /* Largeur standard ticket */
         }
+        
         .header {
             text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #333;
-            padding-bottom: 20px;
+            margin-bottom: 3mm;
+            padding-bottom: 2mm;
+            border-bottom: 1px dashed #000;
         }
-        .entreprise-info {
-            text-align: right;
-            margin-bottom: 20px;
+        
+        .header h1 {
             font-size: 12px;
+            font-weight: bold;
+            margin: 1mm 0;
+            text-transform: uppercase;
         }
+        
+        .header h2 {
+            font-size: 10px;
+            font-weight: bold;
+            margin: 1mm 0;
+        }
+        
+        .entreprise-info {
+            text-align: center;
+            margin-bottom: 2mm;
+            font-size: 8px;
+            line-height: 1.1;
+        }
+        
         .client-info {
-            margin-bottom: 20px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 5px;
+            margin-bottom: 2mm;
+            padding: 2mm;
+            border: 1px dotted #000;
+            font-size: 8px;
+            line-height: 1.1;
         }
+        
+        .client-info strong {
+            display: block;
+            text-align: center;
+            margin-bottom: 1mm;
+            text-decoration: underline;
+        }
+        
         .devis-info {
-            margin-bottom: 20px;
+            margin-bottom: 2mm;
+            text-align: center;
+            font-size: 8px;
         }
+        
         table {
             width: 100%;
             border-collapse: collapse;
-            margin: 20px 0;
+            margin: 2mm 0;
+            font-size: 8px;
         }
+        
         th, td {
-            padding: 10px;
+            padding: 1mm;
             text-align: left;
-            border: 1px solid #ddd;
+            border: none;
         }
+        
         th {
-            background-color: #f8f9fa;
             font-weight: bold;
+            border-bottom: 1px solid #000;
+            text-transform: uppercase;
         }
+        
+        tr {
+            border-bottom: 1px dotted #ccc;
+        }
+        
         .total-row {
             font-weight: bold;
-            background-color: #e9ecef;
+            border-top: 1px solid #000;
+            border-bottom: 2px double #000;
         }
+        
+        .total-row td {
+            padding: 2mm 1mm;
+        }
+        
         .notes {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 5px;
+            margin-top: 2mm;
+            padding: 2mm;
+            border: 1px dotted #000;
+            font-size: 8px;
+            line-height: 1.1;
         }
+        
+        .notes h3 {
+            font-size: 9px;
+            font-weight: bold;
+            margin: 0 0 1mm 0;
+            text-align: center;
+            text-decoration: underline;
+        }
+        
         .footer {
             text-align: center;
-            margin-top: 30px;
-            padding-top: 10px;
-            border-top: 1px solid #ddd;
-            font-size: 10px;
-            color: #666;
+            margin-top: 3mm;
+            padding-top: 2mm;
+            border-top: 1px dashed #000;
+            font-size: 7px;
+            line-height: 1.1;
+        }
+        
+        .barcode-area {
+            text-align: center;
+            margin: 2mm 0;
+            padding: 1mm;
+            border: 1px dotted #000;
+        }
+        
+        .separator {
+            text-align: center;
+            margin: 2mm 0;
+            font-weight: bold;
+        }
+        
+        /* Styles pour l'impression */
+        @media print {
+            body {
+                width: 80mm;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .no-print {
+                display: none;
+            }
+            
+            table {
+                page-break-inside: avoid;
+            }
+        }
+        
+        /* Coupes pour ticket */
+        .cut-line {
+            text-align: center;
+            margin: 3mm 0;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
+    <!-- Ligne de coupe supérieure -->
+    <div class="cut-line">✄ - - - - - - - - - - - - - - - - - ✄</div>
+    
     <div class="header">
-        <h1>{{ entreprise.nom }}</h1>
+        <h1>{{ entreprise.nom|upper }}</h1>
         <h2>DEVIS N° {{ devis.numero }}</h2>
     </div>
 
     <div class="entreprise-info">
-        <p><strong>{{ entreprise.nom }}</strong></p>
+        <p><strong>{{ entreprise.nom|upper }}</strong></p>
         <p>{{ entreprise.adresse }}</p>
         <p>Tél: {{ entreprise.telephone }}</p>
+        {% if entreprise.email %}
         <p>Email: {{ entreprise.email }}</p>
+        {% endif %}
         {% if entreprise.numero_tva %}
         <p>TVA: {{ entreprise.numero_tva }}</p>
         {% endif %}
     </div>
 
+    <div class="separator">--------------------------------</div>
+
     <div class="client-info">
-        <p><strong>CLIENT</strong></p>
-        <p>{{ client.nom_complet }}</p>
+        <strong>CLIENT</strong>
+        <p>{{ client.nom_complet|upper }}</p>
+        {% if client.adresse %}
         <p>{{ client.adresse }}</p>
+        {% endif %}
+        {% if client.ville %}
         <p>{{ client.ville }} {{ client.code_postal }}</p>
+        {% endif %}
+        {% if client.telephone %}
         <p>Tél: {{ client.telephone }}</p>
+        {% endif %}
+        {% if client.email %}
         <p>Email: {{ client.email }}</p>
+        {% endif %}
     </div>
 
     <div class="devis-info">
-        <p><strong>Date du devis:</strong> {{ devis.date_creation|date:"d/m/Y" }}</p>
-        <p><strong>Date de validité:</strong> {{ devis.date_validite|date:"d/m/Y" }}</p>
+        <p><strong>Date:</strong> {{ devis.date_creation|date:"d/m/Y" }}</p>
+        <p><strong>Validité:</strong> {{ devis.date_validite|date:"d/m/Y" }}</p>
     </div>
+
+    <div class="separator">--------------------------------</div>
 
     <table>
         <thead>
             <tr>
                 <th>Désignation</th>
-                <th>Quantité</th>
-                <th>Prix unitaire</th>
-                <th>Total HT</th>
+                <th>Qte</th>
+                <th>Prix</th>
+                <th>Total</th>
             </tr>
         </thead>
         <tbody>
             {% for ligne in lignes %}
             <tr>
-                <td>{{ ligne.produit.nom }}</td>
-                <td>{{ ligne.quantite }}</td>
-                <td>{{ ligne.prix_unitaire }} {{ devise_symbole }}</td>
-                <td>{{ ligne.montant_ht }} {{ devise_symbole }}</td>
+                <td>{{ ligne.produit.nom|truncatechars:20 }}</td>
+                <td style="text-align: center;">{{ ligne.quantite }}</td>
+                <td style="text-align: right;">{{ ligne.prix_unitaire }}</td>
+                <td style="text-align: right;">{{ ligne.montant_ht }}</td>
             </tr>
             {% endfor %}
         </tbody>
-        <tfoot>
-            <tr class="total-row">
-                <td colspan="3" style="text-align: right;"><strong>Total HT:</strong></td>
-                <td><strong>{{ devis.total_ht }} {{ devise_symbole }}</strong></td>
-            </tr>
-            <tr class="total-row">
-                <td colspan="3" style="text-align: right;"><strong>TVA:</strong></td>
-                <td><strong>{{ devis.total_tva }} {{ devise_symbole }}</strong></td>
-            </tr>
-            <tr class="total-row">
-                <td colspan="3" style="text-align: right;"><strong>Total TTC:</strong></td>
-                <td><strong>{{ devis.total_ttc }} {{ devise_symbole }}</strong></td>
-            </tr>
-        </tfoot>
+    </table>
+
+    <div class="separator">--------------------------------</div>
+
+    <table>
+        <tr class="total-row">
+            <td colspan="2" style="text-align: right;"><strong>Total HT:</strong></td>
+            <td colspan="2" style="text-align: right;"><strong>{{ devis.total_ht }} {{ devise_symbole }}</strong></td>
+        </tr>
+        <tr class="total-row">
+            <td colspan="2" style="text-align: right;"><strong>TVA:</strong></td>
+            <td colspan="2" style="text-align: right;"><strong>{{ devis.total_tva }} {{ devise_symbole }}</strong></td>
+        </tr>
+        <tr class="total-row">
+            <td colspan="2" style="text-align: right;"><strong>Total TTC:</strong></td>
+            <td colspan="2" style="text-align: right;"><strong>{{ devis.total_ttc }} {{ devise_symbole }}</strong></td>
+        </tr>
     </table>
 
     {% if devis.notes %}
     <div class="notes">
-        <h3>Notes:</h3>
-        <p>{{ devis.notes }}</p>
+        <h3>NOTES</h3>
+        <p>{{ devis.notes|linebreaksbr }}</p>
     </div>
     {% endif %}
 
-    <div class="footer">
-        <p>{{ entreprise.nom }} - {{ entreprise.adresse }} - Tél: {{ entreprise.telephone }}</p>
-        <p>Devis {{ devis.numero }} - Émis le {{ devis.date_creation|date:"d/m/Y" }}</p>
+    <!-- Zone pour code-barres (optionnelle) -->
+    <div class="barcode-area">
+        <p>DEVIS: {{ devis.numero }}</p>
+        <p>CLIENT: {{ client.nom_complet|slice:":15" }}</p>
+        <!-- Ici vous pouvez ajouter un générateur de code-barres -->
     </div>
+
+    <div class="footer">
+        <p>{{ entreprise.nom }} - {{ entreprise.telephone }}</p>
+        <p>Devis {{ devis.numero }} - {{ devis.date_creation|date:"d/m/Y" }}</p>
+        <p>Merci pour votre confiance !</p>
+    </div>
+
+    <!-- Ligne de coupe inférieure -->
+    <div class="cut-line">✄ - - - - - - - - - - - - - - - - - ✄</div>
+
+    <!-- JavaScript pour l'impression automatique -->
+    <script>
+        // Impression automatique pour les imprimantes thermiques
+        window.onload = function() {
+            window.print();
+            
+            // Retour automatique à la page précédente après impression
+            setTimeout(function() {
+                window.history.back();
+            }, 1000);
+        };
+    </script>
 </body>
 </html>
