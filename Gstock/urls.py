@@ -14,6 +14,7 @@ urlpatterns = [
     path('Achats/', include('achats.urls')),
     path('ventes/', include('ventes.urls')),
     path('STOCK/', include('STOCK.urls')),
+    path('Promotion/', include('promotions.urls')),
     path('comptabilite/', include('comptabilite.urls')),
     path('grh/', include('grh.urls', namespace='grh')),
 ]

@@ -1,0 +1,270 @@
+{% extends "promotions/base.html" %}
+{% load i18n crispy_forms_tags static %}
+
+{% block card_title %}
+    {% if object %}
+        {% trans "Modifier la promotion" %}
+    {% else %}
+        {% trans "Créer une nouvelle promotion" %}
+    {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<!-- Remplacez les lignes de static par ces CDN si nécessaire -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css" rel="stylesheet">
+
+<style>
+.formset-form {
+    background-color: #f8f9fa;
+    transition: all 0.3s ease;
+    position: relative;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 5px;
+    border: 1px solid #dee2e6;
+}
+
+.formset-form:hover {
+    background-color: #e9ecef;
+}
+
+.remove-form {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1001;
+}
+
+.select2-container {
+    width: 100% !important;
+}
+</style>
+{% endblock %}
+
+{% block card_body %}
+<form method="post" id="promotion-form" novalidate>
+    {% csrf_token %}
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Informations générales" %}</h5>
+                </div>
+                <div class="card-body">
+                    {{ form|crispy }}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Produits concernés" %}</h5>
+                </div>
+                <div class="card-body">
+                    {{ formset.management_form }}
+                    <div id="formset-container">
+                        {% for form in formset %}
+                            <div class="formset-form">
+                                <button type="button" class="btn btn-danger btn-sm remove-form">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {{ form|crispy }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-form">
+                        <i class="fas fa-plus"></i> {% trans "Ajouter un produit" %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="form-group mt-4">
+        <button type="submit" class="btn btn-success btn-lg">
+            <i class="fas fa-save"></i> {% trans "Enregistrer" %}
+        </button>
+        <a href="{% url 'promotions:promotion_list' %}" class="btn btn-secondary btn-lg">
+            <i class="fas fa-times"></i> {% trans "Annuler" %}
+        </a>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Charger jQuery depuis static -->
+<script src="{% static 'vendor/jquery/jquery.min.js' %}"></script>
+<script src="{% static 'vendor/select2/js/select2.min.js' %}"></script>
+
+<script>
+// Attendre que le document soit complètement chargé
+document.addEventListener('DOMContentLoaded', function() {
+    // Vérifier si jQuery est chargé
+    if (typeof jQuery === 'undefined') {
+        console.error('jQuery n\'est pas chargé');
+        return;
+    }
+    
+    // Utiliser jQuery avec l'alias $
+    var $ = jQuery;
+    
+    console.log('jQuery version:', $.fn.jquery);
+    console.log('Select2 disponible:', typeof $.fn.select2 !== 'undefined');
+    
+    // Fonction pour initialiser Select2
+    function initSelect2() {
+        $('select[name*="produit"]').each(function() {
+            var $select = $(this);
+            
+            // Détruire Select2 s'il est déjà initialisé
+            if ($select.data('select2')) {
+                $select.select2('destroy');
+            }
+            
+            // Initialiser Select2
+            $select.select2({
+                placeholder: "Sélectionner un produit",
+                allowClear: true,
+                width: '100%',
+                theme: 'bootstrap4',
+                dropdownParent: $select.closest('.formset-form')
+            });
+        });
+    }
+    
+    // Fonction pour mettre à jour les index des formulaires
+    function updateFormIndexes() {
+        $('#formset-container .formset-form').each(function(index) {
+            var $form = $(this);
+            
+            $form.find(':input').each(function() {
+                var $input = $(this);
+                var name = $input.attr('name');
+                var id = $input.attr('id');
+                
+                if (name) {
+                    $input.attr('name', name.replace(/form-\d+-/, 'form-' + index + '-'));
+                }
+                if (id) {
+                    $input.attr('id', id.replace(/id_form-\d+-/, 'id_form-' + index + '-'));
+                }
+            });
+            
+            $form.find('label').each(function() {
+                var $label = $(this);
+                var forAttr = $label.attr('for');
+                
+                if (forAttr) {
+                    $label.attr('for', forAttr.replace(/id_form-\d+-/, 'id_form-' + index + '-'));
+                }
+            });
+        });
+        
+        // Mettre à jour le nombre total de forms
+        $('#id_form-TOTAL_FORMS').val($('#formset-container .formset-form').length);
+    }
+    
+    // Ajouter un nouveau formulaire
+    $('#add-form').on('click', function() {
+        var formCount = parseInt($('#id_form-TOTAL_FORMS').val());
+        var $template = $('#formset-container .formset-form:first').clone();
+        
+        // Nettoyer les valeurs
+        $template.find(':input').each(function() {
+            var $input = $(this);
+            var type = $input.attr('type');
+            
+            if (type === 'text' || type === 'number' || type === 'email' || type === 'password') {
+                $input.val('');
+            } else if (type === 'checkbox' || type === 'radio') {
+                $input.prop('checked', false);
+            } else if ($input.is('select')) {
+                $input.val(null);
+            }
+            
+            // Supprimer les valeurs d'erreur de validation
+            $input.removeClass('is-invalid');
+            $input.next('.invalid-feedback').remove();
+        });
+        
+        // Supprimer les messages d'erreur
+        $template.find('.alert-danger').remove();
+        
+        // Mettre à jour les noms et IDs
+        $template.find(':input').each(function() {
+            var $input = $(this);
+            var name = $input.attr('name');
+            var id = $input.attr('id');
+            
+            if (name) {
+                $input.attr('name', name.replace(/form-\d+-/, 'form-' + formCount + '-'));
+            }
+            if (id) {
+                $input.attr('id', id.replace(/id_form-\d+-/, 'id_form-' + formCount + '-'));
+            }
+        });
+        
+        $template.find('label').each(function() {
+            var $label = $(this);
+            var forAttr = $label.attr('for');
+            
+            if (forAttr) {
+                $label.attr('for', forAttr.replace(/id_form-\d+-/, 'id_form-' + formCount + '-'));
+            }
+        });
+        
+        $('#formset-container').append($template);
+        $('#id_form-TOTAL_FORMS').val(formCount + 1);
+        
+        // Réinitialiser Select2 pour le nouveau formulaire
+        initSelect2();
+    });
+    
+    // Supprimer un formulaire
+    $(document).on('click', '.remove-form', function() {
+        var $form = $(this).closest('.formset-form');
+        
+        // Si c'est un formulaire existant (avec un ID), marquer pour suppression
+        var $deleteInput = $form.find('input[name*="-DELETE"]');
+        var $idInput = $form.find('input[name*="-id"]');
+        
+        if ($idInput.length && $idInput.val()) {
+            // Formulaire existant - marquer pour suppression
+            $deleteInput.val('on');
+            $form.hide();
+        } else {
+            // Nouveau formulaire - supprimer complètement
+            $form.remove();
+        }
+        
+        updateFormIndexes();
+    });
+    
+    // Masquer/afficher les champs en fonction du type de promotion
+    function togglePromotionFields() {
+        var promotionType = $('#id_type_promotion').val();
+        var showExtraFields = (promotionType === 'acheter_x_obtenir_y' || promotionType === 'lot');
+        
+        $('.field-valeur_secondaire, .field-quantite_min').toggle(showExtraFields);
+    }
+    
+    // Initialisation
+    $(document).ready(function() {
+        // Initialiser Select2
+        setTimeout(initSelect2, 100);
+        
+        // Configurer le changement de type de promotion
+        $('#id_type_promotion').on('change', togglePromotionFields);
+        togglePromotionFields();
+        
+        // Mettre à jour les index au chargement initial
+        updateFormIndexes();
+        
+        console.log('Formulaire de promotion initialisé');
+    });
+});
+</script>
+{% endblock %}

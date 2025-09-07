@@ -1,0 +1,128 @@
+{% extends "promotions/base.html" %}
+{% load i18n humanize %}
+
+{% block card_title %}
+    {{ promotion.nom }}
+    <div class="btn-group ml-2">
+        <a href="{% url 'promotions:promotion_update' promotion.id %}" class="btn btn-primary btn-sm">
+            <i class="fas fa-edit"></i> {% trans "Modifier" %}
+        </a>
+        {% if promotion.statut == 'active' %}
+        <a href="{% url 'promotions:promotion_deactivate' promotion.id %}" class="btn btn-warning btn-sm">
+            <i class="fas fa-pause"></i> {% trans "Désactiver" %}
+        </a>
+        {% else %}
+        <a href="{% url 'promotions:promotion_activate' promotion.id %}" class="btn btn-success btn-sm">
+            <i class="fas fa-play"></i> {% trans "Activer" %}
+        </a>
+        {% endif %}
+        <a href="{% url 'promotions:promotion_delete' promotion.id %}" class="btn btn-danger btn-sm">
+            <i class="fas fa-trash"></i> {% trans "Supprimer" %}
+        </a>
+    </div>
+{% endblock %}
+
+{% block card_body %}
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title">{% trans "Informations générales" %}</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th width="30%">{% trans "Nom" %}</th>
+                        <td>{{ promotion.nom }}</td>
+                    </tr>
+                    <tr>
+                        <th>{% trans "Description" %}</th>
+                        <td>{{ promotion.description|default:"-" }}</td>
+                    </tr>
+                    <tr>
+                        <th>{% trans "Type" %}</th>
+                        <td>{{ promotion.get_type_promotion_display }}</td>
+                    </tr>
+                    <tr>
+                        <th>{% trans "Valeur" %}</th>
+                        <td>
+                            {% if promotion.type_promotion == 'pourcentage' %}
+                                {{ promotion.valeur }}%
+                            {% else %}
+                                {{ promotion.valeur }} {{ devise_principale_symbole }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>{% trans "Date de début" %}</th>
+                        <td>{{ promotion.date_debut|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <th>{% trans "Date de fin" %}</th>
+                        <td>{{ promotion.date_fin|date:"d/m/Y H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <th>{% trans "Statut" %}</th>
+                        <td>
+                            <span class="badge badge-{% if promotion.statut == 'active' %}success{% elif promotion.statut == 'planifiee' %}info{% else %}secondary{% endif %}">
+                                {{ promotion.get_statut_display }}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title">{% trans "Produits concernés" %}</h5>
+            </div>
+            <div class="card-body">
+                {% if lignes %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>{% trans "Produit" %}</th>
+                                <th>{% trans "Quantité min" %}</th>
+                                <th>{% trans "Valeur secondaire" %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ligne in lignes %}
+                            <tr>
+                                <td>{{ ligne.produit.nom }}</td>
+                                <td>{{ ligne.quantite_min }}</td>
+                                <td>
+                                    {% if ligne.valeur_secondaire %}
+                                        {{ ligne.valeur_secondaire }}
+                                        {% if promotion.type_promotion == 'acheter_x_obtenir_y' or promotion.type_promotion == 'lot' %}
+                                            {% trans "unités" %}
+                                        {% else %}
+                                            {{ devise_principale_symbole }}
+                                        {% endif %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">{% trans "Aucun produit associé à cette promotion." %}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-3">
+    <a href="{% url 'promotions:promotion_list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> {% trans "Retour à la liste" %}
+    </a>
+</div>
+{% endblock %}

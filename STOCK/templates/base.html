@@ -210,9 +210,16 @@
                   <i class="fas fa-chart-bar me-1"></i> Statistiques
                 </a>
               </li>
-       
+
+        <li class="nav-item">
                 <a class="nav-link nav-anim" href="{% url 'grh:grh' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Outils d'intelligence artificielle pour l'analyse">
-                  <i class="fas fa-robot me-1"></i> GRH
+                  <i class="fas fa-robot me-1"></i> Grh
+                </a>
+              </li>  
+
+                 <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'promotions:promotion_stats' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Outils d'intelligence artificielle pour l'analyse">
+                  <i class="fas fa-robot me-1"></i> Promotion
                 </a>
               </li>  
             {% endif %}

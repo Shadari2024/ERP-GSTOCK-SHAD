@@ -1,0 +1,26 @@
+{% extends "promotions/base.html" %}
+{% load i18n %}
+
+{% block card_title %}
+    {% trans "Confirmer la suppression" %}
+{% endblock %}
+
+{% block card_body %}
+<div class="alert alert-warning">
+    <h4 class="alert-heading">{% trans "Attention!" %}</h4>
+    <p>{% trans "Êtes-vous sûr de vouloir supprimer la promotion" %} <strong>"{{ object.nom }}"</strong> ?</p>
+    <p>{% trans "Cette action est irréversible." %}</p>
+</div>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="form-group">
+        <button type="submit" class="btn btn-danger">
+            <i class="fas fa-trash"></i> {% trans "Confirmer la suppression" %}
+        </button>
+        <a href="{% url 'promotions:promotion_list' %}" class="btn btn-secondary">
+            <i class="fas fa-times"></i> {% trans "Annuler" %}
+        </a>
+    </div>
+</form>
+{% endblock %}

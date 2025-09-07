@@ -140,6 +140,7 @@ INSTALLED_APPS = [
     'parametres.apps.ParametresConfig',  # Utilisez la classe AppConfig
     'security.apps.SecurityConfig',   
     'STOCK',
+    'promotions.apps.PromotionsConfig',  # Utilisez la classe AppConfig
     'achats.apps.AchatsConfig',  
     'ventes.apps.VentesConfig',
     'comptabilite.apps.ComptabiliteConfig',

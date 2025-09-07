@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% load i18n humanize %}
+
+{% block title %}{% trans "Tableau de bord des promotions" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1 class="h3 mb-0">{% trans "Gestion des promotions" %}</h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">{% trans "Accueil" %}</a></li>
+                    <li class="breadcrumb-item active">{% trans "Promotions" %}</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Cartes de statistiques -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                {% trans "Promotions actives" %}
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ active_promotions_count }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-percentage fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                {% trans "Revenus des promotions" %}
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ revenue_promotion|floatformat:2 }} {{ devise_principale_symbole }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                {% trans "Ventes avec promotion" %}
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ ventes_avec_promotion }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-shopping-cart fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                {% trans "Total des promotions" %}
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_promotions }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-list fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Actions rapides" %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group" role="group">
+                        <a href="{% url 'promotions:promotion_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> {% trans "Nouvelle promotion" %}
+                        </a>
+                        <a href="{% url 'promotions:promotion_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-list"></i> {% trans "Toutes les promotions" %}
+                        </a>
+                        <a href="{% url 'promotions:promotion_stats' %}" class="btn btn-info">
+                            <i class="fas fa-chart-bar"></i> {% trans "Statistiques" %}
+                        </a>
+                        <a href="{% url 'promotions:promotion_report' %}" class="btn btn-warning">
+                            <i class="fas fa-file-alt"></i> {% trans "Rapports" %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Promotions actives -->
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Promotions actives" %}</h5>
+                </div>
+                <div class="card-body">
+                    {% if active_promotions %}
+                    <div class="list-group">
+                        {% for promotion in active_promotions %}
+                        <a href="{% url 'promotions:promotion_detail' promotion.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ promotion.nom }}</h6>
+                                <small class="text-success">{% trans "Active" %}</small>
+                            </div>
+                            <p class="mb-1">{{ promotion.description|truncatewords:10 }}</p>
+                            <small>{% trans "Valide jusqu'au" %} {{ promotion.date_fin|date:"d/m/Y" }}</small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">{% trans "Aucune promotion active pour le moment." %}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Promotions récentes -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">{% trans "Promotions récentes" %}</h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_promotions %}
+                    <div class="list-group">
+                        {% for promotion in recent_promotions %}
+                        <a href="{% url 'promotions:promotion_detail' promotion.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ promotion.nom }}</h6>
+                                <span class="badge badge-{% if promotion.statut == 'active' %}success{% elif promotion.statut == 'planifiee' %}info{% else %}secondary{% endif %}">
+                                    {{ promotion.get_statut_display }}
+                                </span>
+                            </div>
+                            <p class="mb-1">{{ promotion.description|truncatewords:10 }}</p>
+                            <small>{% trans "Créée le" %} {{ promotion.date_creation|date:"d/m/Y" }}</small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted">{% trans "Aucune promotion créée récemment." %}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
