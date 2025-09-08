@@ -25,6 +25,16 @@
             border-bottom: 2px solid #3498db;
             padding-bottom: 15px;
         }
+        .company-info {
+            text-align: left;
+            margin-bottom: 15px;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+        .company-info strong {
+            font-size: 14px;
+            color: #2c3e50;
+        }
         .title {
             color: #2c3e50;
             font-size: 22px;
@@ -89,14 +99,26 @@
     </style>
 </head>
 <body>
+    <div class="company-info">
+        {% if entreprise %}
+            <strong>{{ entreprise.nom }}</strong><br>
+            <small>{{ entreprise.adresse }}</small><br>
+            <small>Tél: {{ entreprise.telephone }}</small><br>
+            <small>Email: {{ entreprise.email }}</small><br>
+        {% endif %}
+        {% if config_saas %}
+            <small>Devise principale: {{ config_saas.devise_principale }}</small><br>
+        {% endif %}
+    </div>
+
     <div class="header">
         <h1 class="title">Rapport des Écarts d'Inventaire</h1>
-        <p class="subtitle">Généré le {% now "j F Y à H:i" %}</p>
+        <p class="subtitle">Généré le {{ now|date:"j F Y à H:i" }}</p>
     </div>
 
     <div class="info-box">
         <p>
-            Ce rapport liste tous les écarts d'inventaire non validés. 
+            Ce rapport liste tous les écarts d'inventaire non validés pour l'entreprise **{{ entreprise.nom }}**.
             <strong>Total des écarts : {{ ecarts|length }}</strong>
         </p>
     </div>
@@ -123,19 +145,19 @@
                 <td class="{% if ecart.ecart < 0 %}alert-cell{% endif %}">
                     {{ ecart.ecart }}
                 </td>
-                <td>{{ ecart.date_inventaire|date:"d/m/Y" }}</td>
+                <td>{{ ecart.date|date:"d/m/Y" }}</td>
                 <td>{{ ecart.utilisateur.get_full_name|default:ecart.utilisateur.username }}</td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="7" style="text-align: center;">Aucun écart d'inventaire à signaler</td>
+                <td colspan="7" style="text-align: center;">Aucun écart d'inventaire à signaler pour cette entreprise.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
     <div class="signature">
-        <p>Fait à ___________________, le {% now "d/m/Y" %}</p>
+        <p>Fait à {{ entreprise.adresse_ville|default:"_____________" }}, le {{ now|date:"d/m/Y" }}</p>
         <div class="signature-line"></div>
         <p>Signature du responsable</p>
     </div>

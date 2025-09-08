@@ -6,7 +6,7 @@ from django.views.generic import RedirectView
 from security.views import dashboard_redirect
 
 urlpatterns = [
-    # path('admin/', admin.site.urls),
+    #path('admin/', admin.site.urls),
     # path('admin/', RedirectView.as_view(url='/dashboard/admin', permanent=True)),
     path('', dashboard_redirect, name='root_redirect'),
     path('', include('security.urls')),

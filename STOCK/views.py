@@ -2152,7 +2152,6 @@ def nouvelle_commande(request):
     }
     
     return render(request, 'commande/creer_commande.html', context)
-
 @login_required
 def tableau_de_bord(request):
     # 1. Vérification et récupération de l'entreprise et configuration SAAS
@@ -2169,18 +2168,19 @@ def tableau_de_bord(request):
         return redirect('tableau_de_bord_erreur')
 
     # 2. Période du mois en cours
-    aujourdhui = timezone.now()  # Utilisation de timezone pour la compatibilité Django
+    aujourdhui = timezone.now()
     debut_mois = aujourdhui.replace(day=1)
     fin_mois = (debut_mois + timedelta(days=32)).replace(day=1) - timedelta(days=1)
     
     # 3. Récupération des données filtrées par entreprise
+    # CORRECTION : Utiliser 'date' au lieu de 'date_commande'
     produits = Produit.objects.filter(entreprise=entreprise).annotate(
         quantite_vendue=Sum('lignecommande__quantite',
-            filter=Q(lignecommande__commande__date_commande__range=[debut_mois, fin_mois],
-                    lignecommande__commande__entreprise=entreprise)),  # Filtre SAAS ajouté
+            filter=Q(lignecommande__commande__date__range=[debut_mois, fin_mois],
+                    lignecommande__commande__entreprise=entreprise)),
         montant_vendu=Sum(F('lignecommande__quantite') * F('lignecommande__prix_unitaire'),
-            filter=Q(lignecommande__commande__date_commande__range=[debut_mois, fin_mois],
-                    lignecommande__commande__entreprise=entreprise))  # Filtre SAAS ajouté
+            filter=Q(lignecommande__commande__date__range=[debut_mois, fin_mois],
+                    lignecommande__commande__entreprise=entreprise))
     ).select_related('categorie').order_by('-montant_vendu')
 
     # 4. Calcul des totaux avec conversion devise si nécessaire
@@ -2191,12 +2191,13 @@ def tableau_de_bord(request):
     total_ca_formatted = devise_principale.formater_montant(Decimal(total_ca)) if total_ca else "0.00"
 
     # 5. Stats par catégorie (filtrées par entreprise)
+    # CORRECTION : Utiliser 'date' au lieu de 'date_commande'
     categories = Categorie.objects.filter(entreprise=entreprise).annotate(
         total_ventes=Sum('produit__lignecommande__quantite',
-            filter=Q(produit__lignecommande__commande__date_commande__range=[debut_mois, fin_mois],
+            filter=Q(produit__lignecommande__commande__date__range=[debut_mois, fin_mois],
                     produit__lignecommande__commande__entreprise=entreprise)),
         total_ca=Sum(F('produit__lignecommande__quantite') * F('produit__lignecommande__prix_unitaire'),
-            filter=Q(produit__lignecommande__commande__date_commande__range=[debut_mois, fin_mois],
+            filter=Q(produit__lignecommande__commande__date__range=[debut_mois, fin_mois],
                     produit__lignecommande__commande__entreprise=entreprise))
     ).filter(total_ventes__gt=0)
 
@@ -3568,16 +3569,46 @@ def generate_ecriture_number(journal):
             pass
     
     return f"{journal.code}-{today.strftime('%Y%m%d')}-{sequence:04d}"
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.template.loader import get_template
+from django.http import HttpResponse
+from io import BytesIO
+from datetime import datetime
+from weasyprint import HTML
 
 @login_required
 def rapport_ecarts_inventaire_pdf(request):
-    ecarts = InventairePhysique.objects.filter(ecart__isnull=False).order_by('-date')
+    """
+    Génère un rapport PDF des écarts d'inventaire, filtré par entreprise
+    et incluant les coordonnées de celle-ci.
+    """
+    # 1. Récupérer l'entreprise de l'utilisateur
+    entreprise = request.entreprise  # Ceci dépend de votre système de gestion SAAS
+
+    # 2. Filtrer les écarts par entreprise
+    # On suppose que InventairePhysique a une relation vers le modèle Produit,
+    # qui a lui-même une relation vers le modèle Entreprise.
+    ecarts = InventairePhysique.objects.filter(
+        ecart__isnull=False,
+        produit__entreprise=entreprise
+    ).order_by('-date')
+    
+    # 3. Récupérer les informations de l'entreprise
+    try:
+        config_saas = ConfigurationSAAS.objects.get(entreprise=entreprise)
+    except ConfigurationSAAS.DoesNotExist:
+        config_saas = None
+
     template = get_template("rapports/rapport_ecarts_pdf.html")
     context = {
         "ecarts": ecarts,
         "user": request.user,
-        "now": now(),
+        "now": datetime.now(),
+        "entreprise": entreprise,
+        "config_saas": config_saas,
     }
+    
     html_content = template.render(context)
 
     buffer = BytesIO()
@@ -3588,6 +3619,7 @@ def rapport_ecarts_inventaire_pdf(request):
     response['Content-Disposition'] = 'inline; filename="rapport_ecarts_inventaire.pdf"'
     response['Content-Length'] = len(pdf_content)
     return response
+
 
 #liste cloture
 @login_required

@@ -175,21 +175,32 @@
           {% if user.is_authenticated %}
             <!-- Menu Admin -->
             {% if user.role == 'ADMIN' or user.is_superuser %}
-         <li class="nav-item">
-                <a class="nav-link nav-anim" href="{% url 'comptabilite:plan_comptable_list' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion des entrées/sorties de fonds et états financiers">
-                  <i class="fas fa-money-bill-wave me-1"></i> Finance
-                </a>
-              </li> 
-              <li class="nav-item">
-                <a class="nav-link nav-anim" href="{% url 'gestion_stock_et_produit' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion des produits, stocks et inventaires">
-                  <i class="fas fa-boxes me-1"></i> Stock
+
+             <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'achats:liste_commandes' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion des achats et fournisseurs">
+                  <i class="fas fa-shopping-cart me-1"></i> Achats
                 </a>
               </li>
+
               <li class="nav-item">
                 <a class="nav-link nav-anim" href="{% url 'venteModule' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion des ventes en ligne et commandes clients">
                   <i class="fas fa-store me-1"></i> Vente
                 </a>
               </li>
+
+               <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'gestion_stock_et_produit' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion des produits, stocks et inventaires">
+                  <i class="fas fa-boxes me-1"></i> Stock
+                </a>
+              </li>
+
+         <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'comptabilite:plan_comptable_list' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion des entrées/sorties de fonds et états financiers">
+                  <i class="fas fa-money-bill-wave me-1"></i> Finance
+                </a>
+              </li> 
+             
+              
               <li class="nav-item">
                 <a class="nav-link nav-anim" href="{% url 'Liste_parametres' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Configuration du système et paramètres">
                   <i class="fas fa-cogs me-1"></i> Configuration
@@ -200,11 +211,7 @@
                   <i class="bi bi-journal-text me-1"></i> Journal
                 </a>
               </li>
-              <li class="nav-item">
-                <a class="nav-link nav-anim" href="{% url 'achats:liste_commandes' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion des achats et fournisseurs">
-                  <i class="fas fa-shopping-cart me-1"></i> Achats
-                </a>
-              </li>
+            
               <li class="nav-item">
                 <a class="nav-link nav-anim" href="{% url 'inventaitre_liste' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Statistiques et rapports d'activité">
                   <i class="fas fa-chart-bar me-1"></i> Statistiques
@@ -223,6 +230,68 @@
                 </a>
               </li>  
             {% endif %}
+
+
+ <!-- Menu Manager -->
+            {% if user.role == 'MANAGER' or user.is_superuser %}
+              <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'achats:liste_commandes' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion des achats et fournisseurs">
+                  <i class="fas fa-shopping-cart me-1"></i> Achats
+                </a>
+              </li>
+
+               <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'gestion_stock_et_produit' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion des produits, stocks et inventaires">
+                  <i class="fas fa-boxes me-1"></i> Stock
+                </a>
+              </li>
+               <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'venteModule' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion des ventes en ligne et commandes clients">
+                  <i class="fas fa-store me-1"></i> Vente
+                </a>
+              </li>
+         <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'comptabilite:plan_comptable_list' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Gestion des entrées/sorties de fonds et états financiers">
+                  <i class="fas fa-money-bill-wave me-1"></i> comptabilite
+                </a>
+              </li> 
+             
+            
+              <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'inventaitre_liste' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Statistiques et rapports d'activité">
+                  <i class="fas fa-chart-bar me-1"></i> Statistiques
+                </a>
+              </li>
+
+              
+        <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'grh:grh' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Outils d'intelligence artificielle pour l'analyse">
+                  <i class="fas fa-robot me-1"></i> Grh
+                </a>
+              </li>  
+
+                 <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'promotions:promotion_stats' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Outils d'intelligence artificielle pour l'analyse">
+                  <i class="fas fa-robot me-1"></i> Promotion
+                </a>
+              </li>  
+                <li class="nav-item">
+                <a class="nav-link nav-anim" href="{% url 'Liste_parametres' %}" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Configuration du système et paramètres">
+                  <i class="fas fa-cogs me-1"></i> Configuration
+                </a>
+              </li>
+           
+            {% endif %}
+            
+
+
+
+
+
+
+
+
+
             
             <!-- Menu Caissier -->
             {% if user.role == 'CAISSIER' %}
