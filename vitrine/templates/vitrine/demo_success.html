@@ -1,0 +1,27 @@
+{% extends 'vitrine/base.html' %}
+{% load static %}
+
+{% block title %}Demande Envoyée - CongoERP-shad{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow text-center">
+                <div class="card-body py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-check-circle fa-5x text-success"></i>
+                    </div>
+                    <h2 class="card-title mb-3">Demande Envoyée avec Succès!</h2>
+                    <p class="lead mb-4">Merci pour votre intérêt pour CongoERP-shad. Notre équipe commerciale vous contactera dans les plus brefs délais pour organiser votre démonstration personnalisée.</p>
+                    <p class="text-muted mb-4">Vous recevrez également un email de confirmation avec les détails de votre demande.</p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="{% url 'vitrine:accueil' %}" class="btn btn-primary">Retour à l'accueil</a>
+                        <a href="{% url 'vitrine:features' %}" class="btn btn-outline-primary">Découvrir les fonctionnalités</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

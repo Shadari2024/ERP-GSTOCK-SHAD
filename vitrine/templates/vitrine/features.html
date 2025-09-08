@@ -1,0 +1,52 @@
+{% extends 'vitrine/base.html' %}
+{% load static %}
+
+{% block title %}Fonctionnalités - CongoERP-shad{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="fw-bold">Fonctionnalités de CongoERP-shad</h1>
+        <p class="lead text-muted">Découvrez tous les modules qui font de CongoERP-shad la solution complète pour votre entreprise</p>
+    </div>
+
+    {% for module in modules %}
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-2 text-center">
+                    <i class="{{ module.icone }} fa-3x text-primary mb-3"></i>
+                    <h4>{{ module.nom }}</h4>
+                </div>
+                <div class="col-md-10">
+                    <p class="card-text">{{ module.description }}</p>
+                    <div class="row">
+                        {% for avantage in module.avantages %}
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                <span>{{ avantage }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <div class="text-center mt-5">
+        <div class="row">
+            <div class="col-lg-8 mx-auto">
+                <h2 class="fw-bold mb-4">Prêt à transformer votre gestion d'entreprise ?</h2>
+                <p class="lead mb-4">Rejoignez les centaines d'entreprises qui font confiance à CongoERP-shad pour optimiser leurs opérations.</p>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="{% url 'vitrine:demo' %}" class="btn btn-primary btn-lg">Demander une démo</a>
+                    <a href="{% url 'vitrine:pricing' %}" class="btn btn-outline-primary btn-lg">Voir les tarifs</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

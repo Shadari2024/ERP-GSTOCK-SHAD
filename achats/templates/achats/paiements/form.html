@@ -7,6 +7,10 @@
 <div class="erp-paiement-form-container">
     <div class="erp-content-header">
         <h2 class="erp-content-title">Enregistrer un Paiement</h2>
+        <p class="erp-content-subtitle">
+            Facture: {{ facture.numero_facture }} - {{ facture.fournisseur.nom }}
+            <br>Reste à payer: {{ facture.reste_a_payer }} {{ devise_principale_symbole }}
+        </p>
     </div>
 
     <div class="erp-card">
@@ -19,7 +23,7 @@
                     <button type="submit" class="erp-btn erp-btn-primary">
                         <i class="bi bi-check-circle"></i> Enregistrer
                     </button>
-                    <a href="{% url 'achats:detail_facture' facture_id %}" class="erp-btn erp-btn-secondary">
+                    <a href="{% url 'achats:detail_facture' facture.pk %}" class="erp-btn erp-btn-secondary">
                         <i class="bi bi-x-circle"></i> Annuler
                     </a>
                 </div>

@@ -1,80 +1,384 @@
 {% extends "achats/base_achats.html" %}
 {% load static %}
 
-{% block page_title %}Liste des Factures Fournisseurs{% endblock %}
+{% block page_title %}
+Liste des Factures Fournisseurs
+{% endblock %}
+
+{% block page_actions %}
+{% if perms.achats.add_facturefournisseur %}
+<a href="{% url 'achats:creer_facture' %}" class="btn btn-primary">
+    <i class="fas fa-plus-circle me-2"></i> Nouvelle Facture
+</a>
+{% endif %}
+{% endblock %}
 
 {% block achats_content %}
-<div class="erp-factures-container">
-    <div class="erp-content-header">
-        <h2 class="erp-content-title">Factures Fournisseurs</h2>
+<div class="card bg-dark text-white">
+    <div class="card-header border-bottom border-secondary">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-file-invoice me-2 text-primary"></i>
+                    Factures Fournisseurs
+                </h5>
+            </div>
+            <div class="col-md-4 text-end">
+                <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse">
+                    <i class="fas fa-filter me-1"></i> Filtres
+                </button>
+            </div>
+        </div>
         
-        <div class="erp-content-actions">
-            {% if perms.achats.add_facturefournisseur %}
-            <a href="{% url 'achats:creer_facture' %}" class="erp-btn erp-btn-primary">
-                <i class="bi bi-plus-circle"></i> Nouvelle Facture
-            </a>
-            {% endif %}
+        <div class="collapse mt-3" id="filtersCollapse">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Statut</label>
+                    <select name="statut" class="form-select form-select-sm bg-secondary text-white border-secondary">
+                        <option value="">Tous les statuts</option>
+                        <option value="brouillon" {% if request.GET.statut == 'brouillon' %}selected{% endif %}>Brouillon</option>
+                        <option value="validee" {% if request.GET.statut == 'validee' %}selected{% endif %}>Validée</option>
+                        <option value="payee" {% if request.GET.statut == 'payee' %}selected{% endif %}>Payée</option>
+                        <option value="partiellement_payee" {% if request.GET.statut == 'partiellement_payee' %}selected{% endif %}>Partiellement payée</option>
+                        <option value="annulee" {% if request.GET.statut == 'annulee' %}selected{% endif %}>Annulée</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">Fournisseur</label>
+                    <select name="fournisseur" class="form-select form-select-sm bg-secondary text-white border-secondary">
+                        <option value="">Tous les fournisseurs</option>
+                        {% for fournisseur in fournisseurs %}
+                        <option value="{{ fournisseur.id }}" {% if request.GET.fournisseur == fournisseur.id|stringformat:"s" %}selected{% endif %}>
+                            {{ fournisseur.nom }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Date début</label>
+                    <input type="date" name="date_debut" class="form-control form-control-sm bg-secondary text-white border-secondary" 
+                           value="{{ request.GET.date_debut }}">
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Date fin</label>
+                    <input type="date" name="date_fin" class="form-control form-control-sm bg-secondary text-white border-secondary" 
+                           value="{{ request.GET.date_fin }}">
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-sm btn-primary w-100">
+                            <i class="fas fa-search me-1"></i> Appliquer
+                        </button>
+                        <a href="{% url 'achats:liste_factures' %}" class="btn btn-sm btn-outline-light">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 
-    <div class="erp-table-container">
-        <table class="erp-table">
-            <thead>
-                <tr>
-                    <th>N° Facture</th>
-                    <th>Fournisseur</th>
-                    <th>Date Facture</th>
-                    <th>Échéance</th>
-                    <th>Montant TTC</th>
-                    <th>Reste à payer</th>
-                    <th>Statut</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for facture in factures %}
-                <tr>
-                    <td>{{ facture.numero_facture }}</td>
-                    <td>{{ facture.fournisseur.nom }}</td>
-                    <td>{{ facture.date_facture|date:"d/m/Y" }}</td>
-                    <td class="{% if facture.est_en_retard %}text-danger{% endif %}">
-                        {{ facture.date_echeance|date:"d/m/Y" }}
-                    </td>
-                    <td class="erp-amount">{{ facture.montant_ttc }} {{ devise_principale_symbole }}</td>
-                    <td class="erp-amount">{{ facture.reste_a_payer }} {{ devise_principale_symbole }}</td>
-                    <td>
-                        <span class="erp-status-badge erp-status-{{ facture.statut }}">
-                            {{ facture.get_statut_display }}
-                        </span>
-                    </td>
-                    <td>
-                        <div class="erp-actions">
-                            <a href="{% url 'achats:detail_facture' facture.pk %}" class="erp-action-btn erp-action-view">
-                                <i class="bi bi-eye"></i>
-                            </a>
-                            {% if perms.achats.change_facturefournisseur %}
-                            <a href="{% url 'achats:modifier_facture' facture.pk %}" class="erp-action-btn erp-action-edit">
-                                <i class="bi bi-pencil"></i>
-                            </a>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-dark table-hover mb-0">
+                <thead class="bg-secondary text-light">
+                    <tr>
+                        <th class="sortable" data-sort="numero_facture">
+                            N° Facture
+                            <i class="fas fa-sort ms-1"></i>
+                        </th>
+                        <th class="sortable" data-sort="fournisseur">
+                            Fournisseur
+                            <i class="fas fa-sort ms-1"></i>
+                        </th>
+                        <th class="sortable" data-sort="date_facture">
+                            Date Facture
+                            <i class="fas fa-sort ms-1"></i>
+                        </th>
+                        <th class="sortable" data-sort="date_echeance">
+                            Échéance
+                            <i class="fas fa-sort ms-1"></i>
+                        </th>
+                        <th class="sortable text-end" data-sort="montant_ttc">
+                            Montant TTC
+                            <i class="fas fa-sort ms-1"></i>
+                        </th>
+                        <th class="sortable text-end" data-sort="reste_a_payer">
+                            Reste à payer
+                            <i class="fas fa-sort ms-1"></i>
+                        </th>
+                        <th class="sortable" data-sort="statut">
+                            Statut
+                            <i class="fas fa-sort ms-1"></i>
+                        </th>
+                        <th width="120">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for facture in factures %}
+                    <tr class="{% if facture.est_en_retard %}table-danger-dark{% elif facture.est_bientot_echeance %}table-warning-dark{% endif %}">
+                        <td>
+                            <strong>{{ facture.numero_facture }}</strong>
+                            {% if facture.bon_reception %}
+                            <br>
+                            <small class="text-muted">BR: {{ facture.bon_reception.numero_bon }}</small>
                             {% endif %}
-                            {% if facture.reste_a_payer > 0 and perms.achats.add_paiementfournisseur %}
-                            <a href="{% url 'achats:creer_paiement' facture.pk %}" class="erp-action-btn erp-action-paiement">
-                                <i class="bi bi-cash-coin"></i>
-                            </a>
-                            {% endif %}
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="8" class="erp-empty">
-                        <i class="bi bi-receipt"></i>
-                        <span>Aucune facture trouvée</span>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                    {{ facture.fournisseur.nom|first|upper }}
+                                </div>
+                                <div>
+                                    <div class="fw-medium">{{ facture.fournisseur.nom }}</div>
+                                    <small class="text-muted">{{ facture.fournisseur.code }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ facture.date_facture|date:"d/m/Y" }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {{ facture.date_echeance|date:"d/m/Y" }}
+                                {% if facture.est_en_retard %}
+                                <span class="badge bg-danger ms-2" data-bs-toggle="tooltip" title="En retard">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                </span>
+                                {% elif facture.est_bientot_echeance %}
+                                <span class="badge bg-warning text-dark ms-2" data-bs-toggle="tooltip" title="Échéance proche">
+                                    <i class="fas fa-clock"></i>
+                                </span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="text-end fw-bold">
+                            {{ facture.montant_ttc|floatformat:2 }} {{ devise_principale_symbole }}
+                        </td>
+                        <td class="text-end">
+                            <span class="fw-bold {% if facture.reste_a_payer > 0 %}text-danger{% else %}text-success{% endif %}">
+                                {{ facture.reste_a_payer|floatformat:2 }} {{ devise_principale_symbole }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-{% if facture.statut == 'payee' %}success{% elif facture.statut == 'partiellement_payee' %}warning text-dark{% elif facture.statut == 'validee' %}info{% elif facture.statut == 'annulee' %}danger{% else %}secondary{% endif %}">
+                                {{ facture.get_statut_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'achats:detail_facture' facture.pk %}" class="btn btn-outline-primary" data-bs-toggle="tooltip" title="Détails">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if perms.achats.change_facturefournisseur %}
+                                <a href="{% url 'achats:modifier_facture' facture.pk %}" class="btn btn-outline-light" data-bs-toggle="tooltip" title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% endif %}
+                                {% if facture.reste_a_payer > 0 and perms.achats.add_paiementfournisseur %}
+                                <a href="{% url 'achats:creer_paiement' facture.pk %}" class="btn btn-outline-success" data-bs-toggle="tooltip" title="Paiement">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <div class="empty-state">
+                                <i class="fas fa-file-invoice fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">Aucune facture trouvée</h5>
+                                <p class="text-muted mb-3">Aucune facture ne correspond à vos critères de recherche.</p>
+                                {% if perms.achats.add_facturefournisseur %}
+                                <a href="{% url 'achats:creer_facture' %}" class="btn btn-primary">
+                                    <i class="fas fa-plus-circle me-2"></i> Créer une facture
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
+
+    {% if factures.has_other_pages %}
+    <div class="card-footer bg-dark border-top border-secondary">
+        <div class="d-flex justify-content-between align-items-center text-muted">
+            <div>
+                Affichage de {{ factures.start_index }} à {{ factures.end_index }} sur {{ factures.paginator.count }} factures
+            </div>
+            <nav aria-label="Page navigation">
+                <ul class="pagination pagination-sm mb-0">
+                    {% if factures.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link bg-dark text-white border-secondary" href="?page={{ factures.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            <i class="fas fa-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for num in factures.paginator.page_range %}
+                    {% if factures.number == num %}
+                    <li class="page-item active"><span class="page-link bg-primary text-white border-primary">{{ num }}</span></li>
+                    {% else %}
+                    <li class="page-item">
+                        <a class="page-link bg-dark text-white border-secondary" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+
+                    {% if factures.has_next %}
+                    <li class="page-item">
+                        <a class="page-link bg-dark text-white border-secondary" href="?page={{ factures.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background-color: #212529; /* Couleur de fond pour le mode sombre */
+        color: #f8f9fa; /* Couleur de texte par défaut */
+    }
+    
+    .card.bg-dark {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.5); /* Ombre plus prononcée */
+    }
+    
+    .table-dark thead th {
+        border-bottom: 1px solid #495057;
+    }
+    
+    .table-dark tbody td {
+        border-color: #495057;
+    }
+
+    .table-dark.table-hover tbody tr:hover {
+        background-color: #343a40; /* Couleur de survol plus foncée */
+    }
+    
+    .form-select.bg-secondary,
+    .form-control.bg-secondary {
+        background-color: #343a40 !important;
+        border-color: #495057 !important;
+    }
+    
+    .form-select.bg-secondary:focus,
+    .form-control.bg-secondary:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .text-primary {
+        color: #0d6efd !important;
+    }
+
+    .table-danger-dark {
+        background-color: rgba(220, 53, 69, 0.2) !important;
+    }
+    .table-warning-dark {
+        background-color: rgba(255, 193, 7, 0.1) !important;
+    }
+    
+    .badge.bg-warning.text-dark {
+        color: #212529 !important;
+    }
+
+    .badge.bg-success, .badge.bg-danger {
+        color: #fff !important;
+    }
+
+    .btn-outline-light:hover {
+        color: #212529 !important;
+        background-color: #f8f9fa !important;
+    }
+
+    .btn-outline-secondary:hover {
+        color: #fff !important;
+        background-color: #6c757d !important;
+    }
+    
+    .sortable:hover {
+        background-color: #343a40 !important;
+    }
+    
+    .empty-state .fa-file-invoice {
+        color: #495057 !important;
+    }
+
+    /* Le reste du CSS du design initial peut être réutilisé */
+    .avatar-sm {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    
+    .sortable {
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .btn-group-sm > .btn {
+        padding: 0.25rem 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialisation des tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Tri des colonnes (côté serveur)
+        document.querySelectorAll('.sortable').forEach(header => {
+            header.addEventListener('click', function() {
+                const sortField = this.dataset.sort;
+                const currentUrl = new URL(window.location.href);
+                const currentSort = currentUrl.searchParams.get('sort');
+                const currentOrder = currentUrl.searchParams.get('order');
+                
+                let newOrder = 'asc';
+                if (currentSort === sortField && currentOrder === 'asc') {
+                    newOrder = 'desc';
+                }
+                
+                currentUrl.searchParams.set('sort', sortField);
+                currentUrl.searchParams.set('order', newOrder);
+                window.location.href = currentUrl.toString();
+            });
+        });
+        
+        // Effet visuel sur les lignes
+        document.querySelectorAll('.table-danger-dark, .table-warning-dark').forEach(row => {
+            row.addEventListener('mouseenter', function() {
+                this.style.boxShadow = 'inset 4px 0 0 0 var(--bs-primary)';
+                this.style.transition = 'box-shadow 0.2s ease';
+            });
+            row.addEventListener('mouseleave', function() {
+                this.style.boxShadow = 'none';
+            });
+        });
+    });
+</script>
 {% endblock %}

@@ -289,32 +289,47 @@ class FactureFournisseurForm(forms.ModelForm):
         if self.entreprise:
             self.fields['fournisseur'].queryset = Fournisseur.objects.filter(entreprise=self.entreprise)
             self.fields['bon_reception'].queryset = BonReception.objects.filter(entreprise=self.entreprise)
-
+from django import forms
+from .models import PaiementFournisseur, FactureFournisseur
 
 class PaiementFournisseurForm(forms.ModelForm):
     class Meta:
         model = PaiementFournisseur
-        fields = ['mode_paiement', 'reference', 'montant', 'date_paiement', 'notes']
+        fields = ['mode_paiement', 'montant', 'date_paiement', 'notes']
         widgets = {
-            'date_paiement': forms.DateInput(attrs={'type': 'date'}),
-            'notes': forms.Textarea(attrs={'rows': 3}),
+            'date_paiement': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'montant': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'mode_paiement': forms.Select(attrs={'class': 'form-select'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
-
+    
     def __init__(self, *args, **kwargs):
         self.entreprise = kwargs.pop('entreprise', None)
         self.facture_id = kwargs.pop('facture_id', None)
         super().__init__(*args, **kwargs)
         
-        if self.facture_id:
-            self.facture = FactureFournisseur.objects.get(id=self.facture_id)
-            self.fields['montant'].widget.attrs['max'] = self.facture.reste_a_payer
+        if self.facture_id and self.entreprise:
+            try:
+                facture = FactureFournisseur.objects.get(
+                    pk=self.facture_id, 
+                    entreprise=self.entreprise
+                )
+                self.fields['montant'].widget.attrs['max'] = facture.reste_a_payer
+            except FactureFournisseur.DoesNotExist:
+                pass
 
     def clean_montant(self):
         montant = self.cleaned_data.get('montant')
-        if self.facture_id:
-            facture = FactureFournisseur.objects.get(id=self.facture_id)
-            if montant > facture.reste_a_payer:
-                raise forms.ValidationError(
-                    f"Le montant ne peut pas dépasser le reste à payer: {facture.reste_a_payer}"
+        if self.facture_id and self.entreprise:
+            try:
+                facture = FactureFournisseur.objects.get(
+                    pk=self.facture_id, 
+                    entreprise=self.entreprise
                 )
-        return montant    
+                if montant > facture.reste_a_payer:
+                    raise forms.ValidationError(
+                        f"Le montant ne peut pas dépasser le reste à payer: {facture.reste_a_payer}"
+                    )
+            except FactureFournisseur.DoesNotExist:
+                pass
+        return montant

@@ -1643,34 +1643,107 @@ class CreerBonAutomatique(View,EntrepriseAccessMixin,LoginRequiredMixin ):
 
 
 
-
-
+# achats/views.py
 class DetailBonView(EntrepriseAccessMixin, DetailView):
     model = BonReception
     template_name = 'achats/bons/detail.html'
+    context_object_name = 'bon'
 
     def get_queryset(self):
         return super().get_queryset().filter(
             entreprise=self.request.entreprise
-        ).select_related('commande', 'commande__fournisseur', 'created_by')
+        ).select_related(
+            'commande',
+            'commande__fournisseur',
+            'created_by'
+        ).prefetch_related(
+            'lignes__ligne_commande__produit'
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['lignes'] = self.object.lignes.select_related(
-            'ligne_commande',
-            'ligne_commande__produit'
-        )
-        config_saas = self.request.entreprise.config_saas
-        devise_principale = config_saas.devise_principale if config_saas else None
+        bon = self.object
+        
+        # Récupération de la devise principale
+        devise_principale = None
+        symbole_devise = "€"  # symbole par défaut
+        try:
+            config_saas = ConfigurationSAAS.objects.get(entreprise=self.request.entreprise)
+            devise_principale = config_saas.devise_principale
+            if devise_principale:
+                symbole_devise = devise_principale.symbole
+        except (ConfigurationSAAS.DoesNotExist, AttributeError):
+            messages.warning(self.request, "Configuration SAAS ou devise principale manquante.")
+        
         context['devise_principale'] = devise_principale
-        context['symbole_devise'] = devise_principale.symbole if devise_principale else '$'
+        context['symbole_devise'] = symbole_devise
+        
+        # Récupération des lignes avec calcul des totaux
+        lignes = bon.lignes.all()
+        total_bon = Decimal('0.00')
+        
+        for ligne in lignes:
+            # Calcul du total HT pour chaque ligne
+            ligne.total_ht_ligne = ligne.quantite * ligne.ligne_commande.prix_unitaire
+            total_bon += ligne.total_ht_ligne
+        
+        context['lignes'] = lignes
+        context['total_bon'] = total_bon
+        
         return context
+# achats/views.py
+from django.http import HttpResponse
+import os
+from django.shortcuts import get_object_or_404
+from django.contrib import messages
+from django.views.generic import View
+from django.shortcuts import redirect
+
+class ExportBonReceptionPDFView(View):
+    """Vue pour exporter un bon de réception en PDF"""
     
+    def get(self, request, *args, **kwargs):
+        try:
+            from .utils import generate_bon_reception_pdf
+            bon = get_object_or_404(BonReception, pk=kwargs['pk'], entreprise=request.entreprise)
+            
+            pdf_buffer = generate_bon_reception_pdf(bon)
+            
+            response = HttpResponse(content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="bon_reception_{bon.numero_bon}.pdf"'
+            response.write(pdf_buffer.getvalue())
+            pdf_buffer.close()
+            
+            return response
+            
+        except Exception as e:
+            messages.error(request, f"Erreur lors de la génération du PDF: {str(e)}")
+            return redirect('achats:detail_bon', pk=kwargs['pk'])
+
+class ExportBonReceptionExcelView(View):
+    """Vue pour exporter un bon de réception en Excel"""
     
-    
-    
-    
-    
+    def get(self, request, *args, **kwargs):
+        try:
+            from .utils import generate_bon_reception_excel
+            bon = get_object_or_404(BonReception, pk=kwargs['pk'], entreprise=request.entreprise)
+            
+            excel_path = generate_bon_reception_excel(bon)
+            
+            with open(excel_path, 'rb') as excel_file:
+                response = HttpResponse(
+                    excel_file.read(),
+                    content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
+                response['Content-Disposition'] = f'attachment; filename="bon_reception_{bon.numero_bon}.xlsx"'
+            
+            os.unlink(excel_path)
+            
+            return response
+            
+        except Exception as e:
+            messages.error(request, f"Erreur lors de la génération du Excel: {str(e)}")
+            return redirect('achats:detail_bon', pk=kwargs['pk'])
     
 # Dans vos views.py
 from django.shortcuts import render
@@ -1738,6 +1811,9 @@ from django.forms import modelformset_factory
 from .models import FactureFournisseur, PaiementFournisseur
 from .forms import FactureFournisseurForm, PaiementFournisseurForm
 from parametres.models import ConfigurationSAAS
+from django.db.models import Q
+from django.utils import timezone
+from datetime import timedelta
 
 class FactureListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = FactureFournisseur
@@ -1747,23 +1823,62 @@ class FactureListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        return FactureFournisseur.objects.filter(
+        queryset = FactureFournisseur.objects.filter(
             entreprise=self.request.user.entreprise
         ).select_related('fournisseur', 'bon_reception')
+        
+        # Filtres
+        statut = self.request.GET.get('statut')
+        if statut:
+            queryset = queryset.filter(statut=statut)
+        
+        fournisseur_id = self.request.GET.get('fournisseur')
+        if fournisseur_id:
+            queryset = queryset.filter(fournisseur_id=fournisseur_id)
+        
+        date_debut = self.request.GET.get('date_debut')
+        if date_debut:
+            queryset = queryset.filter(date_facture__gte=date_debut)
+        
+        date_fin = self.request.GET.get('date_fin')
+        if date_fin:
+            queryset = queryset.filter(date_facture__lte=date_fin)
+        
+        # Tri
+        sort_field = self.request.GET.get('sort', 'date_facture')
+        sort_order = self.request.GET.get('order', 'desc')
+        
+        if sort_order == 'desc':
+            sort_field = f'-{sort_field}'
+        
+        return queryset.order_by(sort_field)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
         # Récupérer la devise principale
         try:
+            from parametres.models import ConfigurationSAAS
             config_saas = ConfigurationSAAS.objects.get(entreprise=self.request.user.entreprise)
             devise_symbole = config_saas.devise_principale.symbole if config_saas.devise_principale else "€"
         except:
             devise_symbole = "€"
         
+        # Liste des fournisseurs pour le filtre
+        from .models import Fournisseur
+        context['fournisseurs'] = Fournisseur.objects.filter(entreprise=self.request.user.entreprise)
+        
         context["devise_principale_symbole"] = devise_symbole
+        
+        # Ajouter des propriétés aux factures pour le template
+        today = timezone.now().date()
+        for facture in context['factures']:
+            facture.est_en_retard = facture.date_echeance < today and facture.reste_a_payer > 0
+            facture.est_bientot_echeance = (facture.date_echeance - today <= timedelta(days=7) and 
+                                          facture.date_echeance >= today and 
+                                          facture.reste_a_payer > 0)
+        
         return context
-
 
 class FactureCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = FactureFournisseur
@@ -1787,26 +1902,59 @@ class FactureCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView)
         return HttpResponseRedirect(self.success_url)
 
 
-class FactureDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+# achats/views.py
+from django.views.generic import View
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib import messages
+from .utils import generer_facture_depuis_bon
+
+class GenererFactureDepuisBonView(View):
+    """Vue pour générer une facture à partir d'un bon de réception"""
+    
+    def post(self, request, *args, **kwargs):
+        bon_id = kwargs.get('pk')
+        bon = get_object_or_404(BonReception, pk=bon_id, entreprise=request.entreprise)
+        
+        facture = generer_facture_depuis_bon(bon, request)
+        
+        if facture:
+            return redirect('achats:detail_facture', pk=facture.pk)
+        else:
+            return redirect('achats:detail_bon', pk=bon_id)
+
+
+
+# achats/views.py
+from django.shortcuts import get_object_or_404
+from django.views.generic import DetailView
+from django.contrib.auth.mixins import LoginRequiredMixin
+
+class FactureDetailView(LoginRequiredMixin, DetailView):
     model = FactureFournisseur
     template_name = 'achats/factures/detail.html'
-    permission_required = 'achats.view_facturefournisseur'
     context_object_name = 'facture'
+
+    def get_queryset(self):
+        return super().get_queryset().filter(entreprise=self.request.user.entreprise)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        facture = self.object
         
-        # Récupérer la devise principale
+        # Récupération de la devise principale
+        devise_principale_symbole = "€"  # Par défaut
         try:
+            from parametres.models import ConfigurationSAAS
             config_saas = ConfigurationSAAS.objects.get(entreprise=self.request.user.entreprise)
-            devise_symbole = config_saas.devise_principale.symbole if config_saas.devise_principale else "€"
+            if config_saas.devise_principale:
+                devise_principale_symbole = config_saas.devise_principale.symbole
         except:
-            devise_symbole = "€"
+            pass
         
-        context["devise_principale_symbole"] = devise_symbole
-        context["paiements"] = self.object.paiements.all()
+        context['devise_principale_symbole'] = devise_principale_symbole
+        context['paiements'] = facture.get_paiements()
+        
         return context
-
 
 class FactureUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = FactureFournisseur
@@ -1820,6 +1968,14 @@ class FactureUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView)
         kwargs['entreprise'] = self.request.user.entreprise
         return kwargs
 
+from django.views.generic import CreateView, UpdateView
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.urls import reverse_lazy
+from django.http import HttpResponseRedirect
+from django.contrib import messages
+from django.shortcuts import get_object_or_404
+from .models import PaiementFournisseur, FactureFournisseur
+from .forms import PaiementFournisseurForm
 
 class PaiementCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = PaiementFournisseur
@@ -1833,18 +1989,44 @@ class PaiementCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView
         kwargs['facture_id'] = self.kwargs.get('facture_id')
         return kwargs
 
-    def get_success_url(self):
-        return reverse_lazy('achats:detail_facture', kwargs={'pk': self.object.facture.id})
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['facture'] = get_object_or_404(
+            FactureFournisseur, 
+            pk=self.kwargs.get('facture_id'),
+            entreprise=self.request.user.entreprise
+        )
+        return context
 
     def form_valid(self, form):
+        facture = get_object_or_404(
+            FactureFournisseur, 
+            pk=self.kwargs.get('facture_id'),
+            entreprise=self.request.user.entreprise
+        )
+        
         paiement = form.save(commit=False)
         paiement.entreprise = self.request.user.entreprise
+        paiement.facture = facture
         paiement.created_by = self.request.user
-        paiement.save()
         
-        messages.success(self.request, 'Paiement enregistré avec succès.')
+        # Créer l'écriture comptable si le statut est validé
+        if form.cleaned_data.get('statut') == 'valide':
+            paiement.statut = 'valide'
+            paiement.save()
+            ecriture = paiement.creer_ecriture_comptable()
+            if ecriture:
+                messages.success(self.request, 'Paiement enregistré et écriture comptable créée avec succès.')
+            else:
+                messages.warning(self.request, 'Paiement enregistré mais erreur lors de la création de l\'écriture comptable.')
+        else:
+            paiement.save()
+            messages.success(self.request, 'Paiement enregistré avec succès.')
+        
         return HttpResponseRedirect(self.get_success_url())
 
+    def get_success_url(self):
+        return reverse_lazy('achats:detail_facture', kwargs={'pk': self.kwargs.get('facture_id')})
 
 class PaiementUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = PaiementFournisseur
@@ -1858,5 +2040,107 @@ class PaiementUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
         kwargs['facture_id'] = self.object.facture.id
         return kwargs
 
+    def form_valid(self, form):
+        paiement = form.save(commit=False)
+        
+        # Si le statut passe à validé, créer l'écriture comptable
+        if form.cleaned_data.get('statut') == 'valide' and self.object.statut != 'valide':
+            ecriture = paiement.creer_ecriture_comptable()
+            if ecriture:
+                messages.success(self.request, 'Paiement modifié et écriture comptable créée avec succès.')
+            else:
+                messages.warning(self.request, 'Paiement modifié mais erreur lors de la création de l\'écriture comptable.')
+        else:
+            messages.success(self.request, 'Paiement modifié avec succès.')
+        
+        paiement.save()
+        return HttpResponseRedirect(self.get_success_url())
+
     def get_success_url(self):
         return reverse_lazy('achats:detail_facture', kwargs={'pk': self.object.facture.id})
+    
+    
+    
+    
+    # achats/views.py
+from django.shortcuts import redirect, get_object_or_404
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required, permission_required
+from django.utils import timezone
+from decimal import Decimal
+
+@login_required
+@permission_required('achats.add_paiementfournisseur', raise_exception=True)
+def creer_paiement_direct(request, pk):
+    """Vue pour créer un paiement directement depuis le détail de la facture"""
+    facture = get_object_or_404(FactureFournisseur, pk=pk, entreprise=request.user.entreprise)
+    
+    if request.method == 'POST':
+        try:
+            # Validation des données
+            mode_paiement = request.POST.get('mode_paiement')
+            montant = Decimal(request.POST.get('montant', '0'))
+            date_paiement = request.POST.get('date_paiement')
+            reference = request.POST.get('reference', '')
+            notes = request.POST.get('notes', '')
+            
+            # Validation du montant
+            if montant <= 0:
+                messages.error(request, "Le montant doit être supérieur à zéro.")
+                return redirect('achats:detail_facture', pk=facture.pk)
+            
+            if montant > facture.reste_a_payer:
+                messages.error(request, f"Le montant ne peut pas dépasser le reste à payer: {facture.reste_a_payer}")
+                return redirect('achats:detail_facture', pk=facture.pk)
+            
+            # Création du paiement
+            paiement = PaiementFournisseur(
+                entreprise=request.user.entreprise,
+                facture=facture,
+                mode_paiement=mode_paiement,
+                montant=montant,
+                date_paiement=date_paiement,
+                reference=reference,
+                notes=notes,
+                statut='valide',  # Statut validé par défaut pour les paiements directs
+                created_by=request.user
+            )
+            
+            paiement.save()
+            
+            # Création de l'écriture comptable
+            ecriture = paiement.creer_ecriture_comptable()
+            if ecriture:
+                messages.success(request, f"Paiement de {montant} enregistré et écriture comptable créée avec succès.")
+            else:
+                messages.warning(request, f"Paiement enregistré mais erreur lors de la création de l'écriture comptable.")
+            
+            return redirect('achats:detail_facture', pk=facture.pk)
+            
+        except Exception as e:
+            messages.error(request, f"Erreur lors de l'enregistrement du paiement: {str(e)}")
+            return redirect('achats:detail_facture', pk=facture.pk)
+    
+    return redirect('achats:detail_facture', pk=facture.pk)
+
+from django.views.generic import DeleteView
+from django.urls import reverse_lazy
+from django.contrib import messages
+# achats/views.py
+class PaiementDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
+    model = PaiementFournisseur
+    template_name = 'achats/paiements/confirm_delete.html'
+    permission_required = 'achats.delete_paiementfournisseur'
+    context_object_name = 'paiement'
+    
+    def get_success_url(self):
+        messages.success(self.request, 'Paiement supprimé avec succès.')
+        return reverse_lazy('achats:detail_facture', kwargs={'pk': self.object.facture.id})
+    
+    def get_queryset(self):
+        return super().get_queryset().filter(entreprise=self.request.user.entreprise)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['facture'] = self.object.facture
+        return context

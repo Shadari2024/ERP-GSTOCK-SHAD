@@ -4,166 +4,280 @@
 {% block title %}Bon de Réception {{ object.numero_bon }}{% endblock %}
 
 {% block content %}
-<div class="container-lg mt-4">
+<div class="container-fluid py-4">
     <!-- Breadcrumb -->
-    <nav aria-label="breadcrumb">
+    <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'achats:liste_commandes' %}">Commandes</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'achats:detail_commande' pk=object.commande.pk %}">Commande {{ object.commande.numero_commande }}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'achats:liste_commandes' %}" class="text-decoration-none">Commandes</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'achats:detail_commande' pk=object.commande.pk %}" class="text-decoration-none">Commande {{ object.commande.numero_commande }}</a></li>
             <li class="breadcrumb-item active" aria-current="page">Bon {{ object.numero_bon }}</li>
         </ol>
     </nav>
 
+    <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="display-5 fw-bold text-primary">
-            <i class="fas fa-clipboard-check me-2"></i>Bon de Réception #{{ object.numero_bon }}
-        </h1>
         <div>
-            <a href="{% url 'achats:liste_commandes' %}" class="btn btn-outline-secondary me-2">
-                <i class="fas fa-list me-1"></i> Liste des Commandes
+            <h1 class="h2 mb-1">
+                <i class="fas fa-clipboard-check me-2 text-primary"></i>Bon de Réception
+            </h1>
+            <p class="text-muted mb-0">#{{ object.numero_bon }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'achats:liste_commandes' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-list me-1"></i> Commandes
             </a>
             <a href="{% url 'achats:detail_commande' pk=object.commande.pk %}" class="btn btn-primary">
-                <i class="fas fa-arrow-left me-1"></i> Retour à la Commande
+                <i class="fas fa-arrow-left me-1"></i> Retour
             </a>
         </div>
     </div>
 
-    <!-- Info Cards Row -->
+    <!-- Stats Cards -->
     <div class="row mb-4">
-        <!-- Bon Info -->
-        <div class="col-md-6 mb-3 mb-md-0">
-            <div class="card h-100 border-primary shadow-sm">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start border-3 border-primary bg-dark-dm bg-light-lm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="text-muted mb-1">Numéro</h6>
+                            <h4 class="mb-0">{{ object.numero_bon }}</h4>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-hashtag text-primary fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start border-3 border-success bg-dark-dm bg-light-lm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="text-muted mb-1">Date Réception</h6>
+                            <h4 class="mb-0">{{ object.date_reception|date:"d/m/Y" }}</h4>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-calendar-check text-success fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start border-3 border-info bg-dark-dm bg-light-lm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="text-muted mb-1">Articles</h6>
+                            <h4 class="mb-0">{{ lignes.count }}</h4>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-boxes text-info fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start border-3 border-warning bg-dark-dm bg-light-lm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="text-muted mb-1">Total HT</h6>
+                            <h4 class="mb-0">{{ total_bon|floatformat:2|intcomma }} {{ symbole_devise }}</h4>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-receipt text-warning fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column - Information -->
+        <div class="col-xl-4 col-lg-5 mb-4">
+            <!-- Bon Details Card -->
+            <div class="card bg-dark-dm bg-light-lm mb-4">
                 <div class="card-header bg-primary text-white">
                     <h5 class="card-title mb-0">
                         <i class="fas fa-info-circle me-2"></i>Détails du Bon
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong><i class="fas fa-hashtag me-2"></i>Numéro:</strong><br>
-                            <span class="text-muted">{{ object.numero_bon }}</span></p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong><i class="fas fa-calendar-alt me-2"></i>Date réception:</strong><br>
-                            <span class="text-muted">{{ object.date_reception|date:"d/m/Y" }}</span></p>
-                        </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Créé par</label>
+                        <p class="mb-0">{{ object.created_by.get_full_name|default:object.created_by.username }}</p>
                     </div>
-                    <p><strong><i class="fas fa-user me-2"></i>Créé par:</strong><br>
-                    <span class="text-muted">{{ object.created_by.get_full_name|default:object.created_by.username }}</span></p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Date création</label>
+                        <p class="mb-0">{{ object.created_at|date:"d/m/Y à H:i" }}</p>
+                    </div>
                     
                     {% if object.notes %}
-                    <p><strong><i class="fas fa-comment me-2"></i>Notes:</strong><br>
-                    <span class="text-muted">{{ object.notes }}</span></p>
+                    <div>
+                        <label class="form-label text-muted small mb-1">Notes</label>
+                        <p class="mb-0">{{ object.notes }}</p>
+                    </div>
                     {% endif %}
                 </div>
             </div>
-        </div>
 
-        <!-- Commande Info -->
-        <div class="col-md-6">
-            <div class="card h-100 border-info shadow-sm">
+            <!-- Commande Info Card -->
+            <div class="card bg-dark-dm bg-light-lm">
                 <div class="card-header bg-info text-white">
                     <h5 class="card-title mb-0">
                         <i class="fas fa-file-invoice me-2"></i>Commande Associée
                     </h5>
                 </div>
                 <div class="card-body">
-                    <p><strong><i class="fas fa-hashtag me-2"></i>Numéro:</strong><br>
-                    <a href="{% url 'achats:detail_commande' pk=object.commande.pk %}" class="text-decoration-none">
-                        {{ object.commande.numero_commande }}
-                    </a></p>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Numéro</label>
+                        <p class="mb-0">
+                            <a href="{% url 'achats:detail_commande' pk=object.commande.pk %}" class="text-decoration-none">
+                                {{ object.commande.numero_commande }}
+                            </a>
+                        </p>
+                    </div>
                     
-                    <p><strong><i class="fas fa-building me-2"></i>Fournisseur:</strong><br>
-                    <span class="text-muted">{{ object.commande.fournisseur.nom }}</span></p>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Fournisseur</label>
+                        <p class="mb-0">{{ object.commande.fournisseur.nom }}</p>
+                    </div>
                     
-                    <p><strong><i class="fas fa-calendar me-2"></i>Date commande:</strong><br>
-                    <span class="text-muted">{{ object.commande.date_commande|date:"d/m/Y" }}</span></p>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small mb-1">Date commande</label>
+                        <p class="mb-0">{{ object.commande.date_commande|date:"d/m/Y" }}</p>
+                    </div>
                     
-                    <p><strong><i class="fas fa-money-bill-wave me-2"></i>Devise:</strong><br>
-                    <span class="text-muted">{{ symbole_devise }} ({{ devise_principale.code }})</span></p>
+                    <div>
+                        <label class="form-label text-muted small mb-1">Devise</label>
+                        <p class="mb-0">{{ symbole_devise }} ({{ devise_principale.code }})</p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Lignes de Réception -->
-    <div class="card border-success shadow-sm mb-4">
-        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-list-ul me-2"></i>Articles Reçus
-            </h5>
-            <span class="badge bg-light text-success fs-6">{{ lignes.count }} article(s)</span>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th width="5%">#</th>
-                            <th width="25%">Produit</th>
-                            <th width="15%">Référence</th>
-                            <th width="10%" class="text-end">Quantité</th>
-                            <th width="15%" class="text-end">Prix Unitaire</th>
-                            <th width="15%" class="text-end">Total</th>
-                            <th width="15%">Conditionnement</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for ligne in lignes %}
-                        <tr>
-                            <td>{{ forloop.counter }}</td>
-                            <td>
-                                <strong>{{ ligne.ligne_commande.produit.nom }}</strong>
-                                {% if ligne.notes %}
-                                <br><small class="text-muted">{{ ligne.notes }}</small>
-                                {% endif %}
-                            </td>
-                            <td>{{ ligne.ligne_commande.produit.reference|default:"-" }}</td>
-                            <td class="text-end">{{ ligne.quantite|intcomma }}</td>
-                            <td class="text-end">{{ ligne.ligne_commande.prix_unitaire|floatformat:2|intcomma }} {{ symbole_devise }}</td>
-                            <td class="text-right" data-tooltip="Montant total hors taxes pour cette ligne de commande.">
-    {{ ligne.total_ht_ligne|floatformat:2 }}
-    {% if devise_principale %}{{ devise_principale.symbole }}{% endif %}
-</td>
-                            <td>{{ ligne.conditionnement|default:"-" }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="7" class="text-center text-muted py-4">Aucun article reçu</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    <tfoot class="table-light">
-                        <tr>
-                            <th colspan="5">Total</th>
-                            <th class="text-end">{{ object.get_total|floatformat:2|intcomma }} {{ symbole_devise }}</th>
-                            <th></th>
-                        </tr>
-                    </tfoot>
-                </table>
+        <!-- Right Column - Articles -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="card bg-dark-dm bg-light-lm">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-list-ul me-2"></i>Articles Reçus
+                    </h5>
+                    <span class="badge bg-light text-success fs-6">{{ lignes.count }} article(s)</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-dark-dm table-light-lm">
+                                <tr>
+                                    <th width="5%">#</th>
+                                    <th width="25%">Produit</th>
+                                    <th width="15%">Référence</th>
+                                    <th width="10%" class="text-end">Quantité</th>
+                                    <th width="15%" class="text-end">Prix Unitaire</th>
+                                    <th width="15%" class="text-end">Total HT</th>
+                                    <th width="15%">Conditionnement</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ligne in lignes %}
+                                <tr class="hover-shadow">
+                                    <td class="fw-bold">{{ forloop.counter }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="flex-grow-1">
+                                                <strong class="d-block">{{ ligne.ligne_commande.produit.nom }}</strong>
+                                                {% if ligne.notes %}
+                                                <small class="text-muted">{{ ligne.notes }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ ligne.ligne_commande.produit.reference|default:"-" }}</span>
+                                    </td>
+                                    <td class="text-end fw-bold">{{ ligne.quantite|floatformat:2|intcomma }}</td>
+                                    <td class="text-end text-success fw-bold">{{ ligne.ligne_commande.prix_unitaire|floatformat:2|intcomma }} {{ symbole_devise }}</td>
+                                    <td class="text-end text-primary fw-bold">{{ ligne.total_ht_ligne|floatformat:2|intcomma }} {{ symbole_devise }}</td>
+                                    <td>
+                                        <span class="badge bg-info">{{ ligne.conditionnement|default:"-" }}</span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center text-muted py-5">
+                                        <i class="fas fa-box-open fa-3x mb-3 d-block"></i>
+                                        Aucun article reçu
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot class="table-dark-dm table-light-lm">
+                                <tr>
+                                    <th colspan="5" class="text-end">Total HT</th>
+                                    <th class="text-end text-primary fw-bold">{{ total_bon|floatformat:2|intcomma }} {{ symbole_devise }}</th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Actions -->
-    <div class="d-flex justify-content-between mb-5">
-        <div>
-            <span class="text-muted small">
-                <i class="fas fa-clock me-1"></i> 
-                Créé le {{ object.created_at|date:"d/m/Y à H:i" }}
-                {% if object.updated_at != object.created_at %}
-                - Modifié le {{ object.updated_at|date:"d/m/Y à H:i" }}
-                {% endif %}
-            </span>
-        </div>
-        <div>
-            <button class="btn btn-outline-secondary me-2">
-                <i class="fas fa-print me-1"></i> Imprimer
-            </button>
-            <a href="#" class="btn btn-outline-primary">
-                <i class="fas fa-file-pdf me-1"></i> Exporter PDF
-            </a>
+            <!-- Actions Card -->
+            <div class="card bg-dark-dm bg-light-lm mt-4">
+                <div class="card-header bg-dark text-white-dm">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-cog me-2"></i>Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                        <div>
+                            <span class="text-muted small">
+                                <i class="fas fa-clock me-1"></i> 
+                                Créé le {{ object.created_at|date:"d/m/Y à H:i" }}
+                                {% if object.updated_at != object.created_at %}
+                                - Modifié le {{ object.updated_at|date:"d/m/Y à H:i" }}
+                                {% endif %}
+                            </span>
+                        </div>
+                        
+                        <div class="d-flex flex-wrap gap-2">
+                            <!-- Générer Facture -->
+                            <form method="post" action="{% url 'achats:generer_facture_depuis_bon' pk=object.pk %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success" data-bs-toggle="tooltip" title="Générer une facture à partir de ce bon">
+                                    <i class="fas fa-file-invoice me-1"></i> Facture
+                                </button>
+                            </form>
+                            
+                            <!-- Export PDF -->
+                            <a href="{% url 'achats:export_bon_pdf' pk=object.pk %}" class="btn btn-outline-danger" data-bs-toggle="tooltip" title="Exporter en PDF">
+                                <i class="fas fa-file-pdf me-1"></i> PDF
+                            </a>
+                            
+                            <!-- Export Excel -->
+                            <a href="{% url 'achats:export_bon_excel' pk=object.pk %}" class="btn btn-outline-success" data-bs-toggle="tooltip" title="Exporter en Excel">
+                                <i class="fas fa-file-excel me-1"></i> Excel
+                            </a>
+                            
+                            <!-- Imprimer -->
+                            <button class="btn btn-outline-secondary" onclick="window.print()" data-bs-toggle="tooltip" title="Imprimer le document">
+                                <i class="fas fa-print me-1"></i> Imprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -171,14 +285,180 @@
 
 {% block extra_css %}
 <style>
+    /* Dark Mode Variables */
+    :root {
+        --dark-bg: #1a1d21;
+        --dark-card: #2d3035;
+        --dark-border: #3d4046;
+        --dark-text: #e9ecef;
+        --dark-muted: #6c757d;
+    }
+
+    .bg-dark-dm {
+        background-color: var(--dark-card) !important;
+        border-color: var(--dark-border) !important;
+        color: var(--dark-text) !important;
+    }
+
+    .bg-light-lm {
+        background-color: #ffffff !important;
+        border-color: #dee2e6 !important;
+        color: #212529 !important;
+    }
+
+    .table-dark-dm {
+        background-color: var(--dark-bg) !important;
+        color: var(--dark-text) !important;
+    }
+
+    .table-light-lm {
+        background-color: #f8f9fa !important;
+        color: #212529 !important;
+    }
+
+    .text-white-dm {
+        color: var(--dark-text) !important;
+    }
+
+    /* Card Styles */
+    .card {
+        border: none;
+        border-radius: 0.75rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        transition: all 0.3s ease;
+    }
+
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+
+    .card-header {
+        border-radius: 0.75rem 0.75rem 0 0 !important;
+        border: none;
+        font-weight: 600;
+    }
+
+    /* Table Styles */
+    .table {
+        margin-bottom: 0;
+        border-radius: 0.75rem;
+        overflow: hidden;
+    }
+
     .table th {
+        border: none;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.875rem;
+        letter-spacing: 0.5px;
         white-space: nowrap;
     }
-    .card {
-        border-radius: 0.5rem;
+
+    .table td {
+        border-color: var(--dark-border);
+        vertical-align: middle;
     }
-    .card-header {
-        border-radius: 0.5rem 0.5rem 0 0 !important;
+
+    .hover-shadow:hover {
+        box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.1);
+        transform: translateY(-1px);
+        transition: all 0.2s ease;
+    }
+
+    /* Badge Styles */
+    .badge {
+        font-size: 0.75em;
+        padding: 0.35em 0.65em;
+    }
+
+    /* Button Styles */
+    .btn {
+        border-radius: 0.5rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+        transform: translateY(-1px);
+    }
+
+    /* Breadcrumb */
+    .breadcrumb {
+        background: transparent;
+        padding: 0;
+        margin-bottom: 1rem;
+    }
+
+    .breadcrumb-item a {
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .card-body {
+            padding: 1rem;
+        }
+        
+        .table-responsive {
+            border-radius: 0.5rem;
+        }
+        
+        .btn {
+            margin-bottom: 0.5rem;
+        }
+        
+        .d-flex.flex-wrap {
+            justify-content: center !important;
+        }
+    }
+
+    /* Print Styles */
+    @media print {
+        .btn, .breadcrumb, .card-header {
+            display: none !important;
+        }
+        
+        .card {
+            border: 1px solid #000 !important;
+            box-shadow: none !important;
+        }
     }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize tooltips
+    document.addEventListener('DOMContentLoaded', function() {
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        })
+    });
+
+    // Dark mode detection and application
+    function applyDarkMode() {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const html = document.documentElement;
+        
+        if (prefersDark) {
+            html.setAttribute('data-bs-theme', 'dark');
+            // Apply dark mode classes
+            document.querySelectorAll('.bg-light-lm').forEach(el => {
+                el.classList.remove('bg-light-lm');
+                el.classList.add('bg-dark-dm');
+            });
+            document.querySelectorAll('.table-light-lm').forEach(el => {
+                el.classList.remove('table-light-lm');
+                el.classList.add('table-dark-dm');
+            });
+        }
+    }
+
+    // Apply dark mode on load and when preference changes
+    document.addEventListener('DOMContentLoaded', applyDarkMode);
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyDarkMode);
+</script>
 {% endblock %}

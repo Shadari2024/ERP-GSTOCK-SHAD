@@ -1,0 +1,47 @@
+{% extends 'vitrine/base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Tarifs - CongoERP-shad" %}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center mb-5">
+        <h1 class="fw-bold">{% trans "Nos Offres" %}</h1>
+        <p class="lead text-muted">{% trans "Choisissez l'offre qui correspond à vos besoins" %}</p>
+    </div>
+
+    <div class="row row-cols-1 row-cols-md-3 mb-3 text-center">
+        {% for forfait in forfaits %}
+        <div class="col">
+            <div class="card mb-4 rounded-3 shadow-sm {% if forfait.populaire %}border-primary{% endif %}">
+                {% if forfait.populaire %}
+                <div class="card-header py-3 text-white bg-primary border-primary">
+                    <h4 class="my-0 fw-normal">{{ forfait.nom }}</h4>
+                </div>
+                {% else %}
+                <div class="card-header py-3">
+                    <h4 class="my-0 fw-normal">{{ forfait.nom }}</h4>
+                </div>
+                {% endif %}
+                <div class="card-body">
+                    <h1 class="card-title pricing-card-title">{{ forfait.prix }}<small class="text-muted fw-light">{{ forfait.periode }}</small></h1>
+                    <ul class="list-unstyled mt-3 mb-4">
+                        {% for feature in forfait.features %}
+                        <li>{{ feature }}</li>
+                        {% endfor %}
+                    </ul>
+                    <button type="button" class="w-100 btn btn-lg {% if forfait.populaire %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        {% trans "Choisir" %}
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="alert alert-info">
+        <h4 class="alert-heading">{% trans "Information importante" %}</h4>
+        <p>{% trans "Tous nos prix sont affichés en " %}{{ devise_symbole }}{% trans ", la devise principale de votre entreprise. Les prix peuvent varier en fonction de vos besoins spécifiques." %}</p>
+    </div>
+</div>
+{% endblock %}

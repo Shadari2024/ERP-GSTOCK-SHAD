@@ -1,0 +1,36 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'vitrine:accueil' %}">
+            <i class="fas fa-cubes me-2"></i>CongoERP-shad
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'vitrine:accueil' %}">Accueil</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'vitrine:features' %}">Fonctionnalités</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'vitrine:pricing' %}">Tarifs</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'vitrine:contact' %}">Contact</a>
+                </li>
+            </ul>
+            <div class="d-flex">
+                {% comment %} {% if user.is_authenticated %}
+                    {# Utiliser une URL absolue par défaut #}
+                    <a href="/dashboard/" class="btn btn-outline-light me-2">Tableau de bord</a>
+                    <a href="{% url 'logout' %}" class="btn btn-light">Déconnexion</a>
+                {% else %}
+                    <a href="{% url 'login' %}" class="btn btn-outline-light me-2">Connexion</a>
+                    <a href="{% url 'vitrine:demo' %}" class="btn btn-primary">Démo gratuite</a>
+                {% endif %} {% endcomment %}
+            </div>
+        </div>
+    </div>
+</nav>

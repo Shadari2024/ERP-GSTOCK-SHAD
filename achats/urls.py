@@ -37,13 +37,30 @@ urlpatterns = [
     path('commandes/<int:commande_pk>/bon/automatique/', 
          CreerBonAutomatique.as_view(), 
          name='creer_bon_automatique'),
+        path('bons/<int:pk>/export/pdf/', 
+         ExportBonReceptionPDFView.as_view(), 
+         name='export_bon_pdf'),
+    path('bons/<int:pk>/export/excel/', 
+         ExportBonReceptionExcelView.as_view(), 
+         name='export_bon_excel'),
       # URLs pour les factures
     path('factures/', FactureListView.as_view(), name='liste_factures'),
     path('factures/nouvelle/', FactureCreateView.as_view(), name='creer_facture'),
     path('factures/<int:pk>/', FactureDetailView.as_view(), name='detail_facture'),
     path('factures/<int:pk>/modifier/', FactureUpdateView.as_view(), name='modifier_facture'),
-    
+    path('bons/<int:pk>/generer-facture/', GenererFactureDepuisBonView.as_view(),name='generer_facture_depuis_bon'),
     # URLs pour les paiements
-    path('factures/<int:facture_id>/paiement/nouveau/', PaiementCreateView.as_view(), name='creer_paiement'),
-    path('paiements/<int:pk>/modifier/', PaiementUpdateView.as_view(), name='modifier_paiement'),
+   path('factures/<int:facture_id>/paiements/creer/', 
+         PaiementCreateView.as_view(), 
+         name='creer_paiement'),
+    path('paiements/<int:pk>/modifier/', 
+         PaiementUpdateView.as_view(), 
+         name='modifier_paiement'),
+    path('factures/<int:pk>/paiement-direct/', 
+         creer_paiement_direct, 
+         name='creer_paiement_direct'),
+    
+     path('paiements/<int:pk>/supprimer/', 
+         PaiementDeleteView.as_view(), 
+         name='supprimer_paiement'),
 ]

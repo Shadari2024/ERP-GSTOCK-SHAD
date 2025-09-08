@@ -8,7 +8,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
-
 class PlanComptableOHADA(models.Model):
     """Modèle pour le plan comptable OHADA"""
     classe = models.CharField(max_length=1, verbose_name=_("Classe"))
@@ -54,6 +53,9 @@ class PlanComptableOHADA(models.Model):
             # Classe 4: Comptes de tiers
             {'classe': '4', 'numero': '401', 'intitule': 'Fournisseurs', 'type_compte': 'passif'},
             {'classe': '4', 'numero': '411', 'intitule': 'Clients', 'type_compte': 'actif'},
+            {'classe': '4', 'numero': '4455', 'intitule': 'TVA à décaisser', 'type_compte': 'passif'},  # AJOUT: Compte TVA standard OHADA
+            {'classe': '4', 'numero': '4456', 'intitule': 'TVA déductible', 'type_compte': 'actif'},    # AJOUT: Compte TVA déductible
+            {'classe': '4', 'numero': '44566', 'intitule': 'TVA à décaisser (détail)', 'type_compte': 'passif'},  # AJOUT: Compte détaillé
             
             # Classe 5: Comptes financiers
             {'classe': '5', 'numero': '51', 'intitule': 'Banques', 'type_compte': 'actif'},

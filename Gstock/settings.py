@@ -145,6 +145,7 @@ INSTALLED_APPS = [
     'comptabilite.apps.ComptabiliteConfig', 
     'ventes.apps.VentesConfig',
     'grh',  # Ajoutez cette ligne
+    'vitrine',
     'django_countries',
     'django.contrib.humanize',
     'django_apscheduler',

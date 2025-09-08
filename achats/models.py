@@ -322,6 +322,13 @@ class LigneBonReception(models.Model):
 
     def __str__(self):
         return f"Ligne BR {self.bon.numero_bon} - {self.ligne_commande.produit.nom} ({self.quantite.normalize()})"
+# achats/models.py (ajouts)
+from django.db import models
+from django.utils import timezone
+from django.conf import settings
+from decimal import Decimal
+from django.db.models import Sum
+
 class FactureFournisseur(models.Model):
     """Modèle pour les factures fournisseurs"""
     STATUT_CHOICES = [
@@ -377,6 +384,47 @@ class FactureFournisseur(models.Model):
 
         return f"FF-{today.year}-{sequence:04d}"
     
+    @property
+    def montant_paye(self):
+        """Retourne le montant total payé sur cette facture"""
+        from .models import PaiementFournisseur
+        return self.paiements.filter(statut='valide').aggregate(
+            total=Sum('montant', output_field=models.DecimalField(max_digits=12, decimal_places=2))
+        )['total'] or Decimal('0.00')
+    
+    @property
+    def reste_a_payer(self):
+        """Retourne le montant restant à payer"""
+        return max(self.montant_ttc - self.montant_paye, Decimal('0.00'))
+    
+    def get_ecritures_comptables(self):
+        """Retourne les écritures comptables liées à cette facture"""
+        from comptabilite.models import EcritureComptable
+        return EcritureComptable.objects.filter(facture_fournisseur_liee=self)
+    
+    def get_paiements(self):
+        """Retourne tous les paiements associés à cette facture"""
+        from .models import PaiementFournisseur
+        return self.paiements.all().order_by('-date_paiement')
+    
+    def update_statut(self):
+        """Met à jour le statut de la facture en fonction des paiements"""
+        montant_paye = self.montant_paye
+        
+        if montant_paye >= self.montant_ttc:
+            self.statut = 'payee'
+        elif montant_paye > 0:
+            self.statut = 'partiellement_payee'
+        elif self.statut != 'annulee':
+            self.statut = 'validee'
+        
+        self.save()
+        
+from django.db import models
+from django.utils import timezone
+from django.conf import settings
+from decimal import Decimal
+from django.db.models import Sum
 
 class PaiementFournisseur(models.Model):
     """Modèle pour les paiements des factures fournisseurs"""
@@ -395,7 +443,7 @@ class PaiementFournisseur(models.Model):
     ]
 
     entreprise = models.ForeignKey('parametres.Entreprise', on_delete=models.CASCADE)
-    facture = models.ForeignKey(FactureFournisseur, on_delete=models.CASCADE, related_name='paiements')
+    facture = models.ForeignKey('FactureFournisseur', on_delete=models.CASCADE, related_name='paiements')
     mode_paiement = models.CharField(max_length=20, choices=MODE_PAIEMENT_CHOICES, default='virement')
     reference = models.CharField(max_length=100, blank=True)
     montant = models.DecimalField(max_digits=12, decimal_places=2)
@@ -420,7 +468,7 @@ class PaiementFournisseur(models.Model):
         super().save(*args, **kwargs)
 
         # Mettre à jour le statut de la facture après sauvegarde
-        self.update_statut_facture()
+        self.facture.update_statut()
 
     def generate_reference(self):
         """Génère une référence de paiement unique"""
@@ -439,19 +487,82 @@ class PaiementFournisseur(models.Model):
 
         return f"PAY-{today.year}-{sequence:04d}"
 
-    def update_statut_facture(self):
-        """Met à jour le statut de la facture associée"""
-        total_paiements = self.facture.paiements.filter(
-            statut='valide'
-        ).aggregate(
-            total=models.Sum('montant', output_field=models.DecimalField(max_digits=12, decimal_places=2))
-        )['total'] or Decimal('0.00')
-
-        if total_paiements >= self.facture.montant_ttc:
-            self.facture.statut = 'payee'
-        elif total_paiements > 0:
-            self.facture.statut = 'partiellement_payee'
-        elif self.facture.statut != 'annulee':
-            self.facture.statut = 'validee'
-
-        self.facture.save()
+    def creer_ecriture_comptable(self):
+        """Crée l'écriture comptable pour le paiement"""
+        from comptabilite.models import EcritureComptable, LigneEcriture, PlanComptableOHADA, JournalComptable
+        
+        try:
+            # Récupérer les comptes nécessaires
+            compte_fournisseurs = PlanComptableOHADA.objects.get(
+                numero='401',  # Fournisseurs
+                entreprise=self.entreprise
+            )
+            
+            # Déterminer le compte de trésorerie selon le mode de paiement
+            if self.mode_paiement == 'virement':
+                compte_tresorerie = PlanComptableOHADA.objects.get(
+                    numero='512',  # Banque
+                    entreprise=self.entreprise
+                )
+            elif self.mode_paiement == 'cheque':
+                compte_tresorerie = PlanComptableOHADA.objects.get(
+                    numero='511',  # Chèques à encaisser
+                    entreprise=self.entreprise
+                )
+            elif self.mode_paiement == 'espece':
+                compte_tresorerie = PlanComptableOHADA.objects.get(
+                    numero='53',  # Caisse
+                    entreprise=self.entreprise
+                )
+            else:
+                compte_tresorerie = PlanComptableOHADA.objects.get(
+                    numero='58',  # Autres moyens de paiement
+                    entreprise=self.entreprise
+                )
+            
+            # Récupérer le journal de trésorerie
+            journal_tresorerie = JournalComptable.objects.get(
+                code='BQ' if self.mode_paiement == 'virement' else 'CA',
+                entreprise=self.entreprise
+            )
+            
+            # Créer l'écriture comptable
+            ecriture = EcritureComptable(
+                journal=journal_tresorerie,
+                date_ecriture=timezone.now(),
+                date_comptable=self.date_paiement,
+                libelle=f"Paiement {self.reference} - {self.facture.fournisseur.nom}",
+                piece_justificative=self.reference,
+                entreprise=self.entreprise,
+                created_by=self.created_by,
+                facture_fournisseur_liee=self.facture
+            )
+            ecriture.save()
+            
+            # Ligne 1: Débit des fournisseurs
+            LigneEcriture.objects.create(
+                ecriture=ecriture,
+                compte=compte_fournisseurs,
+                libelle=f"Paiement fournisseur - {self.facture.fournisseur.nom}",
+                debit=self.montant,
+                credit=Decimal('0.00'),
+                entreprise=self.entreprise
+            )
+            
+            # Ligne 2: Crédit de trésorerie
+            LigneEcriture.objects.create(
+                ecriture=ecriture,
+                compte=compte_tresorerie,
+                libelle=f"Paiement {self.get_mode_paiement_display()} - {self.facture.fournisseur.nom}",
+                debit=Decimal('0.00'),
+                credit=self.montant,
+                entreprise=self.entreprise
+            )
+            
+            return ecriture
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erreur création écriture comptable paiement: {e}")
+            return None
