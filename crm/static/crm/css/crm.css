@@ -1,0 +1,64 @@
+/* Styles spécifiques au CRM */
+.sidebar-crm {
+    min-height: calc(100vh - 56px);
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+}
+
+.main-crm {
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+.crm-content {
+    min-height: 400px;
+}
+
+/* Cards spécifiques CRM */
+.card .card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+/* List groups */
+.list-group-item {
+    border-left: none;
+    border-right: none;
+}
+
+.list-group-item:first-child {
+    border-top: none;
+}
+
+.list-group-item:last-child {
+    border-bottom: none;
+}
+
+/* Badges */
+.badge-crm {
+    font-size: 0.75em;
+    padding: 0.35em 0.65em;
+}
+
+/* Table styles */
+.table-crm th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+
+/* Calendar styles */
+.fc-event {
+    cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sidebar-crm {
+        position: static;
+        height: auto;
+    }
+    
+    .main-crm {
+        margin-left: 0;
+    }
+}

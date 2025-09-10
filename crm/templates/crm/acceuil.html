@@ -1,0 +1,160 @@
+{% extends "crm/base.html" %}
+{% load static %}
+
+{% block page_title %}Tableau de bord CRM{% endblock %}
+
+{% block crm_content %}
+<div class="row">
+    <!-- Statistiques -->
+    <div class="col-md-3">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">{{ total_clients }}</h5>
+                        <p class="card-text">Clients</p>
+                    </div>
+                    <i class="fas fa-users fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">{{ opportunites_actives }}</h5>
+                        <p class="card-text">Opportunités actives</p>
+                    </div>
+                    <i class="fas fa-bullseye fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-info mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">{{ activites_du_jour }}</h5>
+                        <p class="card-text">Activités aujourd'hui</p>
+                    </div>
+                    <i class="fas fa-tasks fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="card-title">0</h5>
+                        <p class="card-text">Tâches en retard</p>
+                    </div>
+                    <i class="fas fa-exclamation-triangle fa-2x"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <!-- Opportunités récentes -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Opportunités récentes</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for opportunite in opportunites_recentes %}
+                    <a href="{% url 'crm:opportunite_detail' opportunite.pk %}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ opportunite.nom }}</h6>
+                            <small class="text-muted">{{ opportunite.date_creation|date:"d/m/Y" }}</small>
+                        </div>
+                        <p class="mb-1">Client: {{ opportunite.client.nom }}</p>
+                        <small class="text-muted">Montant: {{ opportunite.montant_estime }} {{ devise_principale_symbole }}</small>
+                    </a>
+                    {% empty %}
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-inbox fa-3x mb-2"></i>
+                        <p>Aucune opportunité récente</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'crm:opportunite_list' %}" class="btn btn-sm btn-outline-primary">
+                    Voir toutes les opportunités
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Activités à venir -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Activités à venir</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    {% for activite in activites_a_venir %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ activite.sujet }}</h6>
+                            <small class="text-muted">{{ activite.date_debut|date:"d/m/Y H:i" }}</small>
+                        </div>
+                        <p class="mb-1">Type: {{ activite.type_activite.nom }}</p>
+                        <small class="text-muted">Statut: {{ activite.get_statut_display }}</small>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-calendar fa-3x mb-2"></i>
+                        <p>Aucune activité à venir</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'crm:activite_list' %}" class="btn btn-sm btn-outline-primary me-2">
+                    Voir toutes les activités
+                </a>
+                <a href="{% url 'crm:activite_calendar' %}" class="btn btn-sm btn-outline-secondary">
+                    Voir le calendrier
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <!-- Actions rapides -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Actions rapides</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2 d-md-flex">
+                    <a href="{% url 'crm:client_create' %}" class="btn btn-primary me-md-2">
+                        <i class="fas fa-user-plus me-1"></i> Nouveau client
+                    </a>
+                    <a href="{% url 'crm:opportunite_create' %}" class="btn btn-success me-md-2">
+                        <i class="fas fa-bullseye me-1"></i> Nouvelle opportunité
+                    </a>
+                    <a href="{% url 'crm:activite_create' %}" class="btn btn-info">
+                        <i class="fas fa-calendar-plus me-1"></i> Nouvelle activité
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

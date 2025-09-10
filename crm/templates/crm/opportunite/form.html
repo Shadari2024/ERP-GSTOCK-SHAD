@@ -1,0 +1,125 @@
+{% extends "crm/base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block page_title %}
+    {% if object %}Modifier l'opportunité{% else %}Nouvelle opportunité{% endif %}
+{% endblock %}
+
+{% block page_actions %}
+    <a href="{% url 'crm:opportunite_list' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Retour à la liste
+    </a>
+{% endblock %}
+
+{% block crm_content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas {% if object %}fa-edit{% else %}fa-bullseye{% endif %} me-2"></i>
+                    {% if object %}Modifier l'opportunité{% else %}Créer une nouvelle opportunité{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">Informations générales</h6>
+                            {{ form.client|as_crispy_field }}
+                            {{ form.nom|as_crispy_field }}
+                            {{ form.description|as_crispy_field }}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">Valeur et probabilité</h6>
+                            {{ form.montant_estime|as_crispy_field }}
+                            {{ form.probabilite|as_crispy_field }}
+                            <!-- Champ valeur_attendue en lecture seule -->
+                            <div class="form-group">
+                                <label for="id_valeur_attendue" class="form-label">Valeur attendue ({{ devise_symbole }})</label>
+                                <input type="text" id="id_valeur_attendue" class="form-control" readonly>
+                                <small class="form-text text-muted">Calculée automatiquement</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">Statut et planning</h6>
+                            {{ form.statut|as_crispy_field }}
+                            {{ form.priorite|as_crispy_field }}
+                            {{ form.date_fermeture_prevue|as_crispy_field }}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">Assignation</h6>
+                            {{ form.assigne_a|as_crispy_field }}
+                            <!-- SUPPRIMEZ les champs de documents liés ici -->
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            {% if object %}Mettre à jour{% else %}Créer l'opportunité{% endif %}
+                        </button>
+                        
+                        <a href="{% if object %}{% url 'crm:opportunite_detail' object.pk %}{% else %}{% url 'crm:opportunite_list' %}{% endif %}" 
+                           class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-times me-1"></i> Annuler
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Calcul automatique de la valeur attendue
+    function calculerValeurAttendue() {
+        const montant = parseFloat(document.getElementById('id_montant_estime').value) || 0;
+        const probabilite = parseFloat(document.getElementById('id_probabilite').value) || 0;
+        const valeurAttendue = (montant * probabilite) / 100;
+        
+        // Mettre à jour le champ valeur attendue
+        const valeurAttendueField = document.getElementById('id_valeur_attendue');
+        if (valeurAttendueField) {
+            valeurAttendueField.value = valeurAttendue.toFixed(2) + ' {{ devise_symbole }}';
+        }
+    }
+    
+    // Écouter les changements sur les champs montant et probabilité
+    document.getElementById('id_montant_estime').addEventListener('input', calculerValeurAttendue);
+    document.getElementById('id_probabilite').addEventListener('input', calculerValeurAttendue);
+    
+    // Initialiser le calcul
+    calculerValeurAttendue();
+    
+    // Pré-sélectionner le client si passé en paramètre URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const clientId = urlParams.get('client');
+    if (clientId) {
+        const clientField = document.getElementById('id_client');
+        if (clientField) {
+            clientField.value = clientId;
+        }
+    }
+});
+</script>
+{% endblock %}

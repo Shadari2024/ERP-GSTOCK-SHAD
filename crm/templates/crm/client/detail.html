@@ -1,0 +1,276 @@
+{% extends "crm/base.html" %}
+{% load static %}
+
+{% block page_title %}Détails du Client: {{ client.nom }}{% endblock %}
+
+{% block page_actions %}
+    <a href="{% url 'crm:client_list' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Retour à la liste
+    </a>
+    <a href="{% url 'crm:client_update' client.pk %}" class="btn btn-primary ms-2">
+        <i class="fas fa-edit me-1"></i> Modifier
+    </a>
+{% endblock %}
+
+{% block crm_content %}
+<div class="row">
+    <!-- Informations client -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Informations du Client</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">Code:</dt>
+                    <dd class="col-sm-8">{{ client.code_client|default:"N/A" }}</dd>
+                    
+                    <dt class="col-sm-4">Nom:</dt>
+                    <dd class="col-sm-8">{{ client.nom }}</dd>
+                    
+                    <dt class="col-sm-4">Type:</dt>
+                    <dd class="col-sm-8">{{ client.get_type_client_display }}</dd>
+                    
+                    <dt class="col-sm-4">Statut:</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-success">{{ client.get_statut_display }}</span>
+                    </dd>
+                    
+                    <dt class="col-sm-4">Téléphone:</dt>
+                    <dd class="col-sm-8">{{ client.telephone|default:"-" }}</dd>
+                    
+                    <dt class="col-sm-4">Email:</dt>
+                    <dd class="col-sm-8">{{ client.email|default:"-" }}</dd>
+                    
+                    <dt class="col-sm-4">Adresse:</dt>
+                    <dd class="col-sm-8">{{ client.adresse_complete|default:"-" }}</dd>
+                </dl>
+            </div>
+        </div>
+        
+        <!-- Statistiques -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Statistiques</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6 mb-3">
+                        <div class="text-primary">
+                            <h4>{{ factures|length }}</h4>
+                            <small>Factures</small>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <div class="text-success">
+                            <h4>{{ commandes|length }}</h4>
+                            <small>Commandes</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-info">
+                            <h4>{{ devis|length }}</h4>
+                            <small>Devis</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-warning">
+                            <h4>{{ livraisons|length }}</h4>
+                            <small>Livraisons</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Contenu principal -->
+    <div class="col-md-8">
+        <!-- Onglets -->
+        <ul class="nav nav-tabs" id="clientTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="factures-tab" data-bs-toggle="tab" 
+                        data-bs-target="#factures" type="button" role="tab">
+                    Factures ({{ factures|length }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="commandes-tab" data-bs-toggle="tab" 
+                        data-bs-target="#commandes" type="button" role="tab">
+                    Commandes ({{ commandes|length }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="devis-tab" data-bs-toggle="tab" 
+                        data-bs-target="#devis" type="button" role="tab">
+                    Devis ({{ devis|length }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="livraisons-tab" data-bs-toggle="tab" 
+                        data-bs-target="#livraisons" type="button" role="tab">
+                    Livraisons ({{ livraisons|length }})
+                </button>
+            </li>
+        </ul>
+        
+        <div class="tab-content" id="clientTabsContent">
+            <!-- Factures -->
+            <div class="tab-pane fade show active" id="factures" role="tabpanel">
+                <div class="card">
+                    <div class="card-body">
+                        {% if factures %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Numéro</th>
+                                        <th>Date</th>
+                                        <th>Montant</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for facture in factures %}
+                                    <tr>
+                                        <td>{{ facture.numero }}</td>
+                                        <td>{{ facture.date_facture|date:"d/m/Y" }}</td>
+                                        <td>{{ facture.total_ttc }} €</td>
+                                        <td>
+                                            <span class="badge bg-success">{{ facture.get_statut_display }}</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center py-3">Aucune facture</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Commandes -->
+            <div class="tab-pane fade" id="commandes" role="tabpanel">
+                <div class="card">
+                    <div class="card-body">
+                        {% if commandes %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Numéro</th>
+                                        <th>Date</th>
+                                        <th>Montant</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for commande in commandes %}
+                                    <tr>
+                                        <td>{{ commande.numero }}</td>
+                                        <td>{{ commande.date|date:"d/m/Y" }}</td>
+                                        <td>{{ commande.total_ttc }} €</td>
+                                        <td>
+                                            <span class="badge bg-info">{{ commande.get_statut_display }}</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center py-3">Aucune commande</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Devis -->
+            <div class="tab-pane fade" id="devis" role="tabpanel">
+                <div class="card">
+                    <div class="card-body">
+                        {% if devis %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Numéro</th>
+                                        <th>Date</th>
+                                        <th>Montant</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for devis in devis %}
+                                    <tr>
+                                        <td>{{ devis.numero }}</td>
+                                        <td>{{ devis.date|date:"d/m/Y" }}</td>
+                                        <td>{{ devis.total_ttc }} €</td>
+                                        <td>
+                                            <span class="badge bg-warning">{{ devis.get_statut_display }}</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center py-3">Aucun devis</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Livraisons -->
+            <div class="tab-pane fade" id="livraisons" role="tabpanel">
+                <div class="card">
+                    <div class="card-body">
+                        {% if livraisons %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Numéro</th>
+                                        <th>Date</th>
+                                        <th>Commande</th>
+                                        <th>Statut</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for livraison in livraisons %}
+                                    <tr>
+                                        <td>{{ livraison.numero }}</td>
+                                        <td>{{ livraison.date|date:"d/m/Y" }}</td>
+                                        <td>{{ livraison.commande.numero }}</td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ livraison.get_statut_display }}</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="text-muted text-center py-3">Aucune livraison</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Activation des onglets Bootstrap
+    var triggerTabList = [].slice.call(document.querySelectorAll('#clientTabs button'))
+    triggerTabList.forEach(function (triggerEl) {
+        new bootstrap.Tab(triggerEl)
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}CRM - {{ entreprise.nom }}{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'crm/css/crm.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar CRM -->
+        <div class="col-md-3 col-lg-2 sidebar-crm bg-light border-end">
+            <div class="sidebar-sticky pt-3">
+                <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase">
+                    <span>CRM</span>
+                </h6>
+                
+                <ul class="nav flex-column mb-2">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'tableau_de_bord' %}active{% endif %}" href="{% url 'crm:tableau_de_bord' %}">
+                            <i class="fas fa-tachometer-alt me-2"></i> Tableau de bord
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'client' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'crm:client_list' %}">
+                            <i class="fas fa-users me-2"></i> Clients
+                        </a>
+
+                    </li>
+                       <li class="nav-item">
+                        <a class="nav-link {% if 'statut_opportunite_list' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'crm:statut_opportunite_list' %}">
+                            <i class="fas fa-bullseye me-2"></i> Statut Opportunités
+                        </a>
+                    </li>
+                    
+
+
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'opportunite' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'crm:opportunite_list' %}">
+                            <i class="fas fa-bullseye me-2"></i> Opportunités
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'activite' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'crm:activite_list' %}">
+                            <i class="fas fa-tasks me-2"></i> Activités
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'activite_calendar' %}active{% endif %}" href="{% url 'crm:activite_calendar' %}">
+                            <i class="fas fa-calendar me-2"></i> Calendrier
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'performances' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'crm:performances' %}">
+                            <i class="fas fa-chart-line me-2"></i> Performances
+                        </a>
+                    </li>
+                </ul>
+                
+                <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase">
+                    <span>Rapports</span>
+                </h6>
+                
+                <ul class="nav flex-column mb-2">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="fas fa-file-pdf me-2"></i> Rapport clients
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">
+                            <i class="fas fa-chart-bar me-2"></i> Ventes par commercial
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-crm">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">{% block page_title %}CRM{% endblock %}</h1>
+                
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        {% block page_actions %}
+                        {% endblock %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Messages -->
+            {% if messages %}
+            <div class="messages-container">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Content block -->
+            <div class="crm-content">
+                {% block crm_content %}
+                {% endblock %}
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'crm/js/crm.js' %}"></script>
+{% endblock %}

@@ -511,12 +511,7 @@ class Client(models.Model):
         verbose_name=_("Exonéré de TVA")
     )
 
-    # Métadonnées
-    notes = models.TextField(
-        blank=True,
-        null=True,
-        verbose_name=_("Notes internes")
-    )
+    notes = models.TextField(blank=True, null=True, verbose_name=_("Notes internes"))
     cree_le = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_("Date de création")

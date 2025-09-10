@@ -17,3 +17,7 @@ class EntrepriseAccessMixin:
                 raise PermissionDenied("Vous n'avez pas les permissions pour accéder à cette entreprise")
         
         return super().dispatch(request, *args, **kwargs)
+    
+    
+    
+    

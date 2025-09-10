@@ -1,0 +1,133 @@
+{% extends "crm/base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block page_title %}
+    {% if object %}Modifier le client{% else %}Nouveau client{% endif %}
+{% endblock %}
+
+{% block page_actions %}
+    <a href="{% url 'crm:client_list' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Retour à la liste
+    </a>
+{% endblock %}
+
+{% block crm_content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas {% if object %}fa-edit{% else %}fa-user-plus{% endif %} me-2"></i>
+                    {% if object %}Modifier le client{% else %}Créer un nouveau client{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Champs cachés -->
+                    {% for field in form.hidden_fields %}
+                        {{ field }}
+                    {% endfor %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">Informations générales</h6>
+                            {{ form.type_client|as_crispy_field }}
+                            {{ form.nom|as_crispy_field }}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">Coordonnées</h6>
+                            {{ form.telephone|as_crispy_field }}
+                            {{ form.email|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">Adresse</h6>
+                            {{ form.adresse|as_crispy_field }}
+                            {{ form.ville|as_crispy_field }}
+                            {{ form.code_postal|as_crispy_field }}
+                            {{ form.pays|as_crispy_field }}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">Informations commerciales</h6>
+                            {{ form.limite_credit|as_crispy_field }}
+                            {{ form.delai_paiement|as_crispy_field }}
+                            {{ form.taux_remise|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">Informations fiscales</h6>
+                            {{ form.numero_tva|as_crispy_field }}
+                            {{ form.numero_fiscal|as_crispy_field }}
+                            {{ form.exonere_tva|as_crispy_field }}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">Notes</h6>
+                            {{ form.notes|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            {% if object %}Mettre à jour{% else %}Créer le client{% endif %}
+                        </button>
+                        
+                        <a href="{% if object %}{% url 'crm:client_detail' object.pk %}{% else %}{% url 'crm:client_list' %}{% endif %}" 
+                           class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-times me-1"></i> Annuler
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Masquer/afficher les champs en fonction du type de client
+    function toggleClientFields() {
+        const typeClient = document.getElementById('id_type_client').value;
+        const entrepriseFields = ['numero_tva', 'numero_fiscal'];
+        
+        if (typeClient === 'ENT') {
+            // Afficher les champs entreprise
+            entrepriseFields.forEach(field => {
+                const element = document.getElementById(`id_${field}`).closest('.form-group');
+                if (element) element.style.display = 'block';
+            });
+        } else {
+            // Masquer les champs entreprise
+            entrepriseFields.forEach(field => {
+                const element = document.getElementById(`id_${field}`).closest('.form-group');
+                if (element) element.style.display = 'none';
+            });
+        }
+    }
+    
+    // Initialiser et écouter les changements
+    toggleClientFields();
+    document.getElementById('id_type_client').addEventListener('change', toggleClientFields);
+});
+</script>
+{% endblock %}
