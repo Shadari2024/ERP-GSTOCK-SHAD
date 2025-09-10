@@ -1,0 +1,147 @@
+{% extends "crm/base.html" %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% block page_title %}
+    {% if object %}Modifier l'activité{% else %}Nouvelle activité{% endif %}
+{% endblock %}
+
+{% block page_actions %}
+    <a href="{% url 'crm:activite_list' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Retour à la liste
+    </a>
+{% endblock %}
+
+{% block crm_content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas {% if object %}fa-edit{% else %}fa-calendar-plus{% endif %} me-2"></i>
+                    {% if object %}Modifier l'activité{% else %}Créer une nouvelle activité{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">Informations générales</h6>
+                            {{ form.type_activite|as_crispy_field }}
+                            {{ form.sujet|as_crispy_field }}
+                            {{ form.description|as_crispy_field }}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">Dates et statut</h6>
+                            {{ form.date_debut|as_crispy_field }}
+                            {{ form.date_echeance|as_crispy_field }}
+                            {{ form.statut|as_crispy_field }}
+                            {{ form.priorite|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">Assignation</h6>
+                            {{ form.assigne_a|as_crispy_field }}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">Relations</h6>
+                            {{ form.clients|as_crispy_field }}
+                            {{ form.opportunites|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <h6 class="border-bottom pb-2 mb-3">Rappel et résultat</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {{ form.rappel|as_crispy_field }}
+                                </div>
+                                <div class="col-md-6">
+                                    {{ form.date_rappel|as_crispy_field }}
+                                </div>
+                            </div>
+                            {{ form.resultat|as_crispy_field }}
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            {% if object %}Mettre à jour{% else %}Créer l'activité{% endif %}
+                        </button>
+                        
+                        <a href="{% if object %}{% url 'crm:activite_detail' object.pk %}{% else %}{% url 'crm:activite_list' %}{% endif %}" 
+                           class="btn btn-outline-secondary ms-2">
+                            <i class="fas fa-times me-1"></i> Annuler
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Pré-sélectionner les opportunités si passé en paramètre URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const opportunitesId = urlParams.get('opportunites');
+    if (opportunitesId) {
+        const opportunitesField = document.getElementById('id_opportunites');
+        if (opportunitesField) {
+            opportunitesField.value = [opportunitesId];
+        }
+    }
+    
+    // Initialiser Select2 pour les champs multiples
+    if (typeof $ !== 'undefined' && $.fn.select2) {
+        $('select[multiple]').select2({
+            placeholder: "Sélectionnez...",
+            allowClear: true
+        });
+    }
+    
+    // Gérer l'affichage conditionnel de la date de rappel
+    function toggleDateRappel() {
+        const rappelCheckbox = document.getElementById('id_rappel');
+        const dateRappelField = document.getElementById('id_date_rappel').closest('.form-group');
+        
+        if (rappelCheckbox) {
+            if (!rappelCheckbox.checked) {
+                dateRappelField.style.display = 'none';
+            } else {
+                dateRappelField.style.display = 'block';
+            }
+            
+            rappelCheckbox.addEventListener('change', function() {
+                if (!this.checked) {
+                    dateRappelField.style.display = 'none';
+                    document.getElementById('id_date_rappel').value = '';
+                } else {
+                    dateRappelField.style.display = 'block';
+                }
+            });
+        }
+    }
+    
+    toggleDateRappel();
+});
+</script>
+{% endblock %}

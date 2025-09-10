@@ -1,5 +1,5 @@
 from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView, TemplateView
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy,reverse
 from django.contrib import messages
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
@@ -13,7 +13,7 @@ from .models import (
 )
 from .forms import (
     ClientCRMForm, OpportuniteForm, ActiviteForm, 
-    NoteClientForm, ObjectifCommercialForm,StatutOpportuniteForm
+    NoteClientForm, ObjectifCommercialForm,StatutOpportuniteForm,TypeActiviteForm
 )
 from django.views.generic import CreateView
 from django.urls import reverse_lazy
@@ -516,6 +516,66 @@ class OpportuniteDetailView(EntrepriseAccessMixin, DetailView):
         
         return context
 
+
+class TypeActiviteListView(EntrepriseAccessMixin, ListView):
+    model = TypeActivite
+    template_name = "crm/type_activite/list.html"
+    permission_required = "crm.view_typeactivite"
+    context_object_name = "types_activite"
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        return queryset.order_by('nom')
+
+class TypeActiviteCreateView(EntrepriseAccessMixin, CreateView):
+    model = TypeActivite
+    form_class = TypeActiviteForm
+    template_name = "crm/type_activite/form.html"
+    permission_required = "crm.add_typeactivite"
+    success_url = reverse_lazy('crm:type_activite_list')
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['entreprise'] = self.request.user.entreprise
+        return kwargs
+    
+    def form_valid(self, form):
+        form.instance.entreprise = self.request.user.entreprise
+        messages.success(self.request, _("Type d'activité créé avec succès."))
+        return super().form_valid(form)
+
+class TypeActiviteUpdateView(EntrepriseAccessMixin, UpdateView):
+    model = TypeActivite
+    form_class = TypeActiviteForm
+    template_name = "crm/type_activite/form.html"
+    permission_required = "crm.change_typeactivite"
+    success_url = reverse_lazy('crm:type_activite_list')
+    
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['entreprise'] = self.request.user.entreprise
+        return kwargs
+    
+    def form_valid(self, form):
+        messages.success(self.request, _("Type d'activité modifié avec succès."))
+        return super().form_valid(form)
+
+class TypeActiviteDeleteView(EntrepriseAccessMixin, DeleteView):
+    model = TypeActivite
+    template_name = "crm/type_activite/confirm_delete.html"
+    permission_required = "crm.delete_typeactivite"
+    success_url = reverse_lazy('crm:type_activite_list')
+    
+    def delete(self, request, *args, **kwargs):
+        messages.success(request, _("Type d'activité supprimé avec succès."))
+        return super().delete(request, *args, **kwargs)
+
+
+
+
+
+
+
 class ActiviteListView(EntrepriseAccessMixin, ListView):
     model = Activite
     template_name = "crm/activite/list.html"
@@ -608,6 +668,26 @@ class ActiviteUpdateView(EntrepriseAccessMixin, UpdateView):
         messages.success(self.request, _("Activité modifiée avec succès."))
         return super().form_valid(form)
 
+
+class ActiviteDetailView(EntrepriseAccessMixin, DetailView):
+    model = Activite
+    template_name = "crm/activite/detail.html"
+    permission_required = "crm.view_activite"
+    context_object_name = "activite"
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        activite = self.get_object()
+        
+        # Récupérer la devise principale depuis ConfigurationSAAS
+        try:
+            config_saas = ConfigurationSAAS.objects.get(entreprise=self.request.user.entreprise)
+            context['devise_symbole'] = config_saas.devise_principale.symbole if config_saas.devise_principale else "€"
+        except ConfigurationSAAS.DoesNotExist:
+            context['devise_symbole'] = "€"
+        
+        return context
+
 class ActiviteCalendarView(EntrepriseAccessMixin, TemplateView):
     template_name = "crm/activite/calendar.html"
     permission_required = "crm.view_activite"
@@ -627,13 +707,13 @@ class ActiviteCalendarView(EntrepriseAccessMixin, TemplateView):
                 'start': act.date_debut.isoformat(),
                 'end': act.date_echeance.isoformat(),
                 'color': act.type_activite.couleur if act.type_activite else '#007bff',
-                'url': reverse('crm:activite_detail', kwargs={'pk': act.id}),
+                'url': reverse('crm:activite_detail', kwargs={'pk': act.id}),  # Utilisez le bon nom d'URL
             }
             for act in activites
         ]
         
         return context
-
+    
 class TableauDeBordView(EntrepriseAccessMixin, TemplateView):
     template_name = "crm/rapport/tableau_de_bord.html"
     permission_required = "crm.view_tableau_de_bord"
@@ -641,6 +721,13 @@ class TableauDeBordView(EntrepriseAccessMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         entreprise = self.request.user.entreprise
+        
+        # Récupérer la devise principale depuis ConfigurationSAAS
+        try:
+            config_saas = ConfigurationSAAS.objects.get(entreprise=entreprise)
+            context['devise_symbole'] = config_saas.devise_principale.symbole if config_saas.devise_principale else "€"
+        except ConfigurationSAAS.DoesNotExist:
+            context['devise_symbole'] = "€"
         
         # Statistiques clients
         context['total_clients'] = ClientCRM.objects.filter(entreprise=entreprise).count()
@@ -657,13 +744,22 @@ class TableauDeBordView(EntrepriseAccessMixin, TemplateView):
         context['valeur_pipeline'] = opportunites.aggregate(
             total=Sum('montant_estime')
         )['total'] or 0
-        context['valeur_attendue'] = opportunites.aggregate(
-            total=Sum('valeur_attendue')
+        
+        # Calculer la valeur attendue avec annotation
+        from django.db.models import F, ExpressionWrapper, FloatField
+        opportunites_avec_valeur = opportunites.annotate(
+            valeur_calculee=ExpressionWrapper(
+                F('montant_estime') * F('probabilite') / 100.0,
+                output_field=FloatField()
+            )
+        )
+        context['valeur_attendue'] = opportunites_avec_valeur.aggregate(
+            total=Sum('valeur_calculee')
         )['total'] or 0
         
         # Opportunités par statut
         context['opportunites_par_statut'] = (
-            opportunites.values('statut__nom')
+            opportunites.values('statut__nom', 'statut__couleur')
             .annotate(count=Count('id'), total=Sum('montant_estime'))
             .order_by('-total')
         )
@@ -676,22 +772,35 @@ class TableauDeBordView(EntrepriseAccessMixin, TemplateView):
         ).select_related('type_activite', 'assigne_a')[:10]
         
         # Opportunités en retard
+        statuts_non_termines = StatutOpportunite.objects.filter(
+            entreprise=entreprise,
+            est_gagnant=False,
+            est_perdant=False
+        )
+        
         context['opportunites_en_retard'] = opportunites.filter(
             date_fermeture_prevue__lt=timezone.now().date(),
-            statut__est_terminee=False
+            statut__in=statuts_non_termines
         ).select_related('client', 'statut')[:5]
         
         # Meilleurs clients (par chiffre d'affaires)
+        clients = ClientCRM.objects.filter(entreprise=entreprise)[:5]
         context['meilleurs_clients'] = [
             {
                 'client': client,
                 'chiffre_affaires': client.valeur_commerciale
             }
-            for client in ClientCRM.objects.filter(entreprise=entreprise)[:5]
+            for client in clients
         ]
         
         return context
+from django.db.models import Sum, Count, Avg, Q
+from django.utils import timezone
+from django.contrib.auth import get_user_model
+from parametres.models import ConfigurationSAAS
+from .models import Opportunite, StatutOpportunite
 
+User = get_user_model()
 class PerformancesView(EntrepriseAccessMixin, TemplateView):
     template_name = "crm/rapport/performances.html"
     permission_required = "crm.view_performances"
@@ -700,31 +809,120 @@ class PerformancesView(EntrepriseAccessMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         entreprise = self.request.user.entreprise
         
+        # Récupérer la devise principale depuis ConfigurationSAAS
+        try:
+            config_saas = ConfigurationSAAS.objects.get(entreprise=entreprise)
+            context['devise_symbole'] = config_saas.devise_principale.symbole if config_saas.devise_principale else "€"
+            context['devise_code'] = config_saas.devise_principale.code if config_saas.devise_principale else "EUR"
+        except ConfigurationSAAS.DoesNotExist:
+            context['devise_symbole'] = "€"
+            context['devise_code'] = "EUR"
+        
+        # Récupérer les statuts terminés (gagnants et perdants)
+        statuts_termines = StatutOpportunite.objects.filter(
+            Q(est_gagnant=True) | Q(est_perdant=True),
+            entreprise=entreprise
+        )
+        
         # Taux de conversion
         opportunites_terminees = Opportunite.objects.filter(
-            entreprise=entreprise,
-            statut__est_terminee=True
+            statut__in=statuts_termines,
+            entreprise=entreprise
         )
+        
         total_terminees = opportunites_terminees.count()
         gagnees = opportunites_terminees.filter(statut__est_gagnant=True).count()
         
         context['taux_conversion'] = (gagnees / total_terminees * 100) if total_terminees > 0 else 0
         
         # Valeur moyenne des opportunités gagnées
-        context['valeur_moyenne'] = opportunites_terminees.filter(
-            statut__est_gagnant=True
-        ).aggregate(moyenne=Avg('montant_estime'))['moyenne'] or 0
+        opportunites_gagnees = Opportunite.objects.filter(
+            statut__est_gagnant=True,
+            entreprise=entreprise
+        )
         
-        # Délai moyen de vente
-        # (à implémenter avec des données historiques)
+        context['valeur_moyenne'] = opportunites_gagnees.aggregate(
+            moyenne=Avg('montant_estime')
+        )['moyenne'] or 0
+        
+        # Valeur totale des opportunités gagnées
+        context['valeur_totale_gagnees'] = opportunites_gagnees.aggregate(
+            total=Sum('montant_estime')
+        )['total'] or 0
+        
+        
+        # Taux de conversion
+        opportunites_terminees = Opportunite.objects.filter(
+            entreprise=entreprise,
+            statut__in=statuts_termines
+        )
+        
+        total_terminees = opportunites_terminees.count()
+        gagnees = opportunites_terminees.filter(statut__est_gagnant=True).count()
+        
+        context['taux_conversion'] = (gagnees / total_terminees * 100) if total_terminees > 0 else 0
+        
+        # Valeur moyenne des opportunités gagnées
+        opportunites_gagnees = Opportunite.objects.filter(
+            entreprise=entreprise,
+            statut__est_gagnant=True
+        )
+        
+        context['valeur_moyenne'] = opportunites_gagnees.aggregate(
+            moyenne=Avg('montant_estime')
+        )['moyenne'] or 0
+        
+        # Valeur totale des opportunités gagnées
+        context['valeur_totale_gagnees'] = opportunites_gagnees.aggregate(
+            total=Sum('montant_estime')
+        )['total'] or 0
+        
+        # Nombre total d'opportunités
+        context['total_opportunites'] = Opportunite.objects.filter(
+            entreprise=entreprise
+        ).count()
+        
+        # Opportunités en cours (non terminées)
+        statuts_non_termines = StatutOpportunite.objects.filter(
+            entreprise=entreprise,
+            est_gagnant=False,
+            est_perdant=False
+        )
+        
+        context['opportunites_en_cours'] = Opportunite.objects.filter(
+            entreprise=entreprise,
+            statut__in=statuts_non_termines
+        ).count()
+        
+        # Délai moyen de vente (pour les opportunités gagnées)
+        opportunites_gagnees_avec_dates = opportunites_gagnees.exclude(
+            date_fermeture_reelle__isnull=True
+        ).exclude(
+            date_creation__isnull=True
+        )
+        
+        if opportunites_gagnees_avec_dates.exists():
+            # Calculer le délai moyen en jours
+            delais = []
+            for opp in opportunites_gagnees_avec_dates:
+                if opp.date_creation and opp.date_fermeture_reelle:
+                    delai = (opp.date_fermeture_reelle - opp.date_creation.date()).days
+                    delais.append(delai)
+            
+            if delais:
+                context['delai_moyen_vente'] = sum(delais) / len(delais)
+            else:
+                context['delai_moyen_vente'] = 0
+        else:
+            context['delai_moyen_vente'] = 0
         
         # Performances par commercial
-        context['performances_commerciaux'] = (
+        performances_data = (
             Opportunite.objects.filter(
                 entreprise=entreprise,
                 statut__est_gagnant=True
             )
-            .values('assigne_a__username', 'assigne_a__first_name', 'assigne_a__last_name')
+            .values('assigne_a')
             .annotate(
                 count=Count('id'),
                 total=Sum('montant_estime'),
@@ -733,52 +931,102 @@ class PerformancesView(EntrepriseAccessMixin, TemplateView):
             .order_by('-total')
         )
         
-        return context
-
-# Vues API pour les données AJAX
-class GetOpportunitesParStatutView(EntrepriseAccessMixin, TemplateView):
-    """Retourne les données pour le graphique des opportunités par statut"""
-    
-    def get(self, request, *args, **kwargs):
-        entreprise = request.user.entreprise
+        # Enrichir les données avec les informations utilisateur
+        context['performances_commerciaux'] = []
+        for data in performances_data:
+            if data['assigne_a']:
+                try:
+                    user = User.objects.get(id=data['assigne_a'])
+                    context['performances_commerciaux'].append({
+                        'utilisateur': user,
+                        'count': data['count'],
+                        'total': data['total'] or 0,
+                        'moyenne': data['moyenne'] or 0
+                    })
+                except User.DoesNotExist:
+                    continue
         
-        data = list(
+        # Statistiques par statut
+        context['statistiques_par_statut'] = (
             Opportunite.objects.filter(entreprise=entreprise)
             .values('statut__nom', 'statut__couleur')
             .annotate(
                 count=Count('id'),
-                total=Sum('montant_estime')
+                total=Sum('montant_estime'),
+                moyenne=Avg('montant_estime')
             )
             .order_by('-total')
         )
         
-        return JsonResponse(data, safe=False)
-
-class GetActivitesMensuellesView(EntrepriseAccessMixin, TemplateView):
-    """Retourne les données pour le graphique des activités mensuelles"""
-    
-    def get(self, request, *args, **kwargs):
-        entreprise = request.user.entreprise
-        now = timezone.now()
+        # Opportunités par mois (derniers 6 mois)
+        maintenant = timezone.now()
+        context['opportunites_par_mois'] = []
         
-        # Activités des 6 derniers mois
-        data = []
         for i in range(5, -1, -1):
-            month = now.month - i
-            year = now.year
-            if month <= 0:
-                month += 12
-                year -= 1
+            mois = maintenant.month - i
+            annee = maintenant.year
+            if mois <= 0:
+                mois += 12
+                annee -= 1
             
-            count = Activite.objects.filter(
+            count = Opportunite.objects.filter(
                 entreprise=entreprise,
-                date_debut__month=month,
-                date_debut__year=year
+                date_creation__month=mois,
+                date_creation__year=annee
             ).count()
             
-            data.append({
-                'month': f"{month}/{year}",
+            context['opportunites_par_mois'].append({
+                'mois': f"{mois:02d}/{annee}",
                 'count': count
             })
         
-        return JsonResponse(data, safe=False)
+        return context
+class GetOpportunitesParStatutView(EntrepriseAccessMixin, TemplateView):
+    
+    def get(self, request, *args, **kwargs):
+        try:
+            entreprise = request.user.entreprise
+            
+            # Récupérer les données de base
+            data = list(
+                Opportunite.objects.filter(entreprise=entreprise)
+                .values('statut__nom', 'statut__couleur')
+                .annotate(count=Count('id'), total=Sum('montant_estime'))
+                .order_by('-total')
+            )
+            
+            return JsonResponse(data, safe=False)
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+class GetActivitesMensuellesView(EntrepriseAccessMixin, TemplateView):
+    
+    def get(self, request, *args, **kwargs):
+        try:
+            entreprise = request.user.entreprise
+            now = timezone.now()
+            data = []
+            
+            for i in range(5, -1, -1):
+                month = now.month - i
+                year = now.year
+                if month <= 0:
+                    month += 12
+                    year -= 1
+                
+                count = Activite.objects.filter(
+                    entreprise=entreprise,
+                    date_debut__month=month,
+                    date_debut__year=year
+                ).count()
+                
+                data.append({
+                    'month': f"{month:02d}/{year}",
+                    'count': count
+                })
+            
+            return JsonResponse(data, safe=False)
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)

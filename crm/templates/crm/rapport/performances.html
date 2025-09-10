@@ -1,0 +1,201 @@
+{% extends "crm/base.html" %}
+{% load static %}
+
+{% block page_title %}
+    Performances commerciales
+{% endblock %}
+
+{% block page_actions %}
+    <a href="{% url 'crm:tableau_de_bord' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Tableau de bord
+    </a>
+{% endblock %}
+
+{% block crm_content %}
+<div class="row">
+    <!-- Statistiques principales -->
+    <div class="col-md-3 mb-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">{{ total_opportunites }}</h5>
+                <p class="card-text">Opportunités totales</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">{{ valeur_totale_gagnees|floatformat:2 }} {{ devise_symbole }}</h5>
+                <p class="card-text">Valeur gagnée</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">{{ taux_conversion|floatformat:1 }}%</h5>
+                <p class="card-text">Taux de conversion</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">{{ opportunites_en_cours }}</h5>
+                <p class="card-text">En cours</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Performances par commercial -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Performances par commercial
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if performances_commerciaux %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Commercial</th>
+                                    <th>Nombre</th>
+                                    <th>Total</th>
+                                    <th>Moyenne</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for perf in performances_commerciaux %}
+                                <tr>
+                                    <td>{{ perf.utilisateur.get_full_name|default:perf.utilisateur.username }}</td>
+                                    <td>{{ perf.count }}</td>
+                                    <td>{{ perf.total|floatformat:2 }} {{ devise_symbole }}</td>
+                                    <td>{{ perf.moyenne|floatformat:2 }} {{ devise_symbole }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Aucune donnée de performance disponible</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques par statut -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Répartition par statut
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if statistiques_par_statut %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Statut</th>
+                                    <th>Nombre</th>
+                                    <th>Valeur totale</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in statistiques_par_statut %}
+                                <tr>
+                                    <td>
+                                        <span class="badge" style="background-color: {{ stat.statut__couleur|default:'#007bff' }}; color: white;">
+                                            {{ stat.statut__nom }}
+                                        </span>
+                                    </td>
+                                    <td>{{ stat.count }}</td>
+                                    <td>{{ stat.total|floatformat:2 }} {{ devise_symbole }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Aucune statistique par statut disponible</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Délai moyen de vente -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-clock me-2"></i>Délai moyen de vente
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                <h2>{{ delai_moyen_vente|floatformat:1 }} jours</h2>
+                <p class="text-muted">Temps moyen pour conclure une vente</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Valeur moyenne -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-coins me-2"></i>Valeur moyenne
+                </h5>
+            </div>
+            <div class="card-body text-center">
+                <h2>{{ valeur_moyenne|floatformat:2 }} {{ devise_symbole }}</h2>
+                <p class="text-muted">Valeur moyenne des opportunités gagnées</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Évolution mensuelle -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Évolution mensuelle
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if opportunites_par_mois %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Mois</th>
+                                    <th>Nombre d'opportunités</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for mois in opportunites_par_mois %}
+                                <tr>
+                                    <td>{{ mois.mois }}</td>
+                                    <td>{{ mois.count }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Aucune donnée d'évolution disponible</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -23,10 +23,22 @@ path('statuts-opportunite/<int:pk>/supprimer/', views.StatutOpportuniteDeleteVie
     path('opportunites/<int:pk>/', views.OpportuniteDetailView.as_view(), name='opportunite_detail'),
     path('opportunites/<int:pk>/modifier/', views.OpportuniteUpdateView.as_view(), name='opportunite_update'),
     
+    
+    
+    
+    
+    
+   # Types d'activité
+path('types-activite/', views.TypeActiviteListView.as_view(), name='type_activite_list'),
+path('types-activite/nouveau/', views.TypeActiviteCreateView.as_view(), name='type_activite_create'),
+path('types-activite/<int:pk>/modifier/', views.TypeActiviteUpdateView.as_view(), name='type_activite_update'),
+path('types-activite/<int:pk>/supprimer/', views.TypeActiviteDeleteView.as_view(), name='type_activite_delete'), 
+    
     # Activités
     path('activites/', views.ActiviteListView.as_view(), name='activite_list'),
     path('activites/nouvelle/', views.ActiviteCreateView.as_view(), name='activite_create'),
     path('activites/<int:pk>/modifier/', views.ActiviteUpdateView.as_view(), name='activite_update'),
+    path('activites/<int:pk>/', views.ActiviteDetailView.as_view(), name='activite_detail'),
     path('activites/calendrier/', views.ActiviteCalendarView.as_view(), name='activite_calendar'),
     
     # Tableaux de bord et rapports

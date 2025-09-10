@@ -1,0 +1,68 @@
+{% extends "crm/base.html" %}
+{% load static %}
+
+{% block page_title %}
+    Calendrier des activités
+{% endblock %}
+
+{% block page_actions %}
+    <a href="{% url 'crm:activite_list' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Retour à la liste
+    </a>
+    <a href="{% url 'crm:activite_create' %}" class="btn btn-primary ms-2">
+        <i class="fas fa-plus me-1"></i> Nouvelle activité
+    </a>
+{% endblock %}
+
+{% block crm_content %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-calendar me-2"></i>Calendrier des activités
+        </h5>
+    </div>
+    <div class="card-body">
+        <div id="calendar"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.css" rel="stylesheet">
+<style>
+#calendar {
+    max-width: 100%;
+    margin: 0 auto;
+}
+.fc-event {
+    cursor: pointer;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/main.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.10.1/locales/fr.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'fr',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        events: {{ activites_json|safe }},
+        eventClick: function(info) {
+            info.jsEvent.preventDefault();
+            if (info.event.url) {
+                window.location.href = info.event.url;
+            }
+        }
+    });
+    calendar.render();
+});
+</script>
+{% endblock %}

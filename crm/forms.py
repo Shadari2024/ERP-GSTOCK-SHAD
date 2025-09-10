@@ -80,13 +80,19 @@ class OpportuniteForm(forms.ModelForm):
         widget=forms.TextInput(attrs={'readonly': 'readonly', 'class': 'form-control'}),
         label=_("Valeur attendue")
     )
+    nouveau_statut = forms.CharField(
+        required=False,
+        max_length=50,
+        label=_("Nouveau statut (optionnel)"),
+        help_text=_("Créez un nouveau statut si nécessaire")
+    )
     
     class Meta:
         model = Opportunite
         fields = [
             'client', 'nom', 'description', 'montant_estime', 
-            'probabilite', 'statut', 'priorite', 'date_fermeture_prevue',  # 'statut' est bien ici
-            'assigne_a', 'valeur_attendue'
+            'probabilite', 'statut', 'nouveau_statut', 'priorite',  # Ajoutez nouveau_statut
+            'date_fermeture_prevue', 'assigne_a', 'valeur_attendue'
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
@@ -96,6 +102,10 @@ class OpportuniteForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.entreprise = kwargs.pop('entreprise', None)
         super().__init__(*args, **kwargs)
+        
+        if self.entreprise:
+            # Filtrer les statuts par entreprise
+            self.fields['statut'].queryset = StatutOpportunite.objects.filter(entreprise=self.entreprise)
         
         if self.entreprise:
             # Filtrer les clients par entreprise
@@ -119,6 +129,46 @@ class OpportuniteForm(forms.ModelForm):
             self.fields['valeur_attendue'].initial = self.instance.valeur_attendue
         else:
             self.fields['valeur_attendue'].initial = 0
+            
+        def save(self, commit=True):
+            instance = super().save(commit=False)
+            nouveau_statut_nom = self.cleaned_data.get('nouveau_statut')
+            
+            if nouveau_statut_nom and self.entreprise:
+                # Créer un nouveau statut
+                nouveau_statut = StatutOpportunite.objects.create(
+                    entreprise=self.entreprise,
+                    nom=nouveau_statut_nom,
+                    ordre=99,  # Par défaut à la fin
+                    couleur="#007bff",  # Couleur par défaut
+                    est_gagnant=False,
+                    est_perdant=False
+                )
+                instance.statut = nouveau_statut
+            
+            if commit:
+                instance.save()
+                self.save_m2m()
+            
+            return instance
+
+
+class TypeActiviteForm(forms.ModelForm):
+    class Meta:
+        model = TypeActivite
+        fields = ['nom', 'description', 'duree_par_defaut', 'couleur']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 3}),
+            'couleur': forms.TextInput(attrs={'type': 'color'}),
+            'duree_par_defaut': forms.TextInput(attrs={
+                'placeholder': 'HH:MM:SS (ex: 01:30:00 pour 1h30)'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        self.entreprise = kwargs.pop('entreprise', None)
+        super().__init__(*args, **kwargs)
+
             
 class ActiviteForm(forms.ModelForm):
     clients = forms.ModelMultipleChoiceField(

@@ -1,0 +1,296 @@
+{% extends "crm/base.html" %}
+{% load static %}
+
+{% block page_title %}
+    Tableau de bord CRM
+{% endblock %}
+
+{% block page_actions %}
+    <a href="{% url 'crm:performances' %}" class="btn btn-outline-info">
+        <i class="fas fa-chart-line me-1"></i> Performances détaillées
+    </a>
+{% endblock %}
+
+{% block crm_content %}
+<div class="row">
+    <!-- KPI Clients -->
+    <div class="col-md-3 mb-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">{{ total_clients }}</h5>
+                <p class="card-text">Clients totaux</p>
+                <small>{{ clients_actifs }} actifs</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">{{ nouveaux_clients_mois }}</h5>
+                <p class="card-text">Nouveaux clients ce mois</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI Opportunités -->
+    <div class="col-md-3 mb-4">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">{{ total_opportunites }}</h5>
+                <p class="card-text">Opportunités</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-4">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h5 class="card-title">{{ valeur_pipeline|floatformat:2 }} {{ devise_symbole }}</h5>
+                <p class="card-text">Valeur pipeline</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Graphique opportunités par statut -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>Opportunités par statut
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="chartOpportunitesStatut" width="400" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphique activités mensuelles -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Activités des 6 derniers mois
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="chartActivitesMensuelles" width="400" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Opportunités en retard -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-exclamation-triangle me-2 text-danger"></i>Opportunités en retard
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if opportunites_en_retard %}
+                    <div class="list-group">
+                        {% for opportunite in opportunites_en_retard %}
+                        <a href="{% url 'crm:opportunite_detail' opportunite.pk %}" class="list-group-item list-group-item-action list-group-item-danger">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ opportunite.nom }}</h6>
+                                <small>{{ opportunite.date_fermeture_prevue|timesince }} de retard</small>
+                            </div>
+                            <p class="mb-1">Client: {{ opportunite.client.nom }}</p>
+                            <small>Statut: 
+                                <span class="badge" style="background-color: {{ opportunite.statut.couleur }}; color: white;">
+                                    {{ opportunite.statut.nom }}
+                                </span>
+                            </small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">Aucune opportunité en retard</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Activités à venir -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-calendar me-2"></i>Activités à venir
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if activites_a_venir %}
+                    <div class="list-group">
+                        {% for activite in activites_a_venir %}
+                        <a href="{% url 'crm:activite_detail' activite.pk %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ activite.sujet }}</h6>
+                                <small>{{ activite.date_debut|date:"d/m/Y H:i" }}</small>
+                            </div>
+                            <p class="mb-1">{{ activite.type_activite.nom }}</p>
+                            <small>Assigné à: 
+                                {% if activite.assigne_a %}
+                                    {{ activite.assigne_a.get_full_name|default:activite.assigne_a.username }}
+                                {% else %}
+                                    Non assigné
+                                {% endif %}
+                            </small>
+                        </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">Aucune activité à venir</p>
+                {% endif %}
+                <div class="mt-3">
+                    <a href="{% url 'crm:activite_calendar' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-calendar me-1"></i> Voir le calendrier
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Meilleurs clients -->
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-trophy me-2"></i>Top 5 clients par chiffre d'affaires
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if meilleurs_clients %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Client</th>
+                                    <th>Email</th>
+                                    <th>Téléphone</th>
+                                    <th>Chiffre d'affaires</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for client_data in meilleurs_clients %}
+                                <tr>
+                                    <td>{{ client_data.client.nom }}</td>
+                                    <td>{{ client_data.client.email|default:"-" }}</td>
+                                    <td>{{ client_data.client.telephone|default:"-" }}</td>
+                                    <td>{{ client_data.chiffre_affaires|floatformat:2 }} {{ devise_symbole }}</td>
+                                    <td>
+                                        <a href="{% url 'crm:client_detail' client_data.client.pk %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Aucune donnée de chiffre d'affaires disponible</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Charger les données des API
+    Promise.all([
+        fetch('/crm/api/opportunites-par-statut/').then(r => r.json()),
+        fetch('/crm/api/activites-mensuelles/').then(r => r.json())
+    ]).then(([opportunitesData, activitesData]) => {
+        // Graphique opportunités par statut
+        const ctxOpportunites = document.getElementById('chartOpportunitesStatut').getContext('2d');
+        new Chart(ctxOpportunites, {
+            type: 'doughnut',
+            data: {
+                labels: opportunitesData.map(item => item.statut__nom),
+                datasets: [{
+                    data: opportunitesData.map(item => item.count),
+                    backgroundColor: opportunitesData.map(item => item.statut__couleur || '#007bff'),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Graphique activités mensuelles
+        const ctxActivites = document.getElementById('chartActivitesMensuelles').getContext('2d');
+        new Chart(ctxActivites, {
+            type: 'bar',
+            data: {
+                labels: activitesData.map(item => item.month),
+                datasets: [{
+                    label: 'Nombre d\'activités',
+                    data: activitesData.map(item => item.count),
+                    backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Nombre d\'activités'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Mois'
+                        }
+                    }
+                }
+            }
+        });
+    }).catch(error => {
+        console.error('Erreur lors du chargement des données:', error);
+    });
+
+    // Actualisation automatique toutes les 5 minutes
+    setInterval(() => {
+        window.location.reload();
+    }, 300000); // 5 minutes
+});
+</script>
+{% endblock %}

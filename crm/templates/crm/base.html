@@ -44,6 +44,13 @@
                         </a>
                     </li>
                     
+
+                          <li class="nav-item">
+                        <a class="nav-link {% if 'type_activite_list' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'crm:type_activite_list' %}">
+                            <i class="fas fa-tasks me-2"></i> Type Activités
+                        </a>
+                    </li>
+
                     <li class="nav-item">
                         <a class="nav-link {% if 'activite' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'crm:activite_list' %}">
                             <i class="fas fa-tasks me-2"></i> Activités
