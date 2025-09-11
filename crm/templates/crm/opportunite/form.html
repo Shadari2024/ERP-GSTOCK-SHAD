@@ -10,9 +10,6 @@
     <a href="{% url 'crm:opportunite_list' %}" class="btn btn-outline-secondary">
         <i class="fas fa-arrow-left me-1"></i> Retour à la liste
     </a>
-    <a href="{% url 'crm:statut_opportunite_list' %}" class="btn btn-outline-info ms-2">
-        <i class="fas fa-cog me-1"></i> Gérer les statuts
-    </a>
 {% endblock %}
 
 {% block crm_content %}
@@ -26,7 +23,7 @@
                 </h5>
             </div>
             <div class="card-body">
-                <form method="post" enctype="multipart/form-data" id="opportunite-form">
+                <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     
                     {% if form.non_field_errors %}
@@ -49,6 +46,7 @@
                             <h6 class="border-bottom pb-2 mb-3">Valeur et probabilité</h6>
                             {{ form.montant_estime|as_crispy_field }}
                             {{ form.probabilite|as_crispy_field }}
+                            <!-- Champ valeur_attendue en lecture seule -->
                             <div class="form-group">
                                 <label for="id_valeur_attendue" class="form-label">Valeur attendue ({{ devise_symbole }})</label>
                                 <input type="text" id="id_valeur_attendue" class="form-control" readonly>
@@ -60,24 +58,7 @@
                     <div class="row mt-4">
                         <div class="col-md-6">
                             <h6 class="border-bottom pb-2 mb-3">Statut et planning</h6>
-                            
-                            <!-- Champ statut existant -->
                             {{ form.statut|as_crispy_field }}
-                            
-                            <!-- Champ pour créer un nouveau statut -->
-                            <div id="nouveau-statut-group" style="display: none;">
-                                {{ form.nouveau_statut|as_crispy_field }}
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    Le nouveau statut sera créé avec les paramètres par défaut.
-                                </div>
-                            </div>
-                            
-                            <!-- Bouton pour basculer entre les modes -->
-                            <button type="button" id="toggle-statut-mode" class="btn btn-sm btn-outline-secondary mb-3">
-                                <i class="fas fa-plus me-1"></i> Créer un nouveau statut
-                            </button>
-                            
                             {{ form.priorite|as_crispy_field }}
                             {{ form.date_fermeture_prevue|as_crispy_field }}
                         </div>
@@ -85,6 +66,7 @@
                         <div class="col-md-6">
                             <h6 class="border-bottom pb-2 mb-3">Assignation</h6>
                             {{ form.assigne_a|as_crispy_field }}
+                            <!-- SUPPRIMEZ les champs de documents liés ici -->
                         </div>
                     </div>
                     
@@ -129,32 +111,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialiser le calcul
     calculerValeurAttendue();
     
-    // Gestion du basculement entre statut existant et nouveau statut
-    const toggleButton = document.getElementById('toggle-statut-mode');
-    const statutField = document.getElementById('id_statut').closest('.form-group');
-    const nouveauStatutGroup = document.getElementById('nouveau-statut-group');
-    let nouveauStatutMode = false;
-    
-    if (toggleButton && statutField && nouveauStatutGroup) {
-        toggleButton.addEventListener('click', function() {
-            nouveauStatutMode = !nouveauStatutMode;
-            
-            if (nouveauStatutMode) {
-                statutField.style.display = 'none';
-                nouveauStatutGroup.style.display = 'block';
-                toggleButton.innerHTML = '<i class="fas fa-list me-1"></i> Choisir un statut existant';
-                toggleButton.classList.remove('btn-outline-secondary');
-                toggleButton.classList.add('btn-outline-primary');
-            } else {
-                statutField.style.display = 'block';
-                nouveauStatutGroup.style.display = 'none';
-                toggleButton.innerHTML = '<i class="fas fa-plus me-1"></i> Créer un nouveau statut';
-                toggleButton.classList.remove('btn-outline-primary');
-                toggleButton.classList.add('btn-outline-secondary');
-            }
-        });
-    }
-    
     // Pré-sélectionner le client si passé en paramètre URL
     const urlParams = new URLSearchParams(window.location.search);
     const clientId = urlParams.get('client');
@@ -163,21 +119,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (clientField) {
             clientField.value = clientId;
         }
-    }
-    
-    // Validation du formulaire
-    const form = document.getElementById('opportunite-form');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            if (nouveauStatutMode) {
-                const nouveauStatut = document.getElementById('id_nouveau_statut').value;
-                if (!nouveauStatut.trim()) {
-                    e.preventDefault();
-                    alert('Veuillez saisir un nom pour le nouveau statut.');
-                    return false;
-                }
-            }
-        });
     }
 });
 </script>

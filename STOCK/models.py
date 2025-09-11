@@ -51,7 +51,8 @@ from datetime import timedelta
 
         
 class Notification(models.Model):
-    destinataire = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
+    destinataire = models.ForeignKey(User, on_delete=models.CASCADE, related_name='stock_notifications')
+
     message = models.TextField()
     est_lu = models.BooleanField(default=False)
     type = models.CharField(max_length=50, choices=[

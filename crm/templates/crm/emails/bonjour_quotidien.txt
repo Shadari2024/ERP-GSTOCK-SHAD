@@ -1,0 +1,18 @@
+Bonjour {{ client.nom }},
+
+Nous espérons que vous passez une excellente journée !
+
+C'est toujours un plaisir de vous compter parmi nos clients fidèles.
+
+N'hésitez pas à nous contacter si vous avez des questions ou besoin d'assistance.
+
+Cordialement,
+L'équipe {{ entreprise.nom }}
+
+{{ entreprise.nom }}
+Email: {{ entreprise.email }}
+Téléphone: {{ entreprise.telephone }}
+
+{% if entreprise.adresse %}
+Adresse: {{ entreprise.adresse }}
+{% endif %}

@@ -12,23 +12,23 @@
     <style>
         :root {
             /* Odoo-like Dark Mode Variables */
-            --odoo-dark-bg: #2C3E50; /* Dark blue-gray for main background */
-            --odoo-dark-card-bg: #34495E; /* Slightly lighter dark blue-gray for cards */
-            --odoo-dark-text: #ECF0F1; /* Light gray for general text */
-            --odoo-dark-text-muted: #BDC3C7; /* Muted light gray */
-            --odoo-dark-border: #4A627A; /* Darker border color */
-            --odoo-dark-input-bg: #3B536B; /* Darker input background */
-            --odoo-dark-input-border: #526B85; /* Input border */
-            --odoo-dark-hover-bg: #40576E; /* Hover background for interactive elements */
-            --odoo-dark-primary: #875A7B; /* Odoo's primary purple */
-            --odoo-dark-secondary: #2196F3; /* A vibrant blue for secondary actions */
-            --odoo-dark-danger: #E74C3C; /* Red for errors/danger */
-            --odoo-dark-success: #2ECC71; /* Green for success */
-            --odoo-dark-info: #3498DB; /* Blue for info */
-            --odoo-dark-table-header-bg: #2B3B4C; /* Table header background */
-            --odoo-dark-table-border: #4A627A; /* Table border */
-            --odoo-dark-form-control-focus-border: #875A7B; /* Focus border color */
-            --odoo-dark-form-control-focus-shadow: rgba(135, 90, 123, 0.25); /* Focus shadow color */
+            --odoo-dark-bg: #2C3E50;
+            --odoo-dark-card-bg: #34495E;
+            --odoo-dark-text: #ECF0F1;
+            --odoo-dark-text-muted: #BDC3C7;
+            --odoo-dark-border: #99b8d7ff;
+            --odoo-dark-input-bg: #3B536B;
+            --odoo-dark-input-border: #526B85;
+            --odoo-dark-hover-bg: #40576E;
+            --odoo-dark-primary: #875A7B;
+            --odoo-dark-secondary: #2196F3;
+            --odoo-dark-danger: #E74C3C;
+            --odoo-dark-success: #2ECC71;
+            --odoo-dark-info: #3498DB;
+            --odoo-dark-table-header-bg: #2B3B4C;
+            --odoo-dark-table-border: #4A627A;
+            --odoo-dark-form-control-focus-border: #875A7B;
+            --odoo-dark-form-control-focus-shadow: rgba(135, 90, 123, 0.25);
         }
 
         body {
@@ -68,7 +68,7 @@
         }
 
         .erp-info-box {
-            background-color: var(--odoo-dark-table-header-bg); /* Slightly lighter than card */
+            background-color: var(--odoo-dark-table-header-bg);
             border: 1px solid var(--odoo-dark-border);
             border-radius: 6px;
             padding: 15px;
@@ -84,7 +84,7 @@
         }
         .erp-section-title i {
             margin-right: 8px;
-            color: var(--odoo-dark-primary); /* Icon color */
+            color: var(--odoo-dark-primary);
         }
 
         /* Form Control Styling */
@@ -98,7 +98,7 @@
             border: 1px solid var(--odoo-dark-input-border);
             border-radius: 4px;
             padding: 0.375rem 0.75rem;
-            height: calc(1.5em + .75rem + 2px); /* Standard Bootstrap height */
+            height: calc(1.5em + .75rem + 2px);
         }
 
         .form-control:focus {
@@ -110,7 +110,7 @@
 
         .form-control::placeholder {
             color: var(--odoo-dark-text-muted);
-            opacity: 1; /* Firefox default is lower */
+            opacity: 1;
         }
 
         /* Labels */
@@ -125,12 +125,12 @@
             background-color: var(--odoo-dark-input-bg);
             border: 1px solid var(--odoo-dark-input-border);
             color: var(--odoo-dark-text);
-            height: calc(1.5em + .75rem + 2px); /* Align Select2 height with Bootstrap inputs */
+            height: calc(1.5em + .75rem + 2px);
         }
         .select2-container--default .select2-selection--single .select2-selection__rendered {
             color: var(--odoo-dark-text);
-            line-height: calc(1.5em + .75rem + 2px); /* Vertically align text */
-            padding-left: 0.75rem; /* Match input padding */
+            line-height: calc(1.5em + .75rem + 2px);
+            padding-left: 0.75rem;
         }
         .select2-container--default .select2-selection--single .select2-selection__arrow b {
             border-color: var(--odoo-dark-text-muted) transparent transparent transparent;
@@ -153,7 +153,6 @@
             border: 1px solid var(--odoo-dark-input-border) !important;
         }
 
-
         /* Table Styling */
         .erp-table-responsive {
             overflow-x: auto;
@@ -162,9 +161,9 @@
 
         .erp-line-table {
             width: 100%;
-            border-collapse: separate; /* Allows border-radius on cells if needed */
+            border-collapse: separate;
             border-spacing: 0;
-            margin-bottom: 0; /* Remove default table margin */
+            margin-bottom: 0;
         }
 
         .erp-line-table th,
@@ -172,24 +171,23 @@
             padding: 8px 12px;
             vertical-align: middle;
             border-bottom: 1px solid var(--odoo-dark-table-border);
-            border-right: 1px solid var(--odoo-dark-table-border); /* Add right border for column separation */
+            border-right: 1px solid var(--odoo-dark-table-border);
         }
         .erp-line-table th:last-child,
         .erp-line-table td:last-child {
-            border-right: none; /* No right border for the last column */
+            border-right: none;
         }
         .erp-line-table tr:last-child td {
-            border-bottom: none; /* No bottom border for the last row */
+            border-bottom: none;
         }
-
 
         .erp-thead th {
             background-color: var(--odoo-dark-table-header-bg);
             color: var(--odoo-dark-text);
             font-weight: 600;
-            white-space: nowrap; /* Prevent wrapping in headers */
+            white-space: nowrap;
             border-top: 1px solid var(--odoo-dark-table-border);
-            border-bottom: 2px solid var(--odoo-dark-border); /* Stronger bottom border for header */
+            border-bottom: 2px solid var(--odoo-dark-border);
         }
         .erp-thead th:first-child {
             border-top-left-radius: 6px;
@@ -198,10 +196,9 @@
             border-top-right-radius: 6px;
         }
 
-
         /* Error Styling */
         .erp-row-error {
-            background-color: rgba(231, 76, 60, 0.1) !important; /* Lighter red for error rows */
+            background-color: rgba(231, 76, 60, 0.1) !important;
             border-left: 3px solid var(--odoo-dark-danger);
         }
         .erp-row-error input,
@@ -259,7 +256,7 @@
             border: 1px solid var(--odoo-dark-primary);
         }
         .erp-btn-primary:hover {
-            background-color: #6B455F; /* Slightly darker primary */
+            background-color: #6B455F;
             color: #FFFFFF;
             border-color: #6B455F;
         }
@@ -270,7 +267,7 @@
             border: 1px solid var(--odoo-dark-border);
         }
         .erp-btn-secondary:hover {
-            background-color: #526B85; /* Slightly darker hover bg */
+            background-color: #526B85;
             color: var(--odoo-dark-text);
             border-color: #526B85;
         }
@@ -305,9 +302,9 @@
             font-size: 1.1em;
         }
 
-        /* Tooltip Style (Bootstrap default, but ensure visibility in dark mode) */
+        /* Tooltip Style */
         .tooltip-inner {
-            background-color: #4A627A; /* Darker tooltip background */
+            background-color: #4A627A;
             color: #ECF0F1;
         }
         .tooltip.bs-tooltip-auto[x-placement^=top] .arrow::before, 
@@ -329,6 +326,16 @@
 
         .hidden {
             display: none;
+        }
+
+        /* TVA Highlight */
+        .tva-highlight {
+            background-color: rgba(52, 152, 219, 0.1);
+            border-left: 3px solid var(--odoo-dark-info);
+        }
+        .tva-input:focus {
+            border-color: var(--odoo-dark-info);
+            box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
         }
     </style>
 {% endblock extra_head %}
@@ -368,7 +375,7 @@
                         <div class="col-md-6">
                             <div class="form-group {% if form.fournisseur.errors %}has-error{% endif %}">
                                 {{ form.fournisseur.label_tag }}
-                                <div data-bs-toggle="tooltip" data-bs-placement="top" title="Sélectionnez le fournisseur pour cette commande.">
+                                <div data-bs-toggle="tooltip" data-bs-placement="top" title="Sélectionnez le fournisseur pour cette commande. Le taux de TVA par défaut du fournisseur sera appliqué aux nouvelles lignes.">
                                     {{ form.fournisseur }}
                                 </div>
                                 {% for error in form.fournisseur.errors %}
@@ -436,7 +443,7 @@
                                     <th class="text-right" data-bs-toggle="tooltip" data-bs-placement="top" title="Quantité de produit à commander.">Quantité</th>
                                     <th class="text-right" data-bs-toggle="tooltip" data-bs-placement="top" title="Prix unitaire hors taxes du produit.">Prix Unitaire HT</th>
                                     <th class="text-right" data-bs-toggle="tooltip" data-bs-placement="top" title="Pourcentage de remise applicable à ce produit (par exemple, 10 pour 10%).">Remise %</th>
-                                    <th class="text-right" data-bs-toggle="tooltip" data-bs-placement="top" title="Taux de TVA applicable au produit (par exemple, 20 pour 20%).">TVA %</th>
+                                    <th class="text-right" data-bs-toggle="tooltip" data-bs-placement="top" title="Taux de TVA applicable au produit (par exemple, 16 pour 16%).">TVA %</th>
                                     <th class="text-right" data-bs-toggle="tooltip" data-bs-placement="top" title="Montant total hors taxes pour cette ligne (Quantité * Prix Unitaire * (1 - Remise)).">Montant HT</th>
                                     <th class="text-right" data-bs-toggle="tooltip" data-bs-placement="top" title="Montant total toutes taxes comprises pour cette ligne (Montant HT + TVA).">Montant TTC</th>
                                     <th data-bs-toggle="tooltip" data-bs-placement="top" title="Cochez pour marquer cette ligne pour suppression.">Supprimer</th>
@@ -444,7 +451,7 @@
                             </thead>
                             <tbody id="formset-container">
                                 {% for form in formset %}
-                                <tr class="formset-row {% if form.errors %}erp-row-error{% endif %}">
+                                <tr class="formset-row {% if form.errors %}erp-row-error{% endif %} {% if forloop.last %}tva-highlight{% endif %}">
                                     <td>
                                         {{ form.id }}
                                         <div class="form-group" data-bs-toggle="tooltip" data-bs-placement="top" title="Sélectionnez un produit existant ou commencez à taper pour en rechercher un.">
@@ -479,7 +486,7 @@
                                         </div>
                                     </td>
                                     <td class="text-right">
-                                        <div class="form-group" data-bs-toggle="tooltip" data-bs-placement="top" title="Entrez le taux de TVA en pourcentage (ex: 20 pour 20%).">
+                                        <div class="form-group" data-bs-toggle="tooltip" data-bs-placement="top" title="Taux de TVA (16% par défaut). Modifiable si nécessaire.">
                                             {{ form.taux_tva }}
                                             {% for error in form.taux_tva.errors %}
                                             <div class="text-danger small">{{ error }}</div>
@@ -496,7 +503,7 @@
                             </tbody>
                         </table>
                     </div>
-                    <button type="button" class="erp-btn erp-btn-secondary mt-2" id="add-row" data-bs-toggle="tooltip" data-bs-placement="top" title="Ajoutez une nouvelle ligne de produit à la commande.">
+                    <button type="button" class="erp-btn erp-btn-secondary mt-2" id="add-row" data-bs-toggle="tooltip" data-bs-placement="top" title="Ajoutez une nouvelle ligne de produit à la commande. Le taux de TVA du fournisseur sera appliqué automatiquement.">
                         <i class="bi bi-plus-circle"></i> Ajouter une ligne
                     </button>
                     <button type="button" class="erp-btn erp-btn-primary mt-2" id="create-product-btn" data-bs-toggle="tooltip" data-bs-placement="top" title="Créez un nouveau produit sans quitter la commande.">
@@ -566,15 +573,13 @@
 </div>
 
 <script type="text/template" id="empty-row-template">
-    <tr class="formset-row">
+    <tr class="formset-row tva-highlight">
         <td>
             <input type="hidden" name="lignes-__prefix__-id" id="id_lignes-__prefix__-id">
             <div class="form-group">
                 <select name="lignes-__prefix__-produit" id="id_lignes-__prefix__-produit" class="form-control select2" required
                         data-bs-toggle="tooltip" data-bs-placement="top" title="Sélectionnez un produit existant ou commencez à taper pour en rechercher un.">
                     <option value="">---------</option>
-                    {# We need to make sure 'formset.empty_form.produit.field.queryset' is available or fetch products via AJAX #}
-                    {# For simplicity, assuming it's available. In a real app, AJAX would be better for large product lists. #}
                     {% for produit in formset.empty_form.produit.field.queryset %}
                     <option value="{{ produit.pk }}">{{ produit.nom }}</option>
                     {% endfor %}
@@ -605,8 +610,8 @@
         </td>
         <td class="text-right">
             <div class="form-group">
-                <input type="number" name="lignes-__prefix__-taux_tva" step="0.01" id="id_lignes-__prefix__-taux_tva" class="form-control" required value="0"
-                       data-bs-toggle="tooltip" data-bs-placement="top" title="Taux de TVA applicable.">
+                <input type="number" name="lignes-__prefix__-taux_tva" step="0.01" id="id_lignes-__prefix__-taux_tva" class="form-control tva-input" required value="16.00"
+                       data-bs-toggle="tooltip" data-bs-placement="top" title="Taux de TVA applicable (16% par défaut).">
                 <div class="text-danger small" id="error_lignes-__prefix__-taux_tva"></div>
             </div>
         </td>
@@ -628,19 +633,53 @@
 <script>
 $(document).ready(function() {
     let formsetRowIndex = parseInt($('#id_lignes-TOTAL_FORMS').val() || 0);
+    let fournisseurTvaDefaut = 16.00; // Valeur par défaut
 
-    // Initialize Bootstrap Tooltips
+    // Récupérer le taux TVA du fournisseur sélectionné
+    function updateFournisseurTva() {
+        const fournisseurId = $('#id_fournisseur').val();
+        if (fournisseurId) {
+            // Charger le taux TVA du fournisseur via AJAX
+            $.ajax({
+               // Par cette version plus robuste
+url: "{% url 'achats:get_fournisseur_tva' %}" || "/achats/get-fournisseur-tva/",
+                type: 'GET',
+                data: { fournisseur_id: fournisseurId },
+                success: function(response) {
+                    if (response.success) {
+                        fournisseurTvaDefaut = response.taux_tva;
+                        // Mettre à jour les tooltips
+                        $('[data-bs-toggle="tooltip"]').tooltip('dispose');
+                        $('[data-bs-toggle="tooltip"]').tooltip();
+                    }
+                },
+                error: function() {
+                    console.error("Erreur lors du chargement du taux TVA du fournisseur");
+                }
+            });
+        }
+    }
+
+    // Initialiser les tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-      return new bootstrap.Tooltip(tooltipTriggerEl)
+        return new bootstrap.Tooltip(tooltipTriggerEl)
     })
+
+    // Mettre à jour le taux TVA quand le fournisseur change
+    $('#id_fournisseur').on('change', function() {
+        updateFournisseurTva();
+    });
+
+    // Initialiser le taux TVA au chargement
+    updateFournisseurTva();
 
     function initSelect2(element) {
         $(element).select2({
             placeholder: "Sélectionnez un produit",
             allowClear: true,
             width: '100%',
-            dropdownParent: $(element).closest('td') || $('body') // Ensure dropdown is positioned correctly
+            dropdownParent: $(element).closest('td') || $('body')
         });
     }
 
@@ -693,12 +732,15 @@ $(document).ready(function() {
         const newRowHtml = $('#empty-row-template').html().replace(/__prefix__/g, currentFormsCount);
         const $newRow = $(newRowHtml);
         
+        // Appliquer le taux TVA du fournisseur
+        $newRow.find('input[name*="taux_tva"]').val(fournisseurTvaDefaut.toFixed(2));
+        
         $('#formset-container').append($newRow);
         totalFormsInput.val(currentFormsCount + 1);
 
         initSelect2($newRow.find('select[name*="-produit"]'));
 
-        // Re-initialize tooltips for the new row
+        // Ré-initialiser les tooltips
         $newRow.find('[data-bs-toggle="tooltip"]').each(function () {
             new bootstrap.Tooltip(this);
         });
@@ -728,11 +770,9 @@ $(document).ready(function() {
         updateTotals();
     });
 
-    // --- Product Creation Modal Logic ---
+    // Logique pour la modal de création de produit
     $('#create-product-btn').click(function() {
-        // Load the product creation form into the modal body
-
-        const url_for_product_creation_form = "{% url 'ajouter_produit' %}"; // Example URL
+        const url_for_product_creation_form = "{% url 'ajouter_produit' %}";
 
         $.ajax({
             url: url_for_product_creation_form,
@@ -748,7 +788,6 @@ $(document).ready(function() {
         });
     });
 
-    // Handle saving the product from the modal
     $('#saveProductBtn').click(function() {
         const $form = $('#createProductModalBody form');
         if (!$form.length) {
@@ -757,16 +796,14 @@ $(document).ready(function() {
         }
 
         $.ajax({
-            url: $form.attr('action') || "{% url 'ajouter_produit' %}", // Endpoint to save product via AJAX
+            url: $form.attr('action') || "{% url 'ajouter_produit' %}",
             type: 'POST',
             data: $form.serialize(),
             success: function(response) {
                 if (response.success) {
-                    // Product created successfully, add it to all product Select2 dropdowns
-                    const newProduct = response.product; // Assuming response includes {id: ..., name: ...}
+                    const newProduct = response.product;
                     $('select[name*="-produit"]').each(function() {
                         const $select = $(this);
-                        // Check if the option already exists to avoid duplicates
                         if ($select.find(`option[value="${newProduct.id}"]`).length === 0) {
                             const newOption = new Option(newProduct.name, newProduct.id, false, false);
                             $select.append(newOption).trigger('change');
@@ -775,9 +812,7 @@ $(document).ready(function() {
                     $('#createProductModal').modal('hide');
                     alert('Produit créé avec succès !');
                 } else {
-                    // Display form errors in the modal
                     $('#createProductModalBody').html(response.form_html);
-                    // Re-initialize any JS components within the reloaded form, like datepickers if any
                 }
             },
             error: function(xhr, status, error) {
@@ -787,7 +822,7 @@ $(document).ready(function() {
         });
     });
 
-    // Client-side Validation on Form Submission
+    // Validation côté client
     $('#commande-form').on('submit', function(e) {
         let isValid = true;
         
@@ -842,8 +877,6 @@ $(document).ready(function() {
     });
 
     updateTotals();
-
-    // Initial tooltips for existing elements
     $('[data-bs-toggle="tooltip"]').tooltip();
 });
 </script>

@@ -8,35 +8,34 @@ from parametres.models import *
 from django import forms
 from .models import Fournisseur # Assure-toi d'importer le bon modèle
 
+from django import forms
+
+
+
+from django.forms import inlineformset_factory, BaseInlineFormSet
+from .models import *
+from STOCK.models import Produit
+from decimal import Decimal
+
 class FournisseurForm(forms.ModelForm):
     class Meta:
         model = Fournisseur
-      
-        fields = ['nom', 'email', 'telephone', 'adresse'] # Liste explicitement les champs que tu veu
+        fields = ['nom', 'email', 'telephone', 'adresse', 'taux_tva_defaut']
         widgets = {
             'adresse': forms.Textarea(attrs={'rows': 3}),
+            'taux_tva_defaut': forms.NumberInput(attrs={'step': '0.01'}),
         }
 
     def __init__(self, *args, **kwargs):
-        # Retire l'argument 'entreprise' du pop si tu n'en as plus besoin pour d'autres logiques
-        # ou gère-le si tu l'utilises toujours pour autre chose.
         entreprise = kwargs.pop('entreprise', None)
         super().__init__(*args, **kwargs)
-
-        # Si le champ 'code' ne doit pas être affiché du tout dans le formulaire
         if 'code' in self.fields:
             del self.fields['code']
 
-        # Si tu veux le laisser affiché mais en lecture seule :
-        # if 'code' in self.fields:
-        #     self.fields['code'].widget.attrs['readonly'] = True
-        #     self.fields['code'].required = False # Pas obligatoire dans le form
 class CommandeAchatForm(forms.ModelForm):
     class Meta:
         model = CommandeAchat
-        # Excluez 'statut' car il a une valeur par défaut dans le modèle.
-        # Aussi, excluez les champs gérés automatiquement ou non destinés à être modifiés par l'utilisateur.
-        exclude = ['entreprise', 'created_by', 'numero_commande', 'devise', 'taux_change', 'statut']
+        exclude = ['entreprise', 'created_by', 'numero_commande', 'statut']
         widgets = {
             'date_commande': forms.DateInput(attrs={'type': 'date'}),
             'date_livraison_prevue': forms.DateInput(attrs={'type': 'date'}),
@@ -50,82 +49,85 @@ class CommandeAchatForm(forms.ModelForm):
         else:
             self.fields['fournisseur'].queryset = Fournisseur.objects.none()
 
-### `LigneCommandeAchatForm` (Updated for TVA)
-
 class LigneCommandeAchatForm(forms.ModelForm):
-    # 'produit_code' est un champ additionnel non directement sur le modèle,
-    # utilisé pour l'affichage ou les recherches dynamiques dans le template.
     produit_code = forms.CharField(required=False, widget=forms.HiddenInput())
 
     class Meta:
         model = LigneCommandeAchat
-        # Exclure 'commande', 'livree', 'quantite_livree', 'montant_tva_ligne'.
-        # 'commande' est géré par le formset.
-        # 'livree' et 'quantite_livree' sont probablement gérés en dehors du formulaire de création initiale.
-        # 'montant_tva_ligne' est calculé dans la méthode save du modèle, donc il est exclu.
         exclude = ['commande', 'livree', 'quantite_livree', 'montant_tva_ligne']
-
-        # Ajout de widgets pour une meilleure expérience utilisateur avec les DecimalFields
         widgets = {
             'quantite': forms.NumberInput(attrs={'step': '0.01'}),
             'prix_unitaire': forms.NumberInput(attrs={'step': '0.01'}),
             'remise': forms.NumberInput(attrs={'step': '0.01'}),
-            'taux_tva': forms.NumberInput(attrs={'step': '0.01'}), # Nouveau : Widget pour le taux de TVA
+            'taux_tva': forms.NumberInput(attrs={'step': '0.01'}),
         }
 
-    def __init__(self, *args, entreprise=None, **kwargs):
+    def __init__(self, *args, entreprise=None, commande_instance=None, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        self.entreprise = entreprise
+        self.commande_instance = commande_instance
 
         if entreprise:
-            # Filtre le queryset 'produit' pour l'entreprise actuelle
-            # et n'inclut que les produits 'actifs'.
-            # Il pré-charge également 'categorie' pour des gains de performance potentiels.
             self.fields['produit'].queryset = Produit.objects.filter(
                 entreprise=entreprise,
                 actif=True
             ).select_related('categorie')
 
-            # --- Logique pour définir le taux de TVA initial ---
-            # Si nous éditons une ligne existante, le taux_tva sera déjà dans self.instance.
-            if self.instance.pk:
-                # Le formulaire affichera naturellement la valeur sauvegardée, pas besoin de set 'initial'.
-                pass
-            # Si c'est une nouvelle ligne et que des données initiales de commande/fournisseur sont disponibles
-            # via l'argument initial du formset (peu probable pour les 'extra' forms)
-            elif 'fournisseur' in self.initial and self.initial['fournisseur']: # S'assurer que fournisseur n'est pas None/vide
-                try:
-                    # Assurez-vous que votre modèle Fournisseur a un champ 'taux_tva_defaut'
-                    fournisseur = Fournisseur.objects.get(pk=self.initial['fournisseur'])
-                    if fournisseur.taux_tva_defaut is not None:
-                        self.fields['taux_tva'].initial = fournisseur.taux_tva_defaut
-                except Fournisseur.DoesNotExist:
-                    # Si le fournisseur n'est pas trouvé (cas rare), on utilise le taux de l'entreprise.
-                    if entreprise and entreprise.taux_tva_defaut is not None:
-                        self.fields['taux_tva'].initial = entreprise.taux_tva_defaut
-                    else:
-                        self.fields['taux_tva'].initial = Decimal('0.00')
-            # Si aucune information de fournisseur spécifique n'est disponible (nouvelles lignes 'extra'),
-            # ou si le fournisseur n'a pas de taux par défaut, on utilise le taux de l'entreprise.
-            elif entreprise and entreprise.taux_tva_defaut is not None:
-                self.fields['taux_tva'].initial = entreprise.taux_tva_defaut
-            else:
-                # Par défaut à 0.00 si aucun taux de TVA spécifique ne peut être déduit.
-                self.fields['taux_tva'].initial = Decimal('0.00')
-
+            taux_tva_initial = self.get_taux_tva_initial()
+            self.fields['taux_tva'].initial = taux_tva_initial
+            
+            if not self.instance.pk:
+                self.initial['taux_tva'] = taux_tva_initial
         else:
-            # Si aucune 'entreprise' n'est fournie (ce qui ne devrait pas arriver avec votre mixin),
-            # assurez-vous qu'aucun produit n'est sélectionnable pour éviter les fuites de données.
             self.fields['produit'].queryset = Produit.objects.none()
-            self.fields['taux_tva'].initial = Decimal('0.00') # Assurer un défaut même sans entreprise
+            self.fields['taux_tva'].initial = Decimal('16.00')
+
+    def get_taux_tva_initial(self):
+        if self.instance.pk and self.instance.taux_tva:
+            return self.instance.taux_tva
+        
+        if self.commande_instance and self.commande_instance.fournisseur:
+            return self.commande_instance.fournisseur.taux_tva_defaut
+        
+        if 'fournisseur' in self.initial and self.initial['fournisseur']:
+            try:
+                fournisseur = Fournisseur.objects.get(pk=self.initial['fournisseur'])
+                return fournisseur.taux_tva_defaut
+            except Fournisseur.DoesNotExist:
+                pass
+        
+        if self.entreprise and hasattr(self.entreprise, 'taux_tva_defaut'):
+            return self.entreprise.taux_tva_defaut
+        
+        return Decimal('16.00')
+
+    def clean_taux_tva(self):
+        taux_tva = self.cleaned_data.get('taux_tva')
+        if taux_tva is None:
+            return Decimal('16.00')
+        if taux_tva < Decimal('0.00') or taux_tva > Decimal('100.00'):
+            raise forms.ValidationError("Le taux de TVA doit être entre 0% et 100%")
+        return taux_tva
+
+class BaseLigneCommandeAchatFormSet(BaseInlineFormSet):
+    def __init__(self, *args, **kwargs):
+        self.commande_instance = kwargs.pop('instance', None)
+        super().__init__(*args, **kwargs)
+
+    def get_form_kwargs(self, index):
+        kwargs = super().get_form_kwargs(index)
+        kwargs['commande_instance'] = self.commande_instance
+        return kwargs
 
 LigneCommandeAchatFormSet = inlineformset_factory(
     CommandeAchat,
     LigneCommandeAchat,
-    form=LigneCommandeAchatForm, # This correctly references the custom form above
+    form=LigneCommandeAchatForm,
+    formset=BaseLigneCommandeAchatFormSet,
     extra=1,
     can_delete=True
 )
-
 from decimal import Decimal 
 from django import forms
 from django.forms import BaseInlineFormSet, inlineformset_factory

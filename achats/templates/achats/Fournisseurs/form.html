@@ -10,47 +10,46 @@
     }
 
     .o_form_view {
-        background-color: var(--card-background); /* Dark background for the form view */
+        background-color: var(--card-background);
         border-radius: var(--border-radius);
-        box-shadow: var(--box-shadow); /* Darker shadow for dark theme */
-        overflow: hidden; /* Ensures rounded corners are respected */
+        box-shadow: var(--box-shadow);
+        overflow: hidden;
     }
     
     .o_control_panel {
-        background-color: var(--card-background); /* Consistent with card background */
-        border-bottom: 1px solid var(--border-color); /* Subtle border for separation */
-        padding: 1.25rem 2rem; /* Adjusted padding for a modern feel */
-        display: flex; /* Ensure flex behavior */
-        flex-direction: column; /* Stack elements vertically on smaller screens */
-        gap: 1rem; /* Space between top and bottom parts */
+        background-color: var(--card-background);
+        border-bottom: 1px solid var(--border-color);
+        padding: 1.25rem 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
     }
 
     .o_cp_top {
         display: flex;
         justify-content: space-between;
-        align-items: flex-start; /* Align breadcrumb and title to the top */
-        width: 100%; /* Take full width */
-        flex-wrap: wrap; /* Allow wrapping on smaller screens */
-        gap: 1rem; /* Gap between left and right sections */
+        align-items: flex-start;
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 1rem;
     }
 
     .o_cp_top_left {
         display: flex;
         flex-direction: column;
-        flex-grow: 1; /* Allow to grow */
+        flex-grow: 1;
     }
     
-    /* Breadcrumb styles */
     .breadcrumb {
         padding: 0;
-        margin-bottom: 0.5rem; /* Space below breadcrumb */
-        background-color: transparent; /* No background */
+        margin-bottom: 0.5rem;
+        background-color: transparent;
         font-size: 0.85rem;
-        color: var(--text-color-dark); /* Darker text for breadcrumb */
+        color: var(--text-color-dark);
     }
 
     .breadcrumb-item a {
-        color: var(--accent-color); /* Accent color for links */
+        color: var(--accent-color);
         text-decoration: none;
         transition: var(--transition);
     }
@@ -58,32 +57,31 @@
         color: var(--primary-color);
     }
     .breadcrumb-item.active {
-        color: var(--text-color-light); /* Lighter text for active item */
+        color: var(--text-color-light);
         font-weight: 500;
     }
 
     .o_cp_title {
-        font-size: 2rem; /* Larger title for prominence */
-        font-weight: 700; /* Bolder */
+        font-size: 2rem;
+        font-weight: 700;
         margin: 0;
-        color: var(--text-color-light); /* Lighter text for title */
+        color: var(--text-color-light);
         line-height: 1.2;
     }
     
     .o_cp_top_right {
         display: flex;
         align-items: center;
-        gap: 0.75rem; /* Space between button groups if any */
+        gap: 0.75rem;
     }
 
     .o_cp_buttons .erp-btn {
-        /* Inherit general .erp-btn styles */
-        padding: 0.6rem 1.25rem; /* Slightly adjusted padding for toolbar buttons */
+        padding: 0.6rem 1.25rem;
         font-size: 0.9rem;
     }
 
     .o_form_button_save {
-        background-color: var(--primary-color); /* Primary color for save */
+        background-color: var(--primary-color);
         color: white;
         border: none;
         box-shadow: 0 4px 12px rgba(var(--primary-color-rgb), 0.3);
@@ -96,105 +94,116 @@
     }
     
     .o_form_button_cancel {
-        background-color: var(--background-body); /* Body background for cancel */
-        color: var(--text-color-light); /* Light text for cancel button */
-        border: 1px solid var(--border-color); /* Subtle border */
-        box-shadow: none; /* No shadow */
+        background-color: var(--background-body);
+        color: var(--text-color-light);
+        border: 1px solid var(--border-color);
+        box-shadow: none;
     }
     
     .o_form_button_cancel:hover {
-        background-color: var(--dark-color); /* Slightly darker on hover */
+        background-color: var(--dark-color);
         color: white;
         transform: translateY(-2px);
         box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
 
     .o_form_sheet_bg {
-        background-color: var(--background-body); /* Main background of the content area */
-        padding: 2rem; /* Consistent padding */
-        min-height: calc(100vh - 200px); /* Adjust height to fill viewport */
+        background-color: var(--background-body);
+        padding: 2rem;
+        min-height: calc(100vh - 200px);
         display: flex;
         justify-content: center;
-        align-items: flex-start; /* Align content to the top */
+        align-items: flex-start;
     }
     
     .o_form_sheet {
-        background-color: var(--card-background); /* Card background for the form sheet */
-        border: 1px solid var(--border-color); /* Subtle border */
+        background-color: var(--card-background);
+        border: 1px solid var(--border-color);
         border-radius: var(--border-radius);
-        padding: 2.5rem; /* Generous padding inside the form */
-        max-width: 1000px; /* Max width for content, adjust as needed */
+        padding: 2.5rem;
+        max-width: 1000px;
         width: 100%;
         box-shadow: var(--box-shadow);
-        animation: fadeIn 0.8s ease-out; /* Fade in animation */
+        animation: fadeIn 0.8s ease-out;
     }
     
     .o_horizontal_separator {
-        color: var(--accent-color); /* Accent color for separators */
-        font-weight: 600; /* Bolder */
-        margin-bottom: 1.5rem; /* More space below separator */
+        color: var(--accent-color);
+        font-weight: 600;
+        margin-bottom: 1.5rem;
         text-transform: uppercase;
-        font-size: 0.9rem; /* Slightly smaller font for separator */
-        border-bottom: 1px solid var(--border-color); /* Subtle border */
+        font-size: 0.9rem;
+        border-bottom: 1px solid var(--border-color);
         padding-bottom: 0.5rem;
-        letter-spacing: 0.05em; /* Add slight letter spacing */
+        letter-spacing: 0.05em;
     }
     
     .o_field_widget {
-        margin-bottom: 1rem; /* Space between form fields */
+        margin-bottom: 1rem;
     }
     
     /* Crispy Forms adjustments for dark theme */
     .form-group label {
-        color: var(--text-color-light); /* Label text color */
+        color: var(--text-color-light);
         font-weight: 500;
         margin-bottom: 0.5rem;
     }
 
     .form-control, .select2-container--bootstrap4 .select2-selection--single {
-        background-color: var(--background-body); /* Input background color */
-        color: var(--text-color-light); /* Input text color */
-        border: 1px solid var(--border-color); /* Input border color */
-        border-radius: var(--border-radius); /* Rounded inputs */
-        padding: 0.75rem 1rem; /* Padding inside inputs */
-        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2); /* Subtle inner shadow */
+        background-color: var(--background-body);
+        color: var(--text-color-light);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius);
+        padding: 0.75rem 1rem;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
         transition: border-color var(--transition), box-shadow var(--transition);
     }
 
     .form-control:focus, .select2-container--bootstrap4.select2-container--focus .select2-selection--single {
-        border-color: var(--accent-color); /* Accent color on focus */
-        box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.2); /* Glow effect on focus */
-        background-color: var(--background-body); /* Keep background consistent on focus */
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.2);
+        background-color: var(--background-body);
         color: var(--text-color-light);
     }
 
     .form-control::placeholder {
-        color: var(--text-color-dark); /* Placeholder text color */
+        color: var(--text-color-dark);
         opacity: 0.7;
     }
 
     .invalid-feedback {
-        color: var(--danger-color-text); /* Error text color */
+        color: var(--danger-color-text);
         font-size: 0.85rem;
         margin-top: 0.25rem;
     }
 
     .o_form_error {
-        border-left: 4px solid var(--danger-color-text); /* Stronger error border */
-        background-color: var(--danger-color-bg); /* Darker error background */
-        color: var(--danger-color-text); /* Error text color */
+        border-left: 4px solid var(--danger-color-text);
+        background-color: var(--danger-color-bg);
+        color: var(--danger-color-text);
         padding: 1rem 1.5rem;
         margin-bottom: 1.5rem;
         border-radius: var(--border-radius);
         box-shadow: var(--box-shadow);
     }
     
-    /* Font Awesome icons (if still used, convert to BI as well if possible) */
-    .fas {
-        margin-right: 0.5rem;
+    /* TVA specific styling */
+    .tva-field {
+        background-color: rgba(52, 152, 219, 0.1);
+        border-left: 3px solid var(--info-color);
+        padding-left: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .tva-field .form-control {
+        background-color: rgba(52, 152, 219, 0.05);
+    }
+    
+    .tva-field .form-control:focus {
+        background-color: rgba(52, 152, 219, 0.1);
     }
 
-    /* General ERP button style (re-define if not imported via base_achats.html) */
+    /* General ERP button style */
     .erp-btn {
         padding: 0.75rem 1.5rem;
         border-radius: var(--border-radius);
@@ -207,14 +216,12 @@
         border: none;
     }
 
-    /* Ensure RGB values are accessible for rgba() */
     :root {
-        --primary-color-rgb: 91, 33, 182; /* RGB for #5b21b6 */
-        --accent-color-rgb: 124, 58, 237; /* RGB for #7c3aed */
-        /* Add other RGB values if needed for rgba() calculations */
+        --primary-color-rgb: 91, 33, 182;
+        --accent-color-rgb: 124, 58, 237;
+        --info-color: #3498DB;
     }
 
-    /* Responsive adjustments */
     @media (max-width: 768px) {
         .o_control_panel {
             padding: 1rem;
@@ -241,7 +248,7 @@
         }
         
         .o_cp_buttons .btn {
-            width: 100%; /* Full width buttons on small screens */
+            width: 100%;
             margin-bottom: 0.5rem;
         }
     }
@@ -285,7 +292,7 @@
                     {% csrf_token %}
 
                     {% if form.non_field_errors %}
-                        <div class="alert o_form_error"> {# Removed 'alert-danger' class to use custom styling #}
+                        <div class="alert o_form_error">
                             {% for error in form.non_field_errors %}
                                 <p>{{ error }}</p>
                             {% endfor %}
@@ -302,18 +309,21 @@
                                 </div>
                             </div>
                             <div class="col-md-6">
+                                <div class="o_field_widget">
+                                    {{ form.email|as_crispy_field }}
                                 </div>
+                            </div>
                         </div>
 
                         <div class="row mt-3">
                             <div class="col-md-6">
                                 <div class="o_field_widget">
-                                    {{ form.email|as_crispy_field }}
+                                    {{ form.telephone|as_crispy_field }}
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <div class="o_field_widget">
-                                    {{ form.telephone|as_crispy_field }}
+                                <div class="o_field_widget tva-field">
+                                    {{ form.taux_tva_defaut|as_crispy_field }}
                                 </div>
                             </div>
                         </div>
@@ -352,6 +362,15 @@ $(document).ready(function() {
     $('#id_telephone').inputmask('(+99) 999 999 999', {
         placeholder: '(__) ___ ___ ___',
         showMaskOnHover: false
+    });
+
+    // Validation du taux TVA
+    $('#id_taux_tva_defaut').on('change', function() {
+        const tauxTVA = parseFloat($(this).val());
+        if (tauxTVA < 0 || tauxTVA > 100) {
+            alert('Le taux de TVA doit être compris entre 0 et 100%');
+            $(this).val('16.00');
+        }
     });
 
     // Odoo-style form submission

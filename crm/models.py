@@ -6,12 +6,19 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from decimal import Decimal
-import uuid
-
+import decimal
+import logging
+from datetime import timedelta
 from parametres.models import Entreprise, ConfigurationSAAS
 from STOCK.models import Client as StockClient
 from ventes.models import Devis, Commande, Facture
+from django.db import transaction
+from ventes.models import Devis, LigneDevis
+from STOCK.models import Produit
+from model_utils import FieldTracker
 
+# Initialiser le logger
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 class ClientCRM(StockClient):
@@ -120,8 +127,16 @@ class Opportunite(models.Model):
     date_fermeture_prevue = models.DateField(verbose_name=_("Date de fermeture prévue"))
     date_fermeture_reelle = models.DateField(null=True, blank=True, verbose_name=_("Date de fermeture réelle"))
     assigne_a = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_("Assigné à"))
+     # Ajouter le tracker pour suivre les changements
+    tracker = FieldTracker()
     cree_par = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='opportunites_crees', verbose_name=_("Créé par"))
-    
+    devis_lie = models.ForeignKey(
+    'ventes.Devis',  # Utilisez le nom de l'app et du modèle comme string
+    on_delete=models.SET_NULL, 
+    null=True, 
+    blank=True, 
+    verbose_name=_("Devis lié")
+)
     # SUPPRIMEZ ces champs :
     # devis_lie = models.ForeignKey(Devis, on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_("Devis lié"))
     # commande_liee = models.ForeignKey(Commande, on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_("Commande liée"))
@@ -147,6 +162,50 @@ class Opportunite(models.Model):
     def est_terminee(self):
         """Vérifie si l'opportunité est terminée"""
         return self.statut.est_gagnant or self.statut.est_perdant
+    
+    def convertir_en_devis(self, request):
+        """Convertit l'opportunité en devis"""
+        try:
+            with transaction.atomic():
+                # Créer le devis
+                devis = Devis.objects.create(
+                    entreprise=self.entreprise,
+                    client=self.client,
+                    date=timezone.now().date(),
+                    echeance=timezone.now().date() + timedelta(days=30),
+                    statut='brouillon',
+                    notes=f"Devis créé à partir de l'opportunité: {self.nom}",
+                    created_by=request.user,
+                    opportunite=self
+                )
+                
+                # Tenter de trouver le produit générique
+                try:
+                    produit_generique = Produit.objects.get(nom="Service générique", entreprise=self.entreprise)
+                    
+                    # Si le produit est trouvé, créer la ligne de devis
+                    LigneDevis.objects.create(
+                        devis=devis,
+                        produit=produit_generique,
+                        quantite=1,
+                        prix_unitaire=self.montant_estime,
+                        taux_tva=produit_generique.taux_tva if hasattr(produit_generique, 'taux_tva') else decimal.Decimal('20.00'),
+                    )
+                except Produit.DoesNotExist:
+                    # Si le produit générique n'existe pas,
+                    # ne rien faire et laisser le devis sans ligne d'article.
+                    # Cela permet au processus de conversion de réussir même si le produit n'est pas créé.
+                    pass
+                
+                # Lier l'opportunité au devis créé
+                self.devis_lie = devis
+                self.save()
+                
+                return devis
+                
+        except Exception as e:
+            # En cas d'erreur, annuler la transaction
+            raise Exception(f"Erreur lors de la conversion: {str(e)}")
     
     def save(self, *args, **kwargs):
         # Si l'opportunité passe à un statut terminé, enregistrer la date de fermeture
@@ -333,3 +392,82 @@ class ObjectifCommercial(models.Model):
         if today > self.date_fin:
             return 0
         return (self.date_fin - today).days
+    
+    
+class Notification(models.Model):
+    """Modèle pour les notifications système"""
+    TYPE_CHOICES = [
+        ('assignation', _('Assignation d\'opportunité')),
+        ('rappel', _('Rappel de date')),
+        ('changement_statut', _('Changement de statut')),
+        ('activite', _('Activité planifiée')),
+        ('systeme', _('Notification système')),
+    ]
+    
+    utilisateur = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    type_notification = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    titre = models.CharField(max_length=200)
+    message = models.TextField()
+    lien = models.CharField(max_length=200, blank=True, null=True)
+    est_lue = models.BooleanField(default=False)
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_lue = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-date_creation']
+        verbose_name = _("Notification")
+        verbose_name_plural = _("Notifications")
+    
+    def __str__(self):
+        return f"{self.titre} - {self.utilisateur}"
+
+class RegleAutomatisation(models.Model):
+    """Règles d'automatisation pour le CRM"""
+    TYPE_DECLENCHEUR_CHOICES = [
+        ('creation_opportunite', _('Création d\'opportunité')),
+        ('changement_statut', _('Changement de statut')),
+        ('assignation', _('Assignation à un commercial')),
+        ('date_approchant', _('Date approchant')),
+        ('activite_terminee', _('Activité terminée')),
+    ]
+    
+    TYPE_ACTION_CHOICES = [
+        ('notification', _('Notification')),
+        ('email', _('Email')),
+        ('changement_statut', _('Changer le statut')),
+        ('creation_activite', _('Créer une activité')),
+        ('assignation', _('Assigner à un utilisateur')),
+    ]
+    
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
+    nom = models.CharField(max_length=100)
+    type_declencheur = models.CharField(max_length=50, choices=TYPE_DECLENCHEUR_CHOICES)
+    type_action = models.CharField(max_length=50, choices=TYPE_ACTION_CHOICES)
+    parametres = models.JSONField(default=dict)  # Stocke les paramètres spécifiques
+    actif = models.BooleanField(default=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = _("Règle d'automatisation")
+        verbose_name_plural = _("Règles d'automatisation")
+    
+    def __str__(self):
+        return self.nom
+
+class TemplateEmail(models.Model):
+    """Templates d'emails pour l'automatisation"""
+    entreprise = models.ForeignKey(Entreprise, on_delete=models.CASCADE)
+    nom = models.CharField(max_length=100)
+    sujet = models.CharField(max_length=200)
+    corps = models.TextField()
+    variables_disponibles = models.TextField(help_text=_("Liste des variables disponibles séparées par des virgules"))
+    actif = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = _("Template email")
+        verbose_name_plural = _("Templates email")
+    
+    def __str__(self):
+        return self.nom
+    
+    

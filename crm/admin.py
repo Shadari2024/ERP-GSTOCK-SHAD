@@ -121,3 +121,5 @@ admin.site.register(PipelineVente)
 admin.site.register(EtapePipeline)
 admin.site.register(ObjectifCommercial)
 admin.site.register(NoteClient)
+
+

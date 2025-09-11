@@ -3,8 +3,8 @@
 {% block title %}Liste des Bons de Réception{% endblock %}
 
 {% block content %}
-<div class="erp-detail-container"> {# Using erp-detail-container for consistent padding and max-width #}
-    <div class="erp-card"> {# Using erp-card for the main container #}
+<div class="erp-detail-container">
+    <div class="erp-card">
         <div class="erp-card-header d-flex justify-content-between align-items-center">
             <h1 class="erp-card-title" data-tooltip="Consultez l'historique et le détail de tous les bons de réception.">Bons de Réception</h1>
             <a href="{% url 'achats:liste_commandes' %}" class="erp-btn erp-btn-secondary"
@@ -13,7 +13,7 @@
             </a>
         </div>
 
-        <div class="erp-card-body"> {# Using erp-card-body for padding #}
+        <div class="erp-card-body">
             {% if messages %}
                 {% for message in messages %}
                     <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert"
@@ -25,10 +25,77 @@
                 {% endfor %}
             {% endif %}
 
+            <!-- Barre de recherche style Odoo -->
+            <div class="erp-search-container mb-4">
+                <div class="erp-search-header">
+                    <div class="erp-search-filters-toggle" onclick="toggleFilters()">
+                        <i class="fas fa-filter"></i>
+                        <span>Filtres</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="erp-search-input-container">
+                        <i class="fas fa-search"></i>
+                        <input type="text" class="erp-search-input" placeholder="Rechercher..." 
+                               id="globalSearch" onkeypress="handleSearch(event)">
+                        <button class="erp-search-btn" onclick="performSearch()">Rechercher</button>
+                    </div>
+                </div>
+                
+                <div class="erp-search-filters" id="searchFilters">
+                    <div class="filter-group">
+                        <label>Numéro de bon</label>
+                        <input type="text" id="filterNumeroBon" placeholder="Ex: BR-2023-001">
+                    </div>
+                    <div class="filter-group">
+                        <label>Numéro de commande</label>
+                        <input type="text" id="filterNumeroCommande" placeholder="Ex: CMD-2023-001">
+                    </div>
+                    <div class="filter-group">
+                        <label>Fournisseur</label>
+                        <select id="filterFournisseur">
+                            <option value="">Tous les fournisseurs</option>
+                            {% for fournisseur in fournisseurs %}
+                                <option value="{{ fournisseur.id }}">{{ fournisseur.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Date de réception</label>
+                        <div class="date-filters">
+                            <input type="date" id="filterDateDebut" placeholder="Date début">
+                            <span>au</span>
+                            <input type="date" id="filterDateFin" placeholder="Date fin">
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <label>Créé par</label>
+                        <select id="filterCreatedBy">
+                            <option value="">Tous les utilisateurs</option>
+                            {% for user in users %}
+                                <option value="{{ user.id }}">{{ user.get_full_name|default:user.username }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="filter-actions">
+                        <button class="erp-btn erp-btn-primary" onclick="applyFilters()">
+                            <i class="fas fa-check"></i> Appliquer
+                        </button>
+                        <button class="erp-btn erp-btn-secondary" onclick="clearFilters()">
+                            <i class="fas fa-times"></i> Effacer
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Filtres actifs -->
+                <div class="erp-active-filters" id="activeFilters">
+                    <!-- Les filtres actifs seront ajoutés ici dynamiquement -->
+                </div>
+            </div>
+
             {% if bons %}
-            <div class="erp-table-responsive"> {# Using erp-table-responsive for consistent styling #}
-                <table class="erp-line-table"> {# Using erp-line-table for consistent styling #}
-                    <thead class="erp-thead"> {# Using erp-thead for dark header #}
+            <div class="erp-table-responsive">
+                <table class="erp-line-table">
+                    <thead class="erp-thead">
                         <tr>
                             <th data-tooltip="Numéro d'identification unique du bon de réception.">N° Bon</th>
                             <th data-tooltip="Numéro de la commande d'achat associée à ce bon de réception.">Commande Liée</th>
@@ -61,12 +128,30 @@
                                    data-tooltip="Voir le détail complet de ce bon de réception." title="Détails">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                {# Add edit/delete buttons if you implement them later #}
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="erp-pagination">
+                <span class="step-links">
+                    {% if page_obj.has_previous %}
+                        <a href="?page=1">&laquo; première</a>
+                        <a href="?page={{ page_obj.previous_page_number }}">précédente</a>
+                    {% endif %}
+
+                    <span class="current">
+                        Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}.
+                    </span>
+
+                    {% if page_obj.has_next %}
+                        <a href="?page={{ page_obj.next_page_number }}">suivante</a>
+                        <a href="?page={{ page_obj.paginator.num_pages }}">dernière &raquo;</a>
+                    {% endif %}
+                </span>
             </div>
             {% else %}
                 <div class="alert alert-info" role="alert"
@@ -79,7 +164,7 @@
 </div>
 
 <style>
-    /* General ERP styles (from base_achats.html or global) */
+    /* General ERP styles */
     :root {
         --primary-color: #5b21b6; /* Deep Purple */
         --primary-color-rgb: 91, 33, 182;
@@ -100,21 +185,26 @@
         --tooltip-bg: #4a5568; /* Darker tooltip background */
         --tooltip-color: #e2e8f0; /* Light tooltip text */
         
-        /* Status Colors - Tailored for dark theme (if applicable here, though less used on list) */
+        /* Status Colors */
         --status-brouillon-bg: rgba(248, 150, 30, 0.2);
         --status-brouillon-text: #f8961e;
         --status-validee-bg: rgba(76, 201, 240, 0.2);
         --status-validee-text: #4cc9f0;
 
-        /* Button Colors - Specific for this page's actions */
+        /* Button Colors */
         --btn-secondary-bg: var(--background-body);
         --btn-secondary-text: var(--text-color-light);
         --btn-secondary-border: 1px solid var(--border-color);
-        --btn-secondary-hover-bg: #3b4252; /* Slightly lighter dark on hover */
+        --btn-secondary-hover-bg: #3b4252;
 
-        --btn-info-bg: #17a2b8; /* Bootstrap info color */
+        --btn-info-bg: #17a2b8;
         --btn-info-text: white;
         --btn-info-hover-bg: #138496;
+        
+        /* Search Colors */
+        --search-bg: #4a5568;
+        --search-border: #718096;
+        --search-focus-border: var(--secondary-color);
     }
 
     body {
@@ -122,7 +212,6 @@
         color: var(--text-color-light);
     }
 
-    /* Odoo-like styles adaptation for dark theme */
     .erp-detail-container {
         padding: 2rem;
     }
@@ -135,12 +224,12 @@
     }
     
     .erp-card-header {
-        background-color: var(--background-body); /* Slightly darker header */
+        background-color: var(--background-body);
         padding: 1.5rem 2rem;
         border-bottom: 1px solid var(--border-color);
-        display: flex; /* Ensure flex behavior */
-        flex-wrap: wrap; /* Allow wrapping */
-        gap: 1rem; /* Space between items */
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
     }
     
     .erp-card-title {
@@ -163,6 +252,17 @@
         border: none;
         text-decoration: none;
         font-size: 0.9rem;
+    }
+
+    .erp-btn-primary {
+        background-color: var(--primary-color);
+        color: white;
+    }
+    
+    .erp-btn-primary:hover {
+        background-color: var(--secondary-color);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(124, 58, 237, 0.3);
     }
 
     .erp-btn-secondary {
@@ -220,47 +320,214 @@
         text-align: left;
         font-weight: 600;
         font-size: 0.9rem;
-        border: 1px solid var(--border-color); /* Add borders to header for consistency */
+        border: 1px solid var(--border-color);
     }
     .erp-line-table td {
         padding: 0.8rem 1rem;
-        border: 1px solid var(--border-color); /* Visible borders for line table */
+        border: 1px solid var(--border-color);
     }
     
     .erp-line-table tbody tr:nth-child(even) {
-        background-color: var(--background-body); /* Alternate row background */
+        background-color: var(--background-body);
     }
     .erp-line-table tbody tr:hover {
-        background-color: rgba(var(--primary-color-rgb), 0.08); /* Hover effect */
+        background-color: rgba(var(--primary-color-rgb), 0.08);
     }
 
-    .erp-empty-lines { /* Renamed for consistency with erp-line-table */
-        text-align: center;
-        padding: 2rem;
-        color: var(--text-color-dark);
-        font-style: italic;
+    /* Search Styles - Style Odoo */
+    .erp-search-container {
+        background-color: var(--card-background);
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+    }
+    
+    .erp-search-header {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        background-color: var(--background-body);
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .erp-search-filters-toggle {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background-color: var(--search-bg);
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        user-select: none;
+        margin-right: 1rem;
+    }
+    
+    .erp-search-filters-toggle:hover {
+        background-color: var(--primary-color);
+    }
+    
+    .erp-search-input-container {
+        display: flex;
+        align-items: center;
+        flex-grow: 1;
+        background-color: var(--search-bg);
+        border-radius: var(--border-radius);
+        padding: 0 0.75rem;
+        border: 1px solid var(--search-border);
+    }
+    
+    .erp-search-input-container:focus-within {
+        border-color: var(--search-focus-border);
+    }
+    
+    .erp-search-input {
+        flex-grow: 1;
+        background: transparent;
+        border: none;
+        color: var(--text-color-light);
+        padding: 0.5rem;
+        outline: none;
+    }
+    
+    .erp-search-btn {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 0 var(--border-radius) var(--border-radius) 0;
+        cursor: pointer;
+        margin: -0.5rem -0.75rem -0.5rem 0;
+        height: calc(100% + 1rem);
+    }
+    
+    .erp-search-btn:hover {
+        background-color: var(--secondary-color);
+    }
+    
+    .erp-search-filters {
+        padding: 1rem;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .filter-group label {
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+    
+    .filter-group input, .filter-group select {
+        background-color: var(--background-body);
+        border: 1px solid var(--border-color);
+        color: var(--text-color-light);
+        padding: 0.5rem;
+        border-radius: var(--border-radius);
+    }
+    
+    .date-filters {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .date-filters input {
+        flex-grow: 1;
+    }
+    
+    .filter-actions {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.5rem;
+        padding-top: 0.5rem;
+    }
+    
+    .erp-active-filters {
+        padding: 0.75rem 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        background-color: var(--background-body);
+    }
+    
+    .active-filter {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        background-color: var(--primary-color);
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--border-radius);
+        font-size: 0.85rem;
+    }
+    
+    .active-filter button {
+        background: none;
+        border: none;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* Pagination */
+    .erp-pagination {
+        margin-top: 1.5rem;
+        display: flex;
+        justify-content: center;
+    }
+    
+    .step-links {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    
+    .step-links a {
+        color: var(--secondary-color);
+        text-decoration: none;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+    }
+    
+    .step-links a:hover {
+        background-color: var(--secondary-color);
+        color: white;
+    }
+    
+    .step-links .current {
+        padding: 0.25rem 0.5rem;
     }
 
-    /* Bootstrap Alert Overrides for dark theme */
+    /* Alert Styles */
     .alert {
-        background-color: var(--card-background); /* Darker background for alerts */
-        color: var(--text-color-light); /* Light text */
-        border: 1px solid var(--border-color); /* Subtle border */
+        background-color: var(--card-background);
+        color: var(--text-color-light);
+        border: 1px solid var(--border-color);
     }
     .alert-info {
-        background-color: rgba(72, 149, 239, 0.15); /* Light blue tint */
+        background-color: rgba(72, 149, 239, 0.15);
         color: var(--text-color-light);
         border-color: rgba(72, 149, 239, 0.3);
     }
     .alert .btn-close {
-        filter: invert(1); /* Invert color for dark theme */
+        filter: invert(1);
         opacity: 0.7;
     }
     .alert .btn-close:hover {
         opacity: 1;
     }
 
-    /* Tooltip styles (should be in base_achats.html for global availability) */
+    /* Tooltip styles */
     [data-tooltip] {
         position: relative;
         cursor: help;
@@ -277,7 +544,7 @@
         padding: 5px 10px;
         position: absolute;
         z-index: 1001;
-        top: 120%; /* Position below element */
+        top: 120%;
         left: 50%;
         transform: translateX(-50%) translateY(5px);
         transition: opacity 0.3s ease, transform 0.3s ease;
@@ -295,6 +562,10 @@
 
     /* Responsive adjustments */
     @media (max-width: 768px) {
+        .erp-detail-container {
+            padding: 1rem;
+        }
+        
         .erp-card-header {
             flex-direction: column;
             align-items: flex-start;
@@ -310,10 +581,28 @@
             padding: 1.5rem;
         }
 
+        .erp-search-header {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .erp-search-filters-toggle {
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .erp-search-input-container {
+            width: 100%;
+        }
+        
+        .erp-search-filters {
+            grid-template-columns: 1fr;
+        }
+        
         .erp-btn {
             width: 100%;
             text-align: center;
-            justify-content: center; /* Center icon and text */
+            justify-content: center;
         }
         
         .erp-line-table th, .erp-line-table td {
@@ -321,14 +610,225 @@
             font-size: 0.85rem;
         }
 
-        /* Tooltip adjustments for small screens */
-        [data-tooltip]::after {
-            left: 50%;
-            transform: translateX(-50%) translateY(5px);
-            width: auto; /* Allow width to adjust based on content */
-            max-width: 90vw; /* Prevent very wide tooltips */
-            white-space: normal; /* Allow text to wrap */
+        .step-links {
+            flex-wrap: wrap;
+            justify-content: center;
         }
     }
 </style>
+
+<script>
+    // Fonction pour basculer l'affichage des filtres
+    function toggleFilters() {
+        const filters = document.getElementById('searchFilters');
+        filters.style.display = filters.style.display === 'none' ? 'grid' : 'none';
+    }
+    
+    // Fonction pour appliquer les filtres
+    function applyFilters() {
+        const activeFilters = document.getElementById('activeFilters');
+        activeFilters.innerHTML = '';
+        
+        // Récupérer les valeurs des filtres
+        const numeroBon = document.getElementById('filterNumeroBon').value;
+        const numeroCommande = document.getElementById('filterNumeroCommande').value;
+        const fournisseur = document.getElementById('filterFournisseur');
+        const fournisseurText = fournisseur.options[fournisseur.selectedIndex].text;
+        const dateDebut = document.getElementById('filterDateDebut').value;
+        const dateFin = document.getElementById('filterDateFin').value;
+        const createdBy = document.getElementById('filterCreatedBy');
+        const createdByText = createdBy.options[createdBy.selectedIndex].text;
+        
+        // Ajouter les filtres actifs
+        if (numeroBon) {
+            addActiveFilter('Numéro de bon: ' + numeroBon, 'numeroBon');
+        }
+        
+        if (numeroCommande) {
+            addActiveFilter('Numéro de commande: ' + numeroCommande, 'numeroCommande');
+        }
+        
+        if (fournisseur.value) {
+            addActiveFilter('Fournisseur: ' + fournisseurText, 'fournisseur');
+        }
+        
+        if (dateDebut || dateFin) {
+            const dateText = (dateDebut ? 'Du ' + formatDate(dateDebut) : '') + 
+                            (dateDebut && dateFin ? ' au ' : '') + 
+                            (dateFin ? formatDate(dateFin) : '');
+            addActiveFilter(dateText, 'date');
+        }
+        
+        if (createdBy.value) {
+            addActiveFilter('Créé par: ' + createdByText, 'createdBy');
+        }
+        
+        // Ici, vous enverriez normalement une requête au serveur
+        // Pour cet exemple, nous allons simplement filtrer côté client
+        filterTable();
+    }
+    
+    // Fonction pour ajouter un filtre actif
+    function addActiveFilter(text, key) {
+        const activeFilters = document.getElementById('activeFilters');
+        const filter = document.createElement('div');
+        filter.className = 'active-filter';
+        filter.innerHTML = `
+            <span>${text}</span>
+            <button onclick="removeFilter('${key}')">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        activeFilters.appendChild(filter);
+    }
+    
+    // Fonction pour supprimer un filtre
+    function removeFilter(key) {
+        // Réinitialiser le champ de filtre correspondant
+        if (key === 'numeroBon') {
+            document.getElementById('filterNumeroBon').value = '';
+        } else if (key === 'numeroCommande') {
+            document.getElementById('filterNumeroCommande').value = '';
+        } else if (key === 'fournisseur') {
+            document.getElementById('filterFournisseur').value = '';
+        } else if (key === 'date') {
+            document.getElementById('filterDateDebut').value = '';
+            document.getElementById('filterDateFin').value = '';
+        } else if (key === 'createdBy') {
+            document.getElementById('filterCreatedBy').value = '';
+        }
+        
+        // Réappliquer les filtres
+        applyFilters();
+    }
+    
+    // Fonction pour effacer tous les filtres
+    function clearFilters() {
+        document.getElementById('filterNumeroBon').value = '';
+        document.getElementById('filterNumeroCommande').value = '';
+        document.getElementById('filterFournisseur').value = '';
+        document.getElementById('filterDateDebut').value = '';
+        document.getElementById('filterDateFin').value = '';
+        document.getElementById('filterCreatedBy').value = '';
+        
+        document.getElementById('activeFilters').innerHTML = '';
+        
+        // Réinitialiser le tableau
+        const rows = document.querySelectorAll('.erp-line-table tbody tr');
+        rows.forEach(row => {
+            row.style.display = '';
+        });
+    }
+    
+    // Fonction pour formater une date
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('fr-FR');
+    }
+    
+    // Fonction pour effectuer une recherche globale
+    function performSearch() {
+        const searchTerm = document.getElementById('globalSearch').value.toLowerCase();
+        
+        if (!searchTerm) {
+            // Si la recherche est vide, afficher toutes les lignes
+            const rows = document.querySelectorAll('.erp-line-table tbody tr');
+            rows.forEach(row => {
+                row.style.display = '';
+            });
+            return;
+        }
+        
+        // Filtrer les lignes du tableau
+        const rows = document.querySelectorAll('.erp-line-table tbody tr');
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            let found = false;
+            
+            cells.forEach(cell => {
+                if (cell.textContent.toLowerCase().includes(searchTerm)) {
+                    found = true;
+                }
+            });
+            
+            row.style.display = found ? '' : 'none';
+        });
+    }
+    
+    // Gérer la touche Entrée dans la recherche globale
+    function handleSearch(event) {
+        if (event.key === 'Enter') {
+            performSearch();
+        }
+    }
+    
+    // Fonction pour filtrer le tableau en fonction des filtres
+    function filterTable() {
+        const numeroBon = document.getElementById('filterNumeroBon').value.toLowerCase();
+        const numeroCommande = document.getElementById('filterNumeroCommande').value.toLowerCase();
+        const fournisseur = document.getElementById('filterFournisseur').value;
+        const dateDebut = document.getElementById('filterDateDebut').value;
+        const dateFin = document.getElementById('filterDateFin').value;
+        const createdBy = document.getElementById('filterCreatedBy').value;
+        
+        const rows = document.querySelectorAll('.erp-line-table tbody tr');
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('td');
+            let showRow = true;
+            
+            // Filtrer par numéro de bon
+            if (numeroBon && !cells[0].textContent.toLowerCase().includes(numeroBon)) {
+                showRow = false;
+            }
+            
+            // Filtrer par numéro de commande
+            if (numeroCommande && !cells[1].textContent.toLowerCase().includes(numeroCommande)) {
+                showRow = false;
+            }
+            
+            // Filtrer par fournisseur
+            if (fournisseur) {
+                const fournisseurCell = cells[2].textContent;
+                // Cette vérification devrait normalement utiliser l'ID du fournisseur
+                // Pour cet exemple, nous utilisons le texte
+                if (!fournisseurCell.includes(document.getElementById('filterFournisseur').options[document.getElementById('filterFournisseur').selectedIndex].text)) {
+                    showRow = false;
+                }
+            }
+            
+            // Filtrer par date
+            if (dateDebut || dateFin) {
+                const dateCell = cells[3].textContent;
+                const dateParts = dateCell.split('/');
+                const rowDate = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
+                
+                if (dateDebut && new Date(dateDebut) > rowDate) {
+                    showRow = false;
+                }
+                
+                if (dateFin && new Date(dateFin) < rowDate) {
+                    showRow = false;
+                }
+            }
+            
+            // Filtrer par créateur
+            if (createdBy) {
+                const createdByCell = cells[4].textContent;
+                // Cette vérification devrait normalement utiliser l'ID de l'utilisateur
+                // Pour cet exemple, nous utilisons le texte
+                if (!createdByCell.includes(document.getElementById('filterCreatedBy').options[document.getElementById('filterCreatedBy').selectedIndex].text)) {
+                    showRow = false;
+                }
+            }
+            
+            row.style.display = showRow ? '' : 'none';
+        });
+    }
+    
+    // Initialisation
+    document.addEventListener('DOMContentLoaded', function() {
+        // Masquer les filtres au chargement
+        document.getElementById('searchFilters').style.display = 'none';
+    });
+</script>
 {% endblock %}

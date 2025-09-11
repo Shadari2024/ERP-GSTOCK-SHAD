@@ -216,7 +216,7 @@ class LigneVentePOSForm(forms.ModelForm):
         widgets = {
             'quantite': forms.NumberInput(attrs={'min': '0.01', 'step': '0.01', 'class': 'form-control quantite-input'}),
             'prix_unitaire': forms.NumberInput(attrs={'min': '0', 'step': '0.01', 'class': 'form-control prix-input'}),
-            'taux_tva': forms.NumberInput(attrs={'min': '0', 'step': '0.01', 'class': 'form-control'}),
+           
         }
        
     def __init__(self, *args, **kwargs):
@@ -264,7 +264,7 @@ LigneVentePOSFormSet = inlineformset_factory(
     LigneVentePOS,
     form=LigneVentePOSForm,
     formset=LigneVentePOSFormSet,
-    fields=['produit', 'quantite', 'prix_unitaire', 'taux_tva'],
+    fields=['produit', 'quantite', 'prix_unitaire'],
     extra=1,
     can_delete=True,
     min_num=1,

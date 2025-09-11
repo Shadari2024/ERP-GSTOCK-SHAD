@@ -66,11 +66,19 @@
                                         <i class="fas fa-search text-muted"></i>
                                     </span>
                                     <input type="text" id="barcode-scanner" class="form-control border-start-0 px-2"
-                                        placeholder="{% trans 'Code-barres, nom ou référence produit...' %}">
+                                        placeholder="{% trans 'Code-barres, nom ou référence produit...' %}" autofocus>
                                     <button type="button" id="scan-barcode" class="btn btn-primary d-flex align-items-center">
                                         <i class="fas fa-camera me-1"></i>
                                         <span class="d-none d-md-inline">{% trans "Scanner" %}</span>
                                     </button>
+                                    <button type="button" id="toggle-keyboard" class="btn btn-outline-secondary d-flex align-items-center">
+                                        <i class="fas fa-keyboard me-1"></i>
+                                        <span class="d-none d-md-inline">{% trans "Clavier" %}</span>
+                                    </button>
+                                </div>
+                                <div id="barcode-error" class="alert alert-danger mt-2 py-2" style="display: none;">
+                                    <i class="fas fa-exclamation-circle me-2"></i>
+                                    <span>{% trans "Erreur lors de la recherche du code-barre. Produit non trouvé." %}</span>
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -82,16 +90,39 @@
                                 </div>
                             </div>
                         </div>
+                        <!-- Clavier virtuel -->
+                        <div id="virtual-keyboard" class="virtual-keyboard mt-3" style="display: none;">
+                            <div class="keyboard-row">
+                                <div class="keyboard-key" data-key="1">1</div>
+                                <div class="keyboard-key" data-key="2">2</div>
+                                <div class="keyboard-key" data-key="3">3</div>
+                                <div class="keyboard-key" data-key="4">4</div>
+                                <div class="keyboard-key" data-key="5">5</div>
+                                <div class="keyboard-key" data-key="6">6</div>
+                                <div class="keyboard-key" data-key="7">7</div>
+                                <div class="keyboard-key" data-key="8">8</div>
+                                <div class="keyboard-key" data-key="9">9</div>
+                                <div class="keyboard-key" data-key="0">0</div>
+                            </div>
+                            <div class="keyboard-row">
+                                <div class="keyboard-key keyboard-key-wide" data-key="clear">⌫ Effacer</div>
+                                <div class="keyboard-key keyboard-key-wide" data-key="enter">↲ Entrée</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <div class="card shadow-sm">
-                    <div class="card-header bg-transparent py-3">
+                    <div class="card-header bg-transparent py-3 d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0 d-flex align-items-center">
                             <i class="fas fa-shopping-cart me-2 text-primary"></i>
                             {% trans "Articles" %}
                             <span class="badge bg-primary rounded-pill ms-2" id="article-count">0</span>
                         </h5>
+                        <button type="button" id="ajouter-ligne" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>
+                            {% trans "Ajouter" %}
+                        </button>
                     </div>
                     <div class="card-body p-0">
                         {{ formset.management_form }}
@@ -100,16 +131,17 @@
                             <table class="table table-borderless mb-0">
                                 <thead class="table-light">
                                     <tr>
-                                        <th width="40%" class="ps-4">{% trans "Produit" %}</th>
-                                        <th width="15%">{% trans "Prix unitaire" %}</th>
-                                        <th width="15%">{% trans "Quantité" %}</th>
+                                        <th width="45%" class="ps-4">{% trans "Produit" %}</th>
+                                        <th width="20%">{% trans "Prix unitaire" %}</th>
+                                        <th width="20%">{% trans "Quantité" %}</th>
                                         <th width="15%">{% trans "Total" %}</th>
+                                        <!-- COLONNE TVA SUPPRIMÉE -->
                                         <th width="15%" class="text-end pe-4">{% trans "Actions" %}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for form in formset %}
-                                    <tr class="ligne-vente align-middle">
+                                    <tr class="ligne-vente align-middle" data-form-index="{{ forloop.counter0 }}">
                                         <td class="ps-4">
                                             {{ form.id }}
                                             {% if form.DELETE %}
@@ -166,30 +198,10 @@
                                             </button>
                                         </td>
                                     </tr>
-                                    <tr class="ligne-details" style="display: none;">
-                                        <td colspan="5" class="px-4 py-2 bg-light">
-                                            <div class="row small">
-                                                <div class="col-md-3">
-                                                    <label class="form-label mb-1">{% trans "TVA %" %}</label>
-                                                    {{ form.taux_tva }}
-                                                </div>
-                                                <div class="col-md-9">
-                                                    <label class="form-label mb-1">{% trans "Notes" %}</label>
-                                                    <input type="text" class="form-control form-control-sm" placeholder="{% trans 'Notes optionnelles' %}">
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                    <!-- LIGNE DE DÉTAILS SUPPRIMÉE (plus besoin de TVA) -->
                                     {% endfor %}
                                 </tbody>
                             </table>
-                        </div>
-
-                        <div class="card-footer bg-transparent py-3">
-                            <button type="button" id="ajouter-ligne" class="btn btn-outline-primary">
-                                <i class="fas fa-plus me-2"></i>
-                                {% trans "Ajouter un article" %}
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -260,10 +272,7 @@
                                 <span class="text-muted">{% trans "Total HT:" %}</span>
                                 <span id="total-ht" class="fw-semibold">0,00 {{ devise_principale_symbole }}</span>
                             </div>
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted">{% trans "TVA:" %}</span>
-                                <span id="total-tva" class="fw-semibold">0,00 {{ devise_principale_symbole }}</span>
-                            </div>
+                            <!-- LIGNE TVA SUPPRIMÉE -->
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <span class="text-muted">{% trans "Remise:" %}</span>
                                 <span id="total-remise" class="fw-semibold text-danger">0,00 {{ devise_principale_symbole }}</span>
@@ -292,22 +301,51 @@
         </div>
     </form>
 </div>
+
+<!-- Modal pour la caméra code-barres -->
+<div class="modal fade" id="barcodeScannerModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">{% trans "Scanner un code-barres" %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="barcode-scanner-container" class="position-relative">
+                    <div id="interactive" class="viewport"></div>
+                    <div class="scanner-overlay"></div>
+                </div>
+                <div class="mt-3">
+                    <button id="start-scanner" class="btn btn-primary me-2">
+                        <i class="fas fa-play me-1"></i> {% trans "Démarrer le scanner" %}
+                    </button>
+                    <button id="stop-scanner" class="btn btn-secondary" disabled>
+                        <i class="fas fa-stop me-1"></i> {% trans "Arrêter le scanner" %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_css %}
 <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
 <style>
     :root {
-        --pos-primary: #007bff; /* Bleu Bootstrap */
-        --pos-secondary: #6c757d; /* Gris Bootstrap */
-        --pos-success: #28a745; /* Vert Bootstrap */
-        --pos-light: #f8f9fa; /* Gris clair */
-        --pos-bg: #e9ecef; /* Arrière-plan plus doux */
+        --pos-primary: #007bff;
+        --pos-secondary: #6c757d;
+        --pos-success: #28a745;
+        --pos-light: #f8f9fa;
+        --pos-bg: #e9ecef;
+        --odoo-primary: #714B67;
+        --sage-primary: #00A4E4;
+        --dolibarr-primary: #1D4E87;
     }
 
     body {
         background-color: var(--pos-bg);
-        font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
     .pos-container {
@@ -318,6 +356,7 @@
         border: 1px solid rgba(0, 0, 0, .125);
         border-radius: .5rem;
         box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        background: white;
     }
 
     .btn {
@@ -328,6 +367,16 @@
     .btn:hover {
         transform: translateY(-2px);
         box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15);
+    }
+
+    .btn-primary {
+        background-color: var(--odoo-primary);
+        border-color: var(--odoo-primary);
+    }
+
+    .btn-primary:hover {
+        background-color: #5a3c52;
+        border-color: #5a3c52;
     }
 
     .select2-container .select2-selection--single {
@@ -353,13 +402,10 @@
     }
 
     .ligne-vente.deleted {
-        opacity: 0.6;
-        background-color: #f1f3f5;
-        text-decoration: line-through;
-    }
-
-    .ligne-vente.deleted td {
-        color: #868e96 !important;
+        opacity: 0;
+        height: 0;
+        overflow: hidden;
+        transition: all 0.5s ease;
     }
 
     .form-control {
@@ -369,8 +415,8 @@
     }
 
     .form-control:focus {
-        border-color: var(--pos-primary);
-        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        border-color: var(--odoo-primary);
+        box-shadow: 0 0 0 0.2rem rgba(113, 75, 103, 0.25);
     }
 
     .input-group-text {
@@ -413,6 +459,94 @@
         object-fit: cover;
     }
 
+    /* Styles pour le scanner de code-barres */
+    #barcode-scanner-container {
+        width: 100%;
+        height: 300px;
+        overflow: hidden;
+        position: relative;
+        background-color: #000;
+        border-radius: 8px;
+    }
+
+    .viewport {
+        width: 100%;
+        height: 100%;
+    }
+
+    .scanner-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border: 2px solid var(--odoo-primary);
+        box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.5);
+        pointer-events: none;
+    }
+
+    /* Clavier virtuel */
+    .virtual-keyboard {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 15px;
+        border: 1px solid #dee2e6;
+    }
+
+    .keyboard-row {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 8px;
+    }
+
+    .keyboard-key {
+        background-color: white;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        height: 45px;
+        width: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+        user-select: none;
+        margin: 0 4px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .keyboard-key:hover {
+        background-color: var(--odoo-primary);
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .keyboard-key:active {
+        transform: scale(0.95);
+    }
+
+    .keyboard-key-wide {
+        width: 100px;
+    }
+
+    /* Style Odoo pour les en-têtes */
+    .card-header {
+        background: linear-gradient(135deg, var(--odoo-primary), #8C5C7D);
+        color: white;
+        border-bottom: none;
+    }
+
+    .card-header h5 {
+        font-weight: 600;
+    }
+
+    /* Style pour les totaux */
+    #total-ttc {
+        color: var(--odoo-primary);
+    }
+
     /* Améliorations pour écran tactile */
     @media (max-width: 992px) {
         .btn {
@@ -422,18 +556,28 @@
 
         .form-control {
             min-height: 44px;
-            font-size: 16px; /* Évite le zoom sur iOS */
+            font-size: 16px;
         }
 
         .select2-container .select2-selection--single {
             height: 44px;
+        }
+
+        .keyboard-key {
+            height: 50px;
+            width: 50px;
+            font-size: 18px;
+        }
+
+        .keyboard-key-wide {
+            width: 110px;
         }
     }
 
     /* Animation pour l'ajout d'articles */
     @keyframes highlight {
         0% {
-            background-color: rgba(0, 123, 255, 0.1);
+            background-color: rgba(113, 75, 103, 0.1);
         }
         100% {
             background-color: transparent;
@@ -442,6 +586,38 @@
 
     .highlight {
         animation: highlight 1s ease;
+    }
+
+    /* Animation pour la suppression */
+    @keyframes remove-item {
+        0% {
+            transform: translateX(0);
+            opacity: 1;
+            height: auto;
+        }
+        100% {
+            transform: translateX(-100%);
+            opacity: 0;
+            height: 0;
+            padding: 0;
+            margin: 0;
+            border: none;
+        }
+    }
+
+    .removing {
+        animation: remove-item 0.5s ease forwards;
+    }
+
+    /* Style pour les badges */
+    .badge {
+        font-weight: 500;
+    }
+
+    /* Style pour les messages d'alerte */
+    .alert {
+        border: none;
+        border-radius: 8px;
     }
 </style>
 {% endblock %}
@@ -456,6 +632,12 @@
     $(document).ready(function() {
         // Variable globale pour la devise
         const DEVISE_SYMBOLE = "{{ devise_principale_symbole|default:'€' }}";
+
+        // Sons pour l'interface
+        const addSound = new Audio("{% static 'sounds/add-product.mp3' %}");
+        const removeSound = new Audio("{% static 'sounds/remove-product.mp3' %}");
+        const scanSound = new Audio("{% static 'sounds/barcode-scan.mp3' %}");
+        const errorSound = new Audio("{% static 'sounds/error.mp3' %}");
 
         // Initialisation de Select2 pour les clients
         $('#id_client').select2({
@@ -486,7 +668,8 @@
         $('#ajouter-ligne').click(function() {
             const formCount = parseInt($('#id_form-TOTAL_FORMS').val());
             const template = $('.ligne-vente:first').clone();
-            const detailsTemplate = $('.ligne-details:first').clone();
+            // Supprime la ligne de détails si elle existe (plus besoin avec TVA)
+            const detailsTemplate = template.next('.ligne-details').length ? template.next('.ligne-details').clone() : null;
 
             // Réinitialiser tous les champs
             template.find('input, select').val('');
@@ -508,30 +691,11 @@
                 }
             });
 
-            // Faire de même pour la ligne de détails
-            detailsTemplate.find(':input').each(function() {
-                const name = $(this).attr('name');
-                if (name) {
-                    const newName = name.replace(/-\d+-/, `-${formCount}-`);
-                    const newId = 'id_' + newName.replace(/-/g, '_');
-                    $(this).attr({
-                        'name': newName,
-                        'id': newId
-                    });
-                }
-            });
-
-            // Réinitialiser Select2 pour le nouveau produit
-            template.find('select').select2({
-                language: 'fr',
-                placeholder: "{% trans 'Sélectionnez un produit' %}",
-                allowClear: true,
-                width: '100%',
-                minimumResultsForSearch: 3
-            });
-
+            // Ajouter la nouvelle ligne
             $('#lignes-vente tbody').append(template);
-            $('#lignes-vente tbody').append(detailsTemplate);
+            if (detailsTemplate) {
+                $('#lignes-vente tbody').append(detailsTemplate);
+            }
             $('#id_form-TOTAL_FORMS').val(formCount + 1);
             updateArticleCount();
             calculerTotal();
@@ -541,17 +705,25 @@
             setTimeout(() => template.removeClass('highlight'), 1000);
         });
 
-        // Gestion de la suppression de lignes
+        // Gestion de la suppression de lignes — SUPPRESSION IMMÉDIATE (comme Odoo)
         $(document).on('click', '.supprimer-ligne', function() {
             const ligne = $(this).closest('.ligne-vente');
             const details = ligne.next('.ligne-details');
+            
+            // Jouer le son de suppression
+            removeSound.play();
+            
+            // Supprimer immédiatement du DOM
             const deleteInput = ligne.find('input[id$="-DELETE"]');
-
             if (deleteInput.length) {
                 deleteInput.val('on');
             }
-            ligne.addClass('deleted');
-            details.hide();
+            
+            ligne.remove();
+            if (details.length) {
+                details.remove();
+            }
+            
             updateArticleCount();
             calculerTotal();
         });
@@ -563,73 +735,60 @@
             input.val(value + 1).trigger('input');
         });
 
-        // Décrémentation de la quantité
         $(document).on('click', '.decrement-quantity', function() {
             const input = $(this).closest('.ligne-vente').find('input[name$="-quantite"]');
             let value = parseInt(input.val()) || 0;
             if (value > 1) {
                 input.val(value - 1).trigger('input');
             } else if (value === 1) {
-                // Option de supprimer la ligne si la quantité atteint 0
                 $(this).closest('.ligne-vente').find('.supprimer-ligne').trigger('click');
             }
         });
 
-        // Calcul automatique des totaux
+        // Calcul automatique des totaux (sans TVA)
         function calculerTotal() {
             let totalHT = 0;
-            let totalTVA = 0;
             const remise = parseFloat($('#id_remise').val()) || 0;
 
-            $('.ligne-vente:not(.deleted)').each(function() {
+            $('.ligne-vente').each(function() {
                 const quantite = parseFloat($(this).find('input[name$="-quantite"]').val()) || 0;
                 const prix = parseFloat($(this).find('input[name$="-prix_unitaire"]').val()) || 0;
-                const tauxTVA = parseFloat($(this).find('input[name$="-taux_tva"]').val()) || 0;
 
                 if (quantite > 0 && prix > 0) {
-                    const montantHT = quantite * prix;
-                    const montantTVA = montantHT * (tauxTVA / 100);
-                    const totalLigne = montantHT + montantTVA;
-
+                    const totalLigne = quantite * prix;
                     $(this).find('.total-ligne').val(totalLigne.toFixed(2) + ' ' + DEVISE_SYMBOLE);
-
-                    totalHT += montantHT;
-                    totalTVA += montantTVA;
+                    totalHT += totalLigne;
                 } else {
                     $(this).find('.total-ligne').val('0,00 ' + DEVISE_SYMBOLE);
                 }
             });
 
-            const totalTTC = totalHT + totalTVA - remise;
+            const totalTTC = totalHT - remise; // Pas de TVA
 
             $('#total-ht').text(totalHT.toFixed(2) + ' ' + DEVISE_SYMBOLE);
-            $('#total-tva').text(totalTVA.toFixed(2) + ' ' + DEVISE_SYMBOLE);
             $('#total-remise').text('-' + remise.toFixed(2) + ' ' + DEVISE_SYMBOLE);
             $('#total-ttc').text(totalTTC.toFixed(2) + ' ' + DEVISE_SYMBOLE);
         }
 
         // Mise à jour du compteur d'articles
         function updateArticleCount() {
-            const count = $('.ligne-vente:not(.deleted)').length;
+            const count = $('.ligne-vente').length;
             $('#article-count').text(count);
         }
 
-        // Auto-remplissage des prix et TVA lors de la sélection d'un produit
+        // Auto-remplissage des prix lors de la sélection d'un produit
         $(document).on('change', 'select[name$="-produit"]', function() {
             const produitId = $(this).val();
             const ligne = $(this).closest('.ligne-vente');
-            const details = ligne.next('.ligne-details');
             const imageContainer = ligne.find('.product-image-container');
             const productImage = ligne.find('.product-image');
             const productInfo = ligne.find('.product-info');
 
             if (produitId) {
                 const prixInput = ligne.find('input[name$="-prix_unitaire"]');
-                const tvaInput = details.find('input[name$="-taux_tva"]');
                 const quantiteInput = ligne.find('input[name$="-quantite"]');
 
                 prixInput.prop('disabled', true);
-                tvaInput.prop('disabled', true);
 
                 $.ajax({
                     url: '{% url "ventes:api_search_article" %}',
@@ -641,21 +800,25 @@
                         if (data && data.length > 0) {
                             const produit = data[0];
                             prixInput.val(produit.prix_vente || 0).prop('disabled', false);
-                            tvaInput.val(produit.taux_tva || 20).prop('disabled', false);
 
                             if (produit.photo_url) {
-                                productImage.attr('src', produit.photo_url);
+                                productImage.attr('src', produit.photo_url).on('error', function() {
+                                    $(this).attr('src', '{% static "images/placeholder.png" %}');
+                                });
                                 productInfo.html(`${produit.nom}<br><span class="text-primary">{% trans "Stock" %}: ${produit.stock}</span>`);
                                 imageContainer.show();
                             } else {
-                                imageContainer.hide();
+                                productImage.attr('src', '{% static "images/placeholder.png" %}');
+                                imageContainer.show();
                                 productInfo.text('');
                             }
 
                             quantiteInput.val(1);
+                            
+                            // Jouer le son d'ajout
+                            addSound.play();
                         } else {
                             prixInput.val('').prop('disabled', false);
-                            tvaInput.val('').prop('disabled', false);
                             imageContainer.hide();
                             productInfo.text('');
                         }
@@ -663,7 +826,6 @@
                     },
                     error: function() {
                         prixInput.val('').prop('disabled', false);
-                        tvaInput.val('').prop('disabled', false);
                         imageContainer.hide();
                         productInfo.text('');
                         calculerTotal();
@@ -672,14 +834,202 @@
             }
         });
 
-        // Déclenche le calcul lors de la modification des champs importants
-        $(document).on('input', 'input[name$="-quantite"], input[name$="-prix_unitaire"], input[name$="-taux_tva"], #id_remise', function() {
+        // Recherche par code-barres
+        $('#barcode-scanner').on('keypress', function(e) {
+            if (e.which === 13) { // Touche Entrée
+                e.preventDefault();
+                const barcode = $(this).val().trim();
+                if (barcode) {
+                    rechercherParCodeBarres(barcode);
+                }
+            }
+        });
+
+        // Toggle du clavier virtuel
+        $('#toggle-keyboard').click(function() {
+            $('#virtual-keyboard').slideToggle(300);
+            $(this).toggleClass('btn-primary btn-outline-secondary');
+        });
+
+        // Gestion du clavier virtuel
+        $(document).on('click', '.keyboard-key', function() {
+            const key = $(this).data('key');
+            const barcodeInput = $('#barcode-scanner');
+            if (key === 'clear') {
+                barcodeInput.val('');
+            } else if (key === 'enter') {
+                const barcode = barcodeInput.val().trim();
+                if (barcode) {
+                    rechercherParCodeBarres(barcode);
+                }
+            } else {
+                barcodeInput.val(barcodeInput.val() + key);
+            }
+            barcodeInput.focus();
+        });
+
+        // Recherche par code-barres via API
+        function rechercherParCodeBarres(codeBarres) {
+            $.ajax({
+                url: '{% url "ventes:api_search_by_barcode" %}',
+                method: 'GET',
+                data: {
+                    barcode: codeBarres
+                },
+                beforeSend: function() {
+                    $('#barcode-result').show();
+                    $('#barcode-message').text("{% trans 'Recherche en cours...' %}");
+                    $('#barcode-error').hide();
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $('#barcode-message').text("{% trans 'Produit trouvé: ' %}" + response.product.nom);
+                        $('#barcode-result').removeClass('alert-info alert-danger').addClass('alert-success');
+                        
+                        // Jouer le son de scan réussi
+                        scanSound.play();
+                        
+                        // Ajouter le produit au panier
+                        ajouterProduitAuPanier(response.product);
+                    } else {
+                        $('#barcode-result').hide();
+                        $('#barcode-error').show();
+                        $('#barcode-error span').text(response.message);
+                        // Jouer le son d'erreur
+                        errorSound.play();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#barcode-result').hide();
+                    $('#barcode-error').show();
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        $('#barcode-error span').text(response.message || "{% trans 'Erreur lors de la recherche' %}");
+                    } catch (e) {
+                        $('#barcode-error span').text("{% trans 'Erreur de connexion au serveur' %}");
+                    }
+                    // Jouer le son d'erreur
+                    errorSound.play();
+                }
+            });
+        }
+
+        // Ajouter un produit au panier
+        function ajouterProduitAuPanier(produit) {
+            let produitExistant = false;
+            $('.ligne-vente').each(function() {
+                const produitSelect = $(this).find('select[name$="-produit"]');
+                if (produitSelect.val() == produit.id) {
+                    produitExistant = true;
+                    const quantiteInput = $(this).find('input[name$="-quantite"]');
+                    const quantiteActuelle = parseInt(quantiteInput.val()) || 0;
+                    quantiteInput.val(quantiteActuelle + 1).trigger('input');
+                    
+                    // Jouer le son d'ajout
+                    addSound.play();
+                    
+                    $(this).addClass('highlight');
+                    setTimeout(() => $(this).removeClass('highlight'), 1000);
+                    return false;
+                }
+            });
+            
+            if (!produitExistant) {
+                $('#ajouter-ligne').trigger('click');
+                const nouvelleLigne = $('.ligne-vente').last();
+                const selectProduit = nouvelleLigne.find('select[name$="-produit"]');
+                selectProduit.val(produit.id).trigger('change');
+                $('#barcode-scanner').val('');
+            }
+            
+            calculerTotal();
+        }
+
+        // Scanner de code-barres avec caméra
+        $('#scan-barcode').click(function() {
+            $('#barcodeScannerModal').modal('show');
+        });
+
+        $('#start-scanner').click(function() {
+            initBarcodeScanner();
+            $(this).prop('disabled', true);
+            $('#stop-scanner').prop('disabled', false);
+        });
+
+        $('#stop-scanner').click(function() {
+            if (Quagga) {
+                Quagga.stop();
+            }
+            $(this).prop('disabled', true);
+            $('#start-scanner').prop('disabled', false);
+        });
+
+        $('#barcodeScannerModal').on('hidden.bs.modal', function() {
+            if (Quagga) {
+                Quagga.stop();
+            }
+            $('#stop-scanner').prop('disabled', true);
+            $('#start-scanner').prop('disabled', false);
+        });
+
+        function initBarcodeScanner() {
+            Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: document.querySelector('#interactive'),
+                    constraints: {
+                        width: 640,
+                        height: 480,
+                        facingMode: "environment"
+                    },
+                },
+                decoder: {
+                    readers: [
+                        "code_128_reader",
+                        "ean_reader",
+                        "ean_8_reader",
+                        "code_39_reader",
+                        "codabar_reader",
+                        "upc_reader",
+                        "i2of5_reader"
+                    ]
+                }
+            }, function(err) {
+                if (err) {
+                    console.error(err);
+                   let errorMessage = "{% trans 'Erreur d\'initialisation du scanner : ' %}";
+    $('#barcode-message').text(errorMessage + err);
+                    $('#barcode-result').show().removeClass().addClass('alert alert-danger');
+                    return;
+                }
+                Quagga.start();
+            });
+
+            Quagga.onDetected(function(result) {
+                const code = result.codeResult.code;
+                $('#barcode-scanner').val(code);
+                $('#barcodeScannerModal').modal('hide');
+                rechercherParCodeBarres(code);
+            });
+        }
+
+        // Déclenche le calcul lors de la modification des champs
+        $(document).on('input', 'input[name$="-quantite"], input[name$="-prix_unitaire"], #id_remise', function() {
             calculerTotal();
         });
 
-        // Initialise le total et le compteur au chargement de la page
+        // Initialise au chargement
         calculerTotal();
         updateArticleCount();
+
+        // Raccourci clavier F1
+        $(document).on('keydown', function(e) {
+            if (e.key === 'F1') {
+                e.preventDefault();
+                alert("{% trans 'Aide du système POS - Raccourcis disponibles...' %}");
+            }
+        });
     });
 </script>
 {% endblock %}

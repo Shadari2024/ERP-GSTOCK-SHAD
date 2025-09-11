@@ -13,6 +13,12 @@ from django.shortcuts import redirect
 from django.contrib import messages
 import logging
 import io
+from django.db.models import F, Sum, Count, DecimalField, ExpressionWrapper, Q
+from django.db.models.functions import TruncMonth, TruncWeek, TruncDay, Coalesce
+from django.utils import timezone
+from decimal import Decimal
+from datetime import datetime
+import logging
 from decimal import Decimal
 from django.shortcuts import render, redirect
 from django.views import View
@@ -382,9 +388,6 @@ LigneCommandeAchatFormSet = inlineformset_factory(
     can_delete=True
 )
 
-from .models import CommandeAchat, LigneCommandeAchat
-from .forms import CommandeAchatForm, LigneCommandeAchatFormSet
-
 class CreerCommandeView(EntrepriseAccessMixin, CreateView):
     model = CommandeAchat
     form_class = CommandeAchatForm
@@ -437,60 +440,56 @@ class CreerCommandeView(EntrepriseAccessMixin, CreateView):
                 )
                 return self.form_invalid(form)
         return self.form_invalid(form)
-def form_invalid(self, form):
-    context = self.get_context_data(form=form)
-    formset = context['formset']
-    
-    # Affichage détaillé des erreurs
-    if form.errors:
-        messages.error(
-            self.request,
-            "Veuillez corriger les erreurs suivantes dans les informations générales :"
-        )
-        for field, errors in form.errors.items():
-            # CORRECTION: Convertir ErrorList en string
-            error_messages = ', '.join([str(error) for error in errors])
+
+    def form_invalid(self, form):
+        context = self.get_context_data(form=form)
+        formset = context['formset']
+        
+        if form.errors:
             messages.error(
                 self.request,
-                f"- {field}: {error_messages}"
+                "Veuillez corriger les erreurs suivantes dans les informations générales :"
             )
-    
-    if formset.errors:
-        messages.error(
-            self.request,
-            "Veuillez corriger les erreurs suivantes dans les lignes de commande :"
-        )
-        for i, form_line in enumerate(formset):
-            if form_line.errors:
-                # CORRECTION: Convertir ErrorList en string pour chaque champ
-                error_messages = []
-                for field, errors in form_line.errors.items():
-                    error_messages.append(f"{field}: {', '.join([str(e) for e in errors])}")
-                
+            for field, errors in form.errors.items():
+                error_messages = ', '.join([str(error) for error in errors])
                 messages.error(
                     self.request,
-                    f"Ligne {i+1}: {', '.join(error_messages)}"
+                    f"- {field}: {error_messages}"
                 )
         
-        # Afficher aussi les erreurs non-field du formset
-        if formset.non_form_errors():
+        if formset.errors:
             messages.error(
                 self.request,
-                f"Erreurs générales: {', '.join([str(e) for e in formset.non_form_errors()])}"
+                "Veuillez corriger les erreurs suivantes dans les lignes de commande :"
             )
-    
-    # Mode débogage
-    if settings.DEBUG:
-        print("\n=== Erreurs Formulaire Principal ===")
-        print(form.errors)
-        print("\n=== Erreurs Formset ===")
-        print(formset.errors)
-        if hasattr(formset, 'non_form_errors'):
-            print("\n=== Erreurs Non-Form du Formset ===")
-            print(formset.non_form_errors())
-    
-    return self.render_to_response(context)
-    
+            for i, form_line in enumerate(formset):
+                if form_line.errors:
+                    error_messages = []
+                    for field, errors in form_line.errors.items():
+                        error_messages.append(f"{field}: {', '.join([str(e) for e in errors])}")
+                    
+                    messages.error(
+                        self.request,
+                        f"Ligne {i+1}: {', '.join(error_messages)}"
+                    )
+            
+            if formset.non_form_errors():
+                messages.error(
+                    self.request,
+                    f"Erreurs générales: {', '.join([str(e) for e in formset.non_form_errors()])}"
+                )
+        
+        if settings.DEBUG:
+            print("\n=== Erreurs Formulaire Principal ===")
+            print(form.errors)
+            print("\n=== Erreurs Formset ===")
+            print(formset.errors)
+            if hasattr(formset, 'non_form_errors'):
+                print("\n=== Erreurs Non-Form du Formset ===")
+                print(formset.non_form_errors())
+        
+        return self.render_to_response(context)
+
 class ModifierCommandeView(EntrepriseAccessMixin, UpdateView):
     model = CommandeAchat
     form_class = CommandeAchatForm
@@ -504,10 +503,7 @@ class ModifierCommandeView(EntrepriseAccessMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Pour une vue de modification, le formset doit toujours être lié à l'instance existante
-        # (self.object est la CommandeAchat que nous modifions).
         if self.request.POST:
-            # Si c'est une soumission POST, le formset est lié aux données POST
             context['formset'] = LigneCommandeAchatFormSet(
                 self.request.POST,
                 instance=self.object,
@@ -515,7 +511,6 @@ class ModifierCommandeView(EntrepriseAccessMixin, UpdateView):
                 form_kwargs={'entreprise': self.request.entreprise}
             )
         else:
-            # Pour une requête GET, le formset est pré-rempli avec les lignes existantes
             context['formset'] = LigneCommandeAchatFormSet(
                 instance=self.object,
                 prefix='lignes',
@@ -527,39 +522,29 @@ class ModifierCommandeView(EntrepriseAccessMixin, UpdateView):
         context = self.get_context_data()
         formset = context['formset']
 
-        # Vérifions la validité des deux formulaires (principal et formset)
         if form.is_valid() and formset.is_valid():
             try:
                 with transaction.atomic():
-                    # Sauvegardons la commande principale.
-                    # self.object est déjà l'instance que nous modifions.
-                    self.object = form.save() 
-
-                    # Liens le formset à cette même instance et sauvegardons les lignes de commande.
-                    # Le formset.save() gère les ajouts, modifications et suppressions de lignes.
+                    self.object = form.save()
                     formset.instance = self.object
-                    formset.save() 
+                    formset.save()
 
                 messages.success(self.request, 'Commande modifiée avec succès.')
-                return HttpResponseRedirect(self.success_url) # Redirection explicite vers l'URL de succès
+                return HttpResponseRedirect(self.success_url)
 
             except Exception as e:
                 messages.error(
                     self.request,
                     f"Erreur inattendue lors de la modification de la commande : {str(e)}"
                 )
-                # En cas d'exception (ex: problème de base de données), on renvoie au formulaire invalide
                 return self.form_invalid(form)
         else:
-            # Si le formulaire principal ou le formset n'est pas valide,
-            # nous déléguons l'affichage des erreurs à la méthode form_invalid.
             return self.form_invalid(form)
 
     def form_invalid(self, form):
         context = self.get_context_data(form=form)
         formset = context['formset']
         
-        # Affichage des erreurs du formulaire principal
         if form.errors:
             messages.error(
                 self.request,
@@ -571,7 +556,6 @@ class ModifierCommandeView(EntrepriseAccessMixin, UpdateView):
                     f"- {field}: {', '.join(errors)}"
                 )
         
-        # Affichage des erreurs du formset (lignes de commande)
         if formset.errors:
             messages.error(
                 self.request,
@@ -579,19 +563,17 @@ class ModifierCommandeView(EntrepriseAccessMixin, UpdateView):
             )
             for i, line_form in enumerate(formset):
                 if line_form.errors:
-                    # Collecte et affiche toutes les erreurs pour chaque ligne de commande
                     messages.error(
                         self.request,
                         f"Ligne {i+1}: {', '.join(error for error_list in line_form.errors.values() for error in error_list)}"
                     )
-            # Affiche les erreurs non liées à un champ spécifique du formset (ex: erreurs de validation globales du formset)
+            
             if formset.non_form_errors():
                 messages.error(
                     self.request,
                     f"Erreurs générales dans les lignes de commande : {', '.join(formset.non_form_errors())}"
                 )
         
-        # Mode débogage : Impression des erreurs dans la console (visible uniquement si settings.DEBUG est True)
         if settings.DEBUG:
             print("\n=== Erreurs Formulaire Principal ===")
             print(form.errors)
@@ -601,7 +583,7 @@ class ModifierCommandeView(EntrepriseAccessMixin, UpdateView):
                 print("\n=== Erreurs Non-Form du Formset ===")
                 print(formset.non_form_errors)
         
-        return self.render_to_response(context) 
+        return self.render_to_response(context)
         
 class DetailCommandeView(EntrepriseAccessMixin, DetailView):
     model = CommandeAchat
@@ -663,10 +645,21 @@ class DetailCommandeView(EntrepriseAccessMixin, DetailView):
         return context
     
 
+
+
 logger = logging.getLogger(__name__)
 
 class DashboardView(EntrepriseAccessMixin, TemplateView):
     template_name = "achats/dashboard/index.html"
+
+    def get_devise_principale(self, entreprise):
+        """Récupère la devise principale de l'entreprise depuis ConfigurationSAAS"""
+        try:
+            config = ConfigurationSAAS.objects.get(entreprise=entreprise)
+            return config.devise_principale
+        except ConfigurationSAAS.DoesNotExist:
+            logger.warning(f"Aucune configuration SAAS trouvée pour l'entreprise {entreprise}")
+            return None
 
     def get_date_filters(self):
         """Gère les filtres de date depuis les paramètres GET"""
@@ -707,7 +700,7 @@ class DashboardView(EntrepriseAccessMixin, TemplateView):
             'count': count,
             'commandes_qs': commandes_qs
         }
-
+        
     def get_top_fournisseurs(self, commandes_qs):
         """Retourne les 3 fournisseurs avec le plus gros montant de commandes"""
         top_fournisseurs_data = (
@@ -726,20 +719,14 @@ class DashboardView(EntrepriseAccessMixin, TemplateView):
         )
         
         results = []
-        for item in top_fournisseurs_data:
-            try:
-                fournisseur_obj = Fournisseur.objects.get(id=item['id'])
-                results.append({
-                    'fournisseur': fournisseur_obj,
-                    'montant_total': item['total_montant'],
-                    'commandes_count': item['commandes_count']
-                })
-            except Fournisseur.DoesNotExist:
-                logger.warning(f"Fournisseur with ID {item['id']} not found for top suppliers list.")
-                continue # Skip if supplier somehow doesn't exist
+        for fournisseur in top_fournisseurs_data:
+            results.append({
+                'fournisseur': fournisseur,
+                'montant_total': fournisseur.total_montant,
+                'commandes_count': fournisseur.commandes_count
+            })
 
         return results
-
 
     def get_commandes_par_periode(self, commandes_qs):
         """Agrège les commandes par période pour les graphiques"""
@@ -788,7 +775,6 @@ class DashboardView(EntrepriseAccessMixin, TemplateView):
 
     def get_bons_reception_stats(self, entreprise, commande_filters):
         """Calcule les statistiques des bons de réception"""
-        # Note: 'en_attente' logic here is an example. Adjust based on your BonReception model's status.
         return BonReception.objects.filter(
             entreprise=entreprise,
             commande__in=CommandeAchat.objects.filter(
@@ -797,15 +783,16 @@ class DashboardView(EntrepriseAccessMixin, TemplateView):
             )
         ).aggregate(
             count=Count('id'),
-            # This 'en_attente' implies that some quantity on reception lines is less than ordered.
-            # If BonReception has a specific 'status' field (e.g., 'pending', 'validated'), use that instead.
-            # Example: en_attente=Count('id', filter=Q(statut='en_attente')) if a 'statut' field exists.
             en_attente=Count('id', filter=Q(lignes__quantite__lt=F('lignes__ligne_commande__quantite')))
         )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         entreprise = self.request.user.entreprise
+
+        # Récupérer la devise principale
+        devise_principale = self.get_devise_principale(entreprise)
+        context['devise_principale'] = devise_principale
 
         date_filters = self.get_date_filters()
         
@@ -841,7 +828,6 @@ class DashboardView(EntrepriseAccessMixin, TemplateView):
         context['commandes_chart_labels'] = chart_labels
         context['commandes_chart_data'] = chart_values
 
-
         # Commandes par statut
         context['commandes_par_statut'] = self.get_commandes_par_statut(
             context['commandes_achat_qs']
@@ -862,10 +848,9 @@ class DashboardView(EntrepriseAccessMixin, TemplateView):
             statut__in=['envoyee', 'partiellement_livree']
         ).count()
 
-        # Corrected for Produit model fields 'stock' and 'seuil_alerte'
         context['low_stock_products_count'] = Produit.objects.filter(
             entreprise=entreprise,
-            stock__lte=F('seuil_alerte') # Use 'stock' and 'seuil_alerte' directly
+            stock__lte=F('seuil_alerte')
         ).count()
 
         context['total_alerts'] = context['commandes_en_retard'] + context['low_stock_products_count']
@@ -1287,7 +1272,6 @@ class CreerFournisseurView(LoginRequiredMixin, PermissionRequiredMixin, SuccessM
         form.instance.entreprise = self.request.user.entreprise
         return super().form_valid(form)
 
-
 class ModifierFournisseurView(LoginRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
     model = Fournisseur
     form_class = FournisseurForm
@@ -1330,6 +1314,50 @@ class SupprimerFournisseurView(LoginRequiredMixin, PermissionRequiredMixin, Dele
             )
             return redirect('achats:detail_fournisseur', pk=fournisseur.pk)
 
+# achats/views.py
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from .models import Fournisseur
+
+@csrf_exempt
+def get_fournisseur_tva(request):
+    fournisseur_id = request.GET.get('fournisseur_id')
+    try:
+        fournisseur = Fournisseur.objects.get(id=fournisseur_id)
+        return JsonResponse({
+            'success': True,
+            'taux_tva': float(fournisseur.taux_tva_defaut)
+        })
+    except (Fournisseur.DoesNotExist, ValueError):
+        return JsonResponse({
+            'success': False,
+            'taux_tva': 16.00
+        })
+        
+        # achats/views.py
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.views import View
+from .models import Fournisseur
+
+@method_decorator(csrf_exempt, name='dispatch')
+class GetFournisseurTVAView(View):
+    def get(self, request):
+        fournisseur_id = request.GET.get('fournisseur_id')
+        try:
+            fournisseur = Fournisseur.objects.get(id=fournisseur_id)
+            return JsonResponse({
+                'success': True,
+                'taux_tva': float(fournisseur.taux_tva_defaut)
+            })
+        except (Fournisseur.DoesNotExist, ValueError):
+            return JsonResponse({
+                'success': False,
+                'taux_tva': 16.00
+            })
+
 class DetailFournisseurView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     model = Fournisseur
     template_name = 'achats/fournisseurs/detail.html'
@@ -1340,18 +1368,83 @@ class DetailFournisseurView(LoginRequiredMixin, PermissionRequiredMixin, DetailV
 
 logger = logging.getLogger(__name__)
 
-
-# --- VUES POUR LES BONS DE RÉCEPTION ---
+# achats/views.py
+from django.db.models import Q
+from django.views.generic import ListView
+from .models import BonReception, Fournisseur
+from django.contrib.auth import get_user_model # Pour récupérer le modèle d'utilisateur
 
 class ListeBonsView(EntrepriseAccessMixin, ListView):
     model = BonReception
     template_name = 'achats/bons/liste.html'
     context_object_name = 'bons'
+    paginate_by = 20
 
     def get_queryset(self):
-        return super().get_queryset().filter(
+        queryset = super().get_queryset().filter(
             entreprise=self.request.entreprise
         ).select_related('commande', 'commande__fournisseur', 'created_by')
+
+        # Récupération des paramètres de recherche
+        numero_bon = self.request.GET.get('numero_bon')
+        numero_commande = self.request.GET.get('numero_commande')
+        fournisseur = self.request.GET.get('fournisseur')
+        date_debut = self.request.GET.get('date_debut')
+        date_fin = self.request.GET.get('date_fin')
+        created_by = self.request.GET.get('created_by')
+
+        # Application des filtres
+        if numero_bon:
+            queryset = queryset.filter(numero_bon__icontains=numero_bon)
+        if numero_commande:
+            queryset = queryset.filter(commande__numero_commande__icontains=numero_commande)
+        if fournisseur:
+            # Note: Si le filtre est une liste déroulante (select), vous devriez filtrer par l'ID
+            # Exemple: if fournisseur: queryset = queryset.filter(commande__fournisseur__id=fournisseur)
+            # La recherche par nom (icontains) est plus adaptée pour un champ de texte
+            queryset = queryset.filter(commande__fournisseur__nom__icontains=fournisseur)
+        if date_debut:
+            queryset = queryset.filter(date_reception__gte=date_debut)
+        if date_fin:
+            queryset = queryset.filter(date_reception__lte=date_fin)
+        if created_by:
+            # Comme pour le fournisseur, si c'est un <select>, il vaut mieux filtrer par l'ID
+            queryset = queryset.filter(created_by__username__icontains=created_by)
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # 1. Récupération des listes pour les filtres
+        # Récupérer tous les fournisseurs pour le filtre
+        context['fournisseurs'] = Fournisseur.objects.filter(
+            entreprise=self.request.entreprise
+        ).order_by('nom')
+        
+        # Récupérer tous les utilisateurs (employés) pour le filtre
+        User = get_user_model()
+        context['utilisateurs'] = User.objects.filter(
+            entreprise=self.request.entreprise
+        ).order_by('username')
+        
+        # 2. Ajout des paramètres de recherche pour pré-remplir le formulaire
+        context['search_params'] = {
+            'numero_bon': self.request.GET.get('numero_bon', ''),
+            'numero_commande': self.request.GET.get('numero_commande', ''),
+            # Si le filtre est un champ de texte
+            'fournisseur': self.request.GET.get('fournisseur', ''),
+            # Si le filtre est un menu déroulant, stockez l'ID sélectionné
+            # 'fournisseur_id': self.request.GET.get('fournisseur', ''), 
+            'date_debut': self.request.GET.get('date_debut', ''),
+            'date_fin': self.request.GET.get('date_fin', ''),
+            # Si le filtre est un champ de texte
+            'created_by': self.request.GET.get('created_by', ''),
+            # Si le filtre est un menu déroulant, stockez l'ID
+            # 'created_by_id': self.request.GET.get('created_by', ''),
+        }
+        
+        return context
 import logging
 from django.db import transaction
 from django.contrib import messages
@@ -1534,66 +1627,81 @@ class CreerBonView(CreateView,EntrepriseAccessMixin,LoginRequiredMixin, Permissi
         return f"BR-{new_num:05d}"
 
 
+# achats/views.py ou utils.py
+from django.db import transaction
+from django.utils import timezone
+from decimal import Decimal
+
+# achats/views.py ou utils.py
+# ... (imports existants)
+# achats/utils.py ou views.py
+from django.db import transaction
+from django.utils import timezone
+from decimal import Decimal
+
+from django.db import transaction
+# La fonction de création de la vue
 def creer_bon_reception_automatique(commande_id, request):
-    """
-    Crée automatiquement un bon de réception pour une commande
-    avec toutes les lignes livrées en totalité
-    """
     try:
         commande = CommandeAchat.objects.get(
-            pk=commande_id, 
-            entreprise=request.entreprise
+            pk=commande_id,
+            entreprise=request.user.entreprise
         )
         
         with transaction.atomic():
-            # Créer le bon de réception
+            # 1. Créer le BonReception
             bon = BonReception.objects.create(
-                entreprise=request.entreprise,
+                entreprise=request.user.entreprise,
                 commande=commande,
-                numero_bon=generer_numero_bon(request.entreprise),
                 date_reception=timezone.now().date(),
-                created_by=request.user
+                created_by=request.user,
             )
             
-            # Créer les lignes de réception pour chaque ligne de commande
+            # 2. Créer toutes les lignes de réception avec COPIEXACTE des données
             for ligne_commande in commande.lignes.all():
                 quantite_a_livrer = ligne_commande.quantite - ligne_commande.quantite_livree
                 
                 if quantite_a_livrer > 0:
-                    # Créer la ligne de réception
-                    LigneBonReception.objects.create(
+                    # CRÉATION AVEC COPIE EXPLICITE DE TOUTES LES DONNÉES
+                    ligne_reception = LigneBonReception.objects.create(
                         bon=bon,
                         ligne_commande=ligne_commande,
                         quantite=quantite_a_livrer,
+                        prix_unitaire_ht=ligne_commande.prix_unitaire,  # Prix unitaire HT
+                        taux_tva=ligne_commande.taux_tva,  # Taux TVA - CORRECTION CRITIQUE
                         conditionnement="Livraison complète"
                     )
                     
-                    # Mettre à jour le stock
-                    if hasattr(ligne_commande.produit, 'ajouter_stock'):
-                        ligne_commande.produit.ajouter_stock(quantite_a_livrer)
-                    else:
-                        # Méthode alternative
-                        ligne_commande.produit.quantite_stock += quantite_a_livrer
-                        ligne_commande.produit.save()
+                    # FORCER la sauvegarde pour recalcul des totaux
+                    ligne_reception.save()
                     
-                    # Mettre à jour la quantité livrée
-                    ligne_commande.quantite_livree = ligne_commande.quantite
-                    ligne_commande.livree = True
+                    # Mise à jour de la ligne de commande
+                    ligne_commande.quantite_livree += quantite_a_livrer
+                    ligne_commande.livree = (ligne_commande.quantite_livree >= ligne_commande.quantite)
                     ligne_commande.save()
+                    
+                    # Mise à jour du stock
+                    produit = ligne_commande.produit
+                    produit.stock += quantite_a_livrer
+                    produit.save()
             
-            # Mettre à jour le statut de la commande
-            commande.statut = 'livree'
+            # 3. FORCER le recalcul des totaux
+            bon.calculer_totaux()
+            bon.refresh_from_db()
+            
+            # 4. Mettre à jour le statut de la commande
+            toutes_livrees = all(ligne.livree for ligne in commande.lignes.all())
+            commande.statut = 'livree' if toutes_livrees else 'partiellement_livree'
             commande.save()
             
-            messages.success(request, f"Bon de réception {bon.numero_bon} créé automatiquement avec succès.")
+            messages.success(request, f"Bon de réception {bon.numero_bon} créé automatiquement avec succès. 🎉")
             return bon
             
     except Exception as e:
         logger.error(f"Erreur création bon réception automatique: {e}")
         messages.error(request, f"Erreur lors de la création automatique du bon de réception: {str(e)}")
         return None
-
-
+    
 def generer_numero_bon(entreprise):
     """Génère un numéro de bon de réception unique"""
     last_bon = BonReception.objects.filter(
@@ -1641,9 +1749,15 @@ class CreerBonAutomatique(View,EntrepriseAccessMixin,LoginRequiredMixin ):
 
 
 
-
-
 # achats/views.py
+from django.views.generic import DetailView
+from .models import BonReception
+from decimal import Decimal
+from django.contrib import messages
+
+# Assurez-vous que EntrepriseAccessMixin et ConfigurationSAAS sont correctement importés
+# from .mixins import EntrepriseAccessMixin
+# from your_app.models import ConfigurationSAAS
 class DetailBonView(EntrepriseAccessMixin, DetailView):
     model = BonReception
     template_name = 'achats/bons/detail.html'
@@ -1651,7 +1765,7 @@ class DetailBonView(EntrepriseAccessMixin, DetailView):
 
     def get_queryset(self):
         return super().get_queryset().filter(
-            entreprise=self.request.entreprise
+            entreprise=self.request.user.entreprise  # Correction: request.user.entreprise
         ).select_related(
             'commande',
             'commande__fournisseur',
@@ -1664,11 +1778,15 @@ class DetailBonView(EntrepriseAccessMixin, DetailView):
         context = super().get_context_data(**kwargs)
         bon = self.object
         
+        # Forcer le recalcul des totaux AVANT tout
+        bon.calculer_totaux()
+        bon.refresh_from_db()  # Recharger depuis la base
+        
         # Récupération de la devise principale
         devise_principale = None
-        symbole_devise = "€"  # symbole par défaut
+        symbole_devise = "$"
         try:
-            config_saas = ConfigurationSAAS.objects.get(entreprise=self.request.entreprise)
+            config_saas = ConfigurationSAAS.objects.get(entreprise=self.request.user.entreprise)
             devise_principale = config_saas.devise_principale
             if devise_principale:
                 symbole_devise = devise_principale.symbole
@@ -1678,17 +1796,39 @@ class DetailBonView(EntrepriseAccessMixin, DetailView):
         context['devise_principale'] = devise_principale
         context['symbole_devise'] = symbole_devise
         
-        # Récupération des lignes avec calcul des totaux
-        lignes = bon.lignes.all()
-        total_bon = Decimal('0.00')
+        # Préchargement des lignes
+        lignes = bon.lignes.select_related('ligne_commande', 'ligne_commande__produit').all()
         
+        # Calcul des totaux pour chaque ligne (identique à calculer_totaux)
         for ligne in lignes:
-            # Calcul du total HT pour chaque ligne
-            ligne.total_ht_ligne = ligne.quantite * ligne.ligne_commande.prix_unitaire
-            total_bon += ligne.total_ht_ligne
+            remise_factor = Decimal('1') - (ligne.ligne_commande.remise / Decimal('100'))
+            prix_apres_remise = ligne.prix_unitaire_ht * remise_factor
+            
+            ligne.total_ht_ligne = (ligne.quantite * prix_apres_remise).quantize(Decimal('0.01'))
+            ligne.tva_ligne = (ligne.total_ht_ligne * (ligne.taux_tva / Decimal('100'))).quantize(Decimal('0.01'))
+            ligne.ttc_ligne = (ligne.total_ht_ligne + ligne.tva_ligne).quantize(Decimal('0.01'))
         
         context['lignes'] = lignes
-        context['total_bon'] = total_bon
+        context['total_bon_ht'] = bon.total_ht
+        context['total_bon_tva'] = bon.total_tva
+        context['total_bon_ttc'] = bon.total_ttc
+        
+        # Vérification de cohérence
+        total_ht_calcule = sum(ligne.total_ht_ligne for ligne in lignes)
+        total_tva_calcule = sum(ligne.tva_ligne for ligne in lignes)
+        
+        context['totaux_coherents'] = (
+            abs(total_ht_calcule - bon.total_ht) < Decimal('0.05') and
+            abs(total_tva_calcule - bon.total_tva) < Decimal('0.05')
+        )
+        
+        # Debug info
+        context['debug_info'] = {
+            'total_ht_calcule': total_ht_calcule,
+            'total_tva_calcule': total_tva_calcule,
+            'bon_total_ht': bon.total_ht,
+            'bon_total_tva': bon.total_tva,
+        }
         
         return context
 # achats/views.py
@@ -1798,22 +1938,13 @@ def init_comptabilite_manuelle(request):
 
 
 
-
-
-from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView
-from django.urls import reverse_lazy
-from django.contrib import messages
-from django.db import transaction
-from django.http import HttpResponseRedirect
+# achats/views.py
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-from django.forms import modelformset_factory
-
-from .models import FactureFournisseur, PaiementFournisseur
-from .forms import FactureFournisseurForm, PaiementFournisseurForm
-from parametres.models import ConfigurationSAAS
-from django.db.models import Q
 from django.utils import timezone
+from django.db.models import Q
+from django.views.generic import ListView
 from datetime import timedelta
+from .models import FactureFournisseur, Fournisseur
 
 class FactureListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = FactureFournisseur
@@ -1826,58 +1957,59 @@ class FactureListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         queryset = FactureFournisseur.objects.filter(
             entreprise=self.request.user.entreprise
         ).select_related('fournisseur', 'bon_reception')
-        
-        # Filtres
+
+        # === Filtres ===
         statut = self.request.GET.get('statut')
+        fournisseur_id = self.request.GET.get('fournisseur')
+        date_debut = self.request.GET.get('date_debut')
+        date_fin = self.request.GET.get('date_fin')
+
         if statut:
             queryset = queryset.filter(statut=statut)
-        
-        fournisseur_id = self.request.GET.get('fournisseur')
         if fournisseur_id:
             queryset = queryset.filter(fournisseur_id=fournisseur_id)
-        
-        date_debut = self.request.GET.get('date_debut')
         if date_debut:
             queryset = queryset.filter(date_facture__gte=date_debut)
-        
-        date_fin = self.request.GET.get('date_fin')
         if date_fin:
             queryset = queryset.filter(date_facture__lte=date_fin)
-        
-        # Tri
+
+        # === Tri ===
         sort_field = self.request.GET.get('sort', 'date_facture')
         sort_order = self.request.GET.get('order', 'desc')
-        
+
         if sort_order == 'desc':
             sort_field = f'-{sort_field}'
-        
+
         return queryset.order_by(sort_field)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
+
         # Récupérer la devise principale
         try:
             from parametres.models import ConfigurationSAAS
             config_saas = ConfigurationSAAS.objects.get(entreprise=self.request.user.entreprise)
             devise_symbole = config_saas.devise_principale.symbole if config_saas.devise_principale else "€"
-        except:
+        except Exception:
             devise_symbole = "€"
-        
+
         # Liste des fournisseurs pour le filtre
-        from .models import Fournisseur
-        context['fournisseurs'] = Fournisseur.objects.filter(entreprise=self.request.user.entreprise)
-        
+        context['fournisseurs'] = Fournisseur.objects.filter(
+            entreprise=self.request.user.entreprise
+        ).order_by('nom')
+
         context["devise_principale_symbole"] = devise_symbole
-        
+
         # Ajouter des propriétés aux factures pour le template
         today = timezone.now().date()
         for facture in context['factures']:
             facture.est_en_retard = facture.date_echeance < today and facture.reste_a_payer > 0
-            facture.est_bientot_echeance = (facture.date_echeance - today <= timedelta(days=7) and 
-                                          facture.date_echeance >= today and 
-                                          facture.reste_a_payer > 0)
-        
+            facture.est_bientot_echeance = (
+                facture.date_echeance - today <= timedelta(days=7) and
+                facture.date_echeance >= today and
+                facture.reste_a_payer > 0
+            )
+
         return context
 
 class FactureCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
@@ -1901,29 +2033,46 @@ class FactureCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView)
         messages.success(self.request, 'Facture créée avec succès.')
         return HttpResponseRedirect(self.success_url)
 
-
 # achats/views.py
 from django.views.generic import View
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
-from .utils import generer_facture_depuis_bon
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from.utils import *
 
+@method_decorator(csrf_exempt, name='dispatch')
 class GenererFactureDepuisBonView(View):
-    """Vue pour générer une facture à partir d'un bon de réception"""
+    """Vue pour générer une facture à partir d'un bon de réception - VERSION CORRIGÉE"""
     
     def post(self, request, *args, **kwargs):
         bon_id = kwargs.get('pk')
-        bon = get_object_or_404(BonReception, pk=bon_id, entreprise=request.entreprise)
-        
-        facture = generer_facture_depuis_bon(bon, request)
-        
-        if facture:
-            return redirect('achats:detail_facture', pk=facture.pk)
-        else:
+        try:
+            bon = get_object_or_404(BonReception, pk=bon_id, entreprise=request.entreprise)
+            
+            # FORCER le recalcul des totaux AVANT création
+            bon.calculer_totaux()
+            bon.refresh_from_db()
+            
+            # VÉRIFICATION CRITIQUE : Cohérence des totaux
+            if bon.total_ht <= 0 or bon.total_ttc <= 0:
+                messages.error(request, "Les totaux du bon de réception sont invalides")
+                return redirect('achats:detail_bon', pk=bon_id)
+            
+            # Créer la facture
+            facture = generer_facture_depuis_bon(bon, request)
+            
+            if facture:
+                messages.success(request, f"Facture {facture.numero_facture} créée avec succès")
+                return redirect('achats:detail_facture', pk=facture.pk)
+            else:
+                messages.error(request, "Erreur lors de la création de la facture")
+                return redirect('achats:detail_bon', pk=bon_id)
+                
+        except Exception as e:
+            logger.error(f"Erreur création facture depuis bon {bon_id}: {e}")
+            messages.error(request, f"Erreur lors de la création de la facture: {str(e)}")
             return redirect('achats:detail_bon', pk=bon_id)
-
-
-
 # achats/views.py
 from django.shortcuts import get_object_or_404
 from django.views.generic import DetailView
@@ -2068,7 +2217,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.utils import timezone
 from decimal import Decimal
-
+import decimal
 @login_required
 @permission_required('achats.add_paiementfournisseur', raise_exception=True)
 def creer_paiement_direct(request, pk):
@@ -2079,18 +2228,26 @@ def creer_paiement_direct(request, pk):
         try:
             # Validation des données
             mode_paiement = request.POST.get('mode_paiement')
-            montant = Decimal(request.POST.get('montant', '0'))
+            montant_str = request.POST.get('montant', '0')
             date_paiement = request.POST.get('date_paiement')
             reference = request.POST.get('reference', '')
             notes = request.POST.get('notes', '')
             
-            # Validation du montant
-            if montant <= 0:
+            # Convertir le montant
+            try:
+                montant_str = montant_str.replace(' ', '').replace(',', '.')
+                montant = Decimal(montant_str)
+            except (ValueError, InvalidOperation):
+                messages.error(request, "Format de montant invalide. Utilisez le format: 1234,56")
+                return redirect('achats:detail_facture', pk=facture.pk)
+            
+            # Validation
+            if montant <= Decimal('0.00'):
                 messages.error(request, "Le montant doit être supérieur à zéro.")
                 return redirect('achats:detail_facture', pk=facture.pk)
             
             if montant > facture.reste_a_payer:
-                messages.error(request, f"Le montant ne peut pas dépasser le reste à payer: {facture.reste_a_payer}")
+                messages.error(request, f"Le montant ne peut pas dépasser le reste à payer: {facture.reste_a_payer:.2f}")
                 return redirect('achats:detail_facture', pk=facture.pk)
             
             # Création du paiement
@@ -2102,22 +2259,27 @@ def creer_paiement_direct(request, pk):
                 date_paiement=date_paiement,
                 reference=reference,
                 notes=notes,
-                statut='valide',  # Statut validé par défaut pour les paiements directs
+                statut='valide',
                 created_by=request.user
             )
             
             paiement.save()
             
-            # Création de l'écriture comptable
-            ecriture = paiement.creer_ecriture_comptable()
-            if ecriture:
-                messages.success(request, f"Paiement de {montant} enregistré et écriture comptable créée avec succès.")
-            else:
-                messages.warning(request, f"Paiement enregistré mais erreur lors de la création de l'écriture comptable.")
+            # Création IMMÉDIATE de l'écriture comptable (sans thread)
+            try:
+                ecriture = paiement.creer_ecriture_comptable()
+                if ecriture:
+                    messages.success(request, f"Paiement de {montant:.2f} $ enregistré et écriture comptable créée avec succès.")
+                else:
+                    messages.warning(request, "Paiement enregistré mais erreur lors de la création de l'écriture comptable.")
+            except Exception as e:
+                logger.error(f"Erreur création écriture: {e}")
+                messages.warning(request, "Paiement enregistré mais erreur technique lors de la création de l'écriture comptable.")
             
             return redirect('achats:detail_facture', pk=facture.pk)
             
         except Exception as e:
+            logger.error(f"Erreur création paiement: {e}")
             messages.error(request, f"Erreur lors de l'enregistrement du paiement: {str(e)}")
             return redirect('achats:detail_facture', pk=facture.pk)
     
@@ -2144,3 +2306,200 @@ class PaiementDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView
         context = super().get_context_data(**kwargs)
         context['facture'] = self.object.facture
         return context
+    
+    # achats/views.py
+from django.views.generic import TemplateView
+from django.db.models import Sum, Count, Q, F, ExpressionWrapper, DecimalField
+from django.db.models.functions import TruncMonth, TruncYear, TruncDay
+from django.utils import timezone
+from datetime import datetime, timedelta
+from decimal import Decimal
+import logging
+
+from .models import CommandeAchat, Fournisseur, BonReception, FactureFournisseur
+from parametres.models import ConfigurationSAAS
+
+logger = logging.getLogger(__name__)
+
+class RapportsAchatsView(EntrepriseAccessMixin, TemplateView):
+    template_name = "achats/rapports/rapports.html"
+
+    def get_devise_principale(self, entreprise):
+        """Récupère la devise principale de l'entreprise"""
+        try:
+            config = ConfigurationSAAS.objects.get(entreprise=entreprise)
+            return config.devise_principale
+        except ConfigurationSAAS.DoesNotExist:
+            logger.warning(f"Aucune configuration SAAS trouvée pour l'entreprise {entreprise}")
+            return None
+
+    def get_date_range(self):
+        """Détermine la plage de dates basée sur les paramètres GET"""
+        date_debut = self.request.GET.get('date_debut')
+        date_fin = self.request.GET.get('date_fin')
+        periode = self.request.GET.get('periode', 'mois_courant')
+
+        today = timezone.now().date()
+        
+        if date_debut and date_fin:
+            try:
+                date_debut_obj = datetime.strptime(date_debut, "%Y-%m-%d").date()
+                date_fin_obj = datetime.strptime(date_fin, "%Y-%m-%d").date()
+                return date_debut_obj, date_fin_obj
+            except ValueError:
+                logger.error("Format de date invalide")
+        
+        # Périodes prédéfinies
+        if periode == 'mois_courant':
+            debut = today.replace(day=1)
+            fin = today
+        elif periode == 'mois_precedent':
+            premier_du_mois_precedent = (today.replace(day=1) - timedelta(days=1)).replace(day=1)
+            fin_mois_precedent = today.replace(day=1) - timedelta(days=1)
+            debut, fin = premier_du_mois_precedent, fin_mois_precedent
+        elif periode == 'trimestre_courant':
+            trimestre = (today.month - 1) // 3 + 1
+            mois_debut = (trimestre - 1) * 3 + 1
+            debut = today.replace(month=mois_debut, day=1)
+            fin = today
+        elif periode == 'annee_courante':
+            debut = today.replace(month=1, day=1)
+            fin = today
+        else:
+            # 30 derniers jours par défaut
+            debut = today - timedelta(days=30)
+            fin = today
+
+        return debut, fin
+
+    def get_rapport_commandes(self, entreprise, date_debut, date_fin):
+        """Génère le rapport des commandes"""
+        commandes = CommandeAchat.objects.filter(
+            entreprise=entreprise,
+            date_commande__range=[date_debut, date_fin]
+        )
+
+        stats = commandes.aggregate(
+            total_commandes=Count('id'),
+            montant_total=Coalesce(Sum(
+                ExpressionWrapper(
+                    F('lignes__prix_unitaire') * F('lignes__quantite') * 
+                    (Decimal('1.0') - F('lignes__remise') / Decimal('100.0')),
+                    output_field=DecimalField(max_digits=15, decimal_places=2)
+                )
+            ), Decimal('0.00')),
+            commandes_envoyees=Count('id', filter=Q(statut='envoyee')),
+            commandes_livrees=Count('id', filter=Q(statut='livree')),
+            commandes_annulees=Count('id', filter=Q(statut='annulee'))
+        )
+
+        return {
+            'commandes': commandes,
+            'stats': stats,
+            'evolution_mensuelle': self.get_evolution_mensuelle(entreprise, date_debut, date_fin),
+            'par_statut': commandes.values('statut').annotate(
+                count=Count('id'),
+                montant=Coalesce(Sum(
+                    ExpressionWrapper(
+                        F('lignes__prix_unitaire') * F('lignes__quantite') * 
+                        (Decimal('1.0') - F('lignes__remise') / Decimal('100.0')),
+                        output_field=DecimalField(max_digits=15, decimal_places=2)
+                    )
+                ), Decimal('0.00'))
+            ).order_by('-montant')
+        }
+
+    def get_rapport_fournisseurs(self, entreprise, date_debut, date_fin):
+        """Génère le rapport des fournisseurs"""
+        fournisseurs = Fournisseur.objects.filter(
+            entreprise=entreprise,
+            commandes__date_commande__range=[date_debut, date_fin]
+        ).annotate(
+            nb_commandes=Count('commandes', distinct=True),
+            montant_total=Coalesce(Sum(
+                ExpressionWrapper(
+                    F('commandes__lignes__prix_unitaire') * F('commandes__lignes__quantite') * 
+                    (Decimal('1.0') - F('commandes__lignes__remise') / Decimal('100.0')),
+                    output_field=DecimalField(max_digits=15, decimal_places=2)
+                )
+            ), Decimal('0.00'))
+        ).order_by('-montant_total')
+
+        return {
+            'fournisseurs': fournisseurs,
+            'total_fournisseurs': fournisseurs.count(),
+            'top_10': fournisseurs[:10]
+        }
+
+    def get_rapport_bons_reception(self, entreprise, date_debut, date_fin):
+        """Génère le rapport des bons de réception"""
+        bons = BonReception.objects.filter(
+            entreprise=entreprise,
+            date_reception__range=[date_debut, date_fin]
+        )
+
+        stats = bons.aggregate(
+            total_bons=Count('id'),
+            en_attente=Count('id', filter=Q(lignes__quantite__lt=F('lignes__ligne_commande__quantite'))),
+            completes=Count('id', filter=Q(lignes__quantite__gte=F('lignes__ligne_commande__quantite')))
+        )
+
+        return {
+            'bons': bons,
+            'stats': stats
+        }
+
+    def get_evolution_mensuelle(self, entreprise, date_debut, date_fin):
+        """Retourne l'évolution mensuelle des achats"""
+        return (
+            CommandeAchat.objects
+            .filter(
+                entreprise=entreprise,
+                date_commande__range=[date_debut, date_fin]
+            )
+            .annotate(mois=TruncMonth('date_commande'))
+            .values('mois')
+            .annotate(
+                nb_commandes=Count('id'),
+                montant=Coalesce(Sum(
+                    ExpressionWrapper(
+                        F('lignes__prix_unitaire') * F('lignes__quantite') * 
+                        (Decimal('1.0') - F('lignes__remise') / Decimal('100.0')),
+                        output_field=DecimalField(max_digits=15, decimal_places=2)
+                    )
+                ), Decimal('0.00'))
+            )
+            .order_by('mois')
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        entreprise = self.request.user.entreprise
+
+        # Récupérer la devise principale
+        devise_principale = self.get_devise_principale(entreprise)
+        context['devise_principale'] = devise_principale
+
+        # Déterminer la plage de dates
+        date_debut, date_fin = self.get_date_range()
+        context['date_debut'] = date_debut
+        context['date_fin'] = date_fin
+        context['periode_active'] = self.request.GET.get('periode', 'mois_courant')
+
+        # Générer les rapports
+        context['rapport_commandes'] = self.get_rapport_commandes(entreprise, date_debut, date_fin)
+        context['rapport_fournisseurs'] = self.get_rapport_fournisseurs(entreprise, date_debut, date_fin)
+        context['rapport_bons_reception'] = self.get_rapport_bons_reception(entreprise, date_debut, date_fin)
+
+        # Paramètres de filtre pour le template
+        context['current_date_debut'] = self.request.GET.get('date_debut', date_debut.strftime('%Y-%m-%d'))
+        context['current_date_fin'] = self.request.GET.get('date_fin', date_fin.strftime('%Y-%m-%d'))
+
+        return context
+    
+class RecalculerTotauxBonView(EntrepriseAccessMixin, View):
+    def post(self, request, pk):
+        bon = get_object_or_404(BonReception, pk=pk, entreprise=request.user.entreprise)
+        bon.calculer_totaux()
+        messages.success(request, "Totaux recalculés avec succès.")
+        return redirect('achats:detail_bon', pk=bon.pk)

@@ -1,5 +1,5 @@
 {% extends "achats/base_achats.html" %}
-{% load static humanize %}
+{% load static french_format %}
 
 {% block page_title %}Détail de la Facture {{ facture.numero_facture }}{% endblock %}
 
@@ -17,14 +17,6 @@
                 <i class="fas fa-edit me-1"></i> Modifier
             </a>
             {% endif %}
-            
-            {% comment %} <button class="btn btn-outline-danger" disabled>
-                <i class="fas fa-file-pdf me-1"></i> PDF
-            </button>
-            <button class="btn btn-outline-success" disabled>
-                <i class="fas fa-file-excel me-1"></i> Excel
-            </button>
-            {% endcomment %}
         </div>
     </div>
 
@@ -67,24 +59,24 @@
                             <tbody>
                                 <tr>
                                     <td class="text-end border-top-0">Montant HT:</td>
-                                    <td class="text-end fw-bold border-top-0">{{ facture.montant_ht|floatformat:2|intcomma }} {{ devise_principale_symbole }}</td>
+                                    <td class="text-end fw-bold border-top-0">{{ facture.montant_ht|french_floatformat }} {{ devise_principale_symbole }}</td>
                                 </tr>
                                 <tr>
                                     <td class="text-end">TVA:</td>
-                                    <td class="text-end fw-bold">{{ facture.montant_tva|floatformat:2|intcomma }} {{ devise_principale_symbole }}</td>
+                                    <td class="text-end fw-bold">{{ facture.montant_tva|french_floatformat }} {{ devise_principale_symbole }}</td>
                                 </tr>
                                 <tr>
                                     <td class="text-end fw-bold">TOTAL TTC:</td>
-                                    <td class="text-end fw-bold text-primary">{{ facture.montant_ttc|floatformat:2|intcomma }} {{ devise_principale_symbole }}</td>
+                                    <td class="text-end fw-bold text-primary">{{ facture.montant_ttc|french_floatformat }} {{ devise_principale_symbole }}</td>
                                 </tr>
                                 <tr>
                                     <td class="text-end text-success fw-bold">Montant payé:</td>
-                                    <td class="text-end text-success fw-bold">{{ facture.montant_paye|floatformat:2|intcomma }} {{ devise_principale_symbole }}</td>
+                                    <td class="text-end text-success fw-bold">{{ facture.montant_paye|french_floatformat }} {{ devise_principale_symbole }}</td>
                                 </tr>
                                 <tr>
                                     <td class="text-end fw-bold">Reste à payer:</td>
                                     <td class="text-end fw-bold text-{% if facture.reste_a_payer > 0 %}danger{% else %}success{% endif %}">
-                                        {{ facture.reste_a_payer|floatformat:2|intcomma }} {{ devise_principale_symbole }}
+                                        {{ facture.reste_a_payer|french_floatformat }} {{ devise_principale_symbole }}
                                     </td>
                                 </tr>
                             </tbody>
@@ -129,7 +121,7 @@
                                     </td>
                                     <td>{{ paiement.date_paiement|date:"d/m/Y" }}</td>
                                     <td class="text-end fw-bold text-success">
-                                        {{ paiement.montant|floatformat:2|intcomma }} {{ devise_principale_symbole }}
+                                        {{ paiement.montant|french_floatformat }} {{ devise_principale_symbole }}
                                     </td>
                                     <td>
                                         <span class="badge bg-{% if paiement.statut == 'valide' %}success{% elif paiement.statut == 'brouillon' %}warning text-dark{% else %}danger{% endif %}">
@@ -179,16 +171,20 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <form method="post" action="{% url 'achats:creer_paiement_direct' facture.pk %}">
+                    <form method="post" action="{% url 'achats:creer_paiement_direct' facture.pk %}" id="paiement-form">
                         {% csrf_token %}
                         
                         <div class="mb-3">
                             <label class="form-label small">Montant *</label>
-                            <input type="number" name="montant" class="form-control bg-secondary text-white border-secondary" 
-                                   step="0.01" min="0.01" max="{{ facture.reste_a_payer }}"
-                                   placeholder="Montant à payer" required>
+                            <input type="text" name="montant" class="form-control bg-secondary text-white border-secondary" 
+                                   id="montant-input"
+                                   pattern="[0-9\s]+,[0-9]{2}" 
+                                   placeholder="Ex: 16 669,20" 
+                                   title="Format: 16 669,20" 
+                                   required
+                                   value="{{ facture.reste_a_payer|french_floatformat }}">
                             <div class="form-text text-muted">
-                                Maximum: {{ facture.reste_a_payer|floatformat:2 }} {{ devise_principale_symbole }}
+                                Maximum: {{ facture.reste_a_payer|french_floatformat }} {{ devise_principale_symbole }}
                             </div>
                         </div>
 
@@ -260,7 +256,7 @@
                             <td>{{ ecriture.journal.code }}</td>
                             <td>{{ ecriture.date_comptable|date:"d/m/Y" }}</td>
                             <td>{{ ecriture.libelle }}</td>
-                            <td class="text-end">{{ ecriture.montant_devise|floatformat:2|intcomma }} {{ devise_principale_symbole }}</td>
+                            <td class="text-end">{{ ecriture.montant_devise|french_floatformat }} {{ devise_principale_symbole }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -276,19 +272,19 @@
 {% block extra_css %}
 <style>
     body {
-        background-color: #212529; /* Fond général sombre */
-        color: #f8f9fa; /* Texte par défaut clair */
+        background-color: #212529;
+        color: #f8f9fa;
     }
     
     .card {
-        border: 1px solid #495057; /* Bordure sombre */
+        border: 1px solid #495057;
         border-radius: 0.5rem;
         box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.4);
         margin-bottom: 1.5rem;
     }
 
     .card.bg-dark {
-        background-color: #2c3138 !important; /* Arrière-plan de carte légèrement plus clair que le fond du body */
+        background-color: #2c3138 !important;
     }
 
     .card-header {
@@ -332,4 +328,65 @@
         color: #adb5bd !important;
     }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('paiement-form');
+    const montantInput = document.getElementById('montant-input');
+    
+    if (form && montantInput) {
+        // Formater l'affichage en français lors de la perte de focus
+        montantInput.addEventListener('blur', function(e) {
+            let value = e.target.value;
+            
+            // Nettoyer la valeur
+            value = value.replace(/\s/g, '').replace(',', '.');
+            
+            // Convertir en nombre
+            const numberValue = parseFloat(value);
+            if (!isNaN(numberValue)) {
+                // Formater en français avec espaces et virgule
+                const parts = numberValue.toFixed(2).split('.');
+                parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+                e.target.value = parts.join(',');
+            }
+        });
+        
+        // Convertir le format français en format point lors de la soumission
+        form.addEventListener('submit', function(e) {
+            let value = montantInput.value;
+            
+            // Convertir le format français en format point
+            value = value.replace(/\s/g, '').replace(',', '.');
+            
+            // Valider que c'est un nombre
+            if (isNaN(parseFloat(value))) {
+                e.preventDefault();
+                alert('Veuillez entrer un montant valide. Exemple: 16 669,20');
+                return;
+            }
+            
+            montantInput.value = value;
+        });
+        
+        // Validation en temps réel
+        montantInput.addEventListener('input', function(e) {
+            let value = e.target.value;
+            
+            // Autoriser seulement les chiffres, espaces et virgule
+            value = value.replace(/[^\d\s,]/g, '');
+            
+            // S'assurer qu'il n'y a qu'une virgule
+            const commaCount = (value.match(/,/g) || []).length;
+            if (commaCount > 1) {
+                value = value.replace(/,+$/, '');
+            }
+            
+            e.target.value = value;
+        });
+    }
+});
+</script>
 {% endblock %}

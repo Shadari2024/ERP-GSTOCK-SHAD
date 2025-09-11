@@ -1,0 +1,16 @@
+Bonjour {{ client.nom }},
+
+Merci pour votre confiance !
+
+Votre opportunité "{{ opportunite.nom }}" a été enregistrée dans notre système.
+Un de nos conseillers vous contactera prochainement pour avancer ensemble.
+
+Détails :
+- Montant estimé : {{ opportunite.montant_estime }} €
+- Date de clôture prévue : {{ opportunite.date_fermeture_prevue|date:"d/m/Y" }}
+
+Vous pouvez suivre l’avancement en vous connectant à votre espace client :
+{{ site_url }}/client/dashboard/
+
+À très bientôt,
+L’équipe {{ site_url|default:"de notre entreprise" }}

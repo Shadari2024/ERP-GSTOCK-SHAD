@@ -80,23 +80,18 @@ class OpportuniteForm(forms.ModelForm):
         widget=forms.TextInput(attrs={'readonly': 'readonly', 'class': 'form-control'}),
         label=_("Valeur attendue")
     )
-    nouveau_statut = forms.CharField(
-        required=False,
-        max_length=50,
-        label=_("Nouveau statut (optionnel)"),
-        help_text=_("Créez un nouveau statut si nécessaire")
-    )
     
     class Meta:
         model = Opportunite
         fields = [
             'client', 'nom', 'description', 'montant_estime', 
-            'probabilite', 'statut', 'nouveau_statut', 'priorite',  # Ajoutez nouveau_statut
-            'date_fermeture_prevue', 'assigne_a', 'valeur_attendue'
+            'probabilite', 'statut', 'priorite', 'date_fermeture_prevue',
+            'assigne_a', 'devis_lie'
         ]
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
             'date_fermeture_prevue': forms.DateInput(attrs={'type': 'date'}),
+            'devis_lie': forms.Select(attrs={'disabled': 'disabled'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -104,53 +99,15 @@ class OpportuniteForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         
         if self.entreprise:
-            # Filtrer les statuts par entreprise
-            self.fields['statut'].queryset = StatutOpportunite.objects.filter(entreprise=self.entreprise)
-        
-        if self.entreprise:
-            # Filtrer les clients par entreprise
             self.fields['client'].queryset = ClientCRM.objects.filter(entreprise=self.entreprise)
             self.fields['statut'].queryset = StatutOpportunite.objects.filter(entreprise=self.entreprise)
             self.fields['assigne_a'].queryset = User.objects.filter(entreprise=self.entreprise)
+            self.fields['devis_lie'].queryset = Devis.objects.filter(entreprise=self.entreprise)
             
-            # Récupérer la devise principale
-            try:
-                config_saas = ConfigurationSAAS.objects.get(entreprise=self.entreprise)
-                self.devise_symbole = config_saas.devise_principale.symbole if config_saas.devise_principale else "€"
-            except ConfigurationSAAS.DoesNotExist:
-                self.devise_symbole = "€"
-            
-            # Mettre à jour les labels avec la devise
-            self.fields['montant_estime'].label = f"Montant estimé ({self.devise_symbole})"
-            self.fields['valeur_attendue'].label = f"Valeur attendue ({self.devise_symbole})"
-        
-        # Calculer la valeur attendue initiale
-        if self.instance and self.instance.pk:
-            self.fields['valeur_attendue'].initial = self.instance.valeur_attendue
-        else:
-            self.fields['valeur_attendue'].initial = 0
-            
-        def save(self, commit=True):
-            instance = super().save(commit=False)
-            nouveau_statut_nom = self.cleaned_data.get('nouveau_statut')
-            
-            if nouveau_statut_nom and self.entreprise:
-                # Créer un nouveau statut
-                nouveau_statut = StatutOpportunite.objects.create(
-                    entreprise=self.entreprise,
-                    nom=nouveau_statut_nom,
-                    ordre=99,  # Par défaut à la fin
-                    couleur="#007bff",  # Couleur par défaut
-                    est_gagnant=False,
-                    est_perdant=False
-                )
-                instance.statut = nouveau_statut
-            
-            if commit:
-                instance.save()
-                self.save_m2m()
-            
-            return instance
+            # Rendre le champ devis_lie en lecture seule si déjà lié
+            if self.instance and self.instance.devis_lie:
+                self.fields['devis_lie'].disabled = True
+                self.fields['devis_lie'].help_text = "Ce devis a été créé à partir de cette opportunité"
 
 
 class TypeActiviteForm(forms.ModelForm):

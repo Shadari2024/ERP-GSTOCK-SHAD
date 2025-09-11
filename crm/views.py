@@ -1,4 +1,4 @@
-from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView, TemplateView
+from django.views.generic import ListView, CreateView, UpdateView, DetailView, DeleteView, TemplateView, View
 from django.urls import reverse_lazy,reverse
 from django.contrib import messages
 from django.db.models import Sum, Count, Q
@@ -11,6 +11,27 @@ from .models import (
     SourceLead, StatutOpportunite, TypeActivite,
     PipelineVente, ObjectifCommercial
 )
+from django.shortcuts import render
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib import messages
+from django.core.management import call_command
+from django.http import HttpResponseRedirect
+from django.urls import reverse
+import logging
+
+from django.views.generic import DetailView
+from django.utils.translation import gettext_lazy as _
+from django.db.models import Q
+from ventes.models import Devis, Commande, Facture, BonLivraison
+from STOCK.models import Client  # Import du modèle réel
+from django.shortcuts import get_object_or_404
+from django.views.generic import DetailView
+from django.db.models import Sum
+
+from STOCK.models import Client
+from ventes.models import Facture, Commande, Devis, BonLivraison
+from crm.mixins import EntrepriseAccessMixin
+
 from .forms import (
     ClientCRMForm, OpportuniteForm, ActiviteForm, 
     NoteClientForm, ObjectifCommercialForm,StatutOpportuniteForm,TypeActiviteForm
@@ -239,14 +260,8 @@ class ClientUpdateView(EntrepriseAccessMixin, UpdateView):
         messages.success(self.request, "Client modifié avec succès.")
         return super().form_valid(form)
 
-from django.views.generic import DetailView
-from django.utils.translation import gettext_lazy as _
-from django.db.models import Q
-from ventes.models import Devis, Commande, Facture, BonLivraison
-from STOCK.models import Client  # Import du modèle réel
-
 class ClientDetailView(EntrepriseAccessMixin, DetailView):
-    model = Client  # Utilisez le modèle réel Client au lieu du proxy
+    model = Client
     template_name = "crm/client/detail.html"
     permission_required = "STOCK.view_client"
     context_object_name = "client"
@@ -256,31 +271,34 @@ class ClientDetailView(EntrepriseAccessMixin, DetailView):
         client = self.get_object()
         entreprise = self.request.user.entreprise
         
+        # Récupérer la devise principale depuis ConfigurationSAAS
+        try:
+            config_saas = ConfigurationSAAS.objects.get(entreprise=entreprise)
+            context['devise_symbole'] = config_saas.devise_principale.symbole if config_saas.devise_principale else '$'
+            context['devise_code'] = config_saas.devise_principale.code if config_saas.devise_principale else 'USD'
+        except ConfigurationSAAS.DoesNotExist:
+            context['devise_symbole'] = '$'
+            context['devise_code'] = 'USD'
+
         try:
             # Récupérer les données des autres modules
-            # Utilisez le client réel (instance de Client) pour les filtres
-            
-            # Factures récentes
             context['factures'] = Facture.objects.filter(
-                client=client,  # Ici client est une instance de Client
+                client=client,
                 entreprise=entreprise
             ).select_related('devis', 'commande').order_by('-date_facture')[:10]
             
-            # Commandes récentes
             context['commandes'] = Commande.objects.filter(
-                client=client,  # Ici client est une instance de Client
+                client=client,
                 entreprise=entreprise
             ).select_related('devis').order_by('-date')[:10]
             
-            # Devis récents
             context['devis'] = Devis.objects.filter(
-                client=client,  # Ici client est une instance de Client
+                client=client,
                 entreprise=entreprise
             ).order_by('-date')[:10]
             
-            # Bons de livraison récents
             context['livraisons'] = BonLivraison.objects.filter(
-                commande__client=client,  # Ici client est une instance de Client
+                commande__client=client,
                 entreprise=entreprise
             ).select_related('commande').order_by('-date')[:10]
             
@@ -306,13 +324,27 @@ class ClientDetailView(EntrepriseAccessMixin, DetailView):
             ).count()
             
             # Chiffre d'affaires total
-            from django.db.models import Sum
             total_ca = Facture.objects.filter(
                 client=client,
                 entreprise=entreprise,
                 statut='paye'
             ).aggregate(total=Sum('total_ttc'))['total'] or 0
             context['chiffre_affaires'] = total_ca
+            
+            # Ajouter les opportunités du client
+            context['opportunites'] = Opportunite.objects.filter(
+                client=client,
+                entreprise=entreprise
+            ).select_related('statut', 'assigne_a').order_by('-date_creation')[:10]
+            
+            context['total_opportunites'] = context['opportunites'].count()
+            
+            # Valeur totale des opportunités
+            valeur_opportunites = Opportunite.objects.filter(
+                client=client,
+                entreprise=entreprise
+            ).aggregate(total=Sum('montant_estime'))['total'] or 0
+            context['valeur_opportunites'] = valeur_opportunites
             
         except Exception as e:
             # Gestion d'erreur
@@ -321,11 +353,14 @@ class ClientDetailView(EntrepriseAccessMixin, DetailView):
             context['commandes'] = []
             context['devis'] = []
             context['livraisons'] = []
+            context['opportunites'] = []
             context['total_factures'] = 0
             context['total_commandes'] = 0
             context['total_devis'] = 0
             context['total_livraisons'] = 0
+            context['total_opportunites'] = 0
             context['chiffre_affaires'] = 0
+            context['valeur_opportunites'] = 0
         
         return context
 class StatutOpportuniteListView(EntrepriseAccessMixin, ListView):
@@ -379,14 +414,64 @@ class StatutOpportuniteDeleteView(EntrepriseAccessMixin, DeleteView):
     
     def delete(self, request, *args, **kwargs):
         messages.success(request, _("Statut d'opportunité supprimé avec succès."))
-        return super().delete(request, *args, **kwargs)  
-    from django.views.generic import ListView
-from django.db.models import Sum, Q
-from django.contrib.auth import get_user_model
-from django.utils.translation import gettext_lazy as _
-from parametres.models import ConfigurationSAAS
-from .models import Opportunite, StatutOpportunite
-from .mixins import EntrepriseAccessMixin
+        return super().delete(request, *args, **kwargs) 
+    
+    
+     
+    
+class OpportuniteKanbanView(EntrepriseAccessMixin, TemplateView):
+    template_name = "crm/opportunite/kanban.html"
+    permission_required = "crm.view_opportunite"
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        entreprise = self.request.user.entreprise
+        
+        # Récupérer la devise principale
+        try:
+            config_saas = ConfigurationSAAS.objects.get(entreprise=entreprise)
+            context['devise_symbole'] = config_saas.devise_principale.symbole if config_saas.devise_principale else "€"
+        except ConfigurationSAAS.DoesNotExist:
+            context['devise_symbole'] = "€"
+        
+        # Opportunités par statut pour le Kanban
+        opportunites_par_statut = (
+            Opportunite.objects.filter(entreprise=entreprise)
+            .values('statut__nom', 'statut__couleur')
+            .annotate(
+                count=Count('id'),
+                total=Sum('montant_estime')
+            )
+            .order_by('statut__ordre')
+        )
+        context['opportunites_par_statut'] = opportunites_par_statut
+        
+        # Toutes les opportunités pour peupler les colonnes
+        opportunites = Opportunite.objects.filter(entreprise=entreprise).select_related(
+            'client', 'statut', 'assigne_a'
+        )
+        context['opportunites'] = opportunites
+        
+        # Statistiques
+        context['total_opportunites'] = opportunites.count()
+        context['valeur_totale'] = opportunites.aggregate(
+            total=Sum('montant_estime')
+        )['total'] or 0
+        
+        # Calcul du taux de conversion
+        # Correction de l'erreur
+        # On filtre les opportunités gagnées ou perdues directement
+        gagnees = opportunites.filter(statut__est_gagnant=True).count()
+        perdues = opportunites.filter(statut__est_perdant=True).count()
+        total_terminees = gagnees + perdues
+
+        context['taux_conversion'] = (gagnees / total_terminees * 100) if total_terminees > 0 else 0
+        context['opportunites_gagnees'] = gagnees
+        
+        # Filtres
+        context['utilisateurs'] = User.objects.filter(entreprise=entreprise)
+        
+        return context
 
 User = get_user_model()
 
@@ -480,6 +565,34 @@ class OpportuniteCreateView(EntrepriseAccessMixin, CreateView):
         form.instance.cree_par = self.request.user
         messages.success(self.request, _("Opportunité créée avec succès."))
         return super().form_valid(form)
+
+
+
+class ConvertirOpportuniteEnDevisView(EntrepriseAccessMixin, View):
+    """Vue pour convertir une opportunité en devis"""
+    permission_required = "crm.change_opportunite"
+    
+    def post(self, request, pk):
+        opportunite = get_object_or_404(Opportunite, pk=pk, entreprise=request.user.entreprise)
+        
+        try:
+            devis = opportunite.convertir_en_devis(request)
+            messages.success(
+                request, 
+                _(f"Opportunité convertie en devis avec succès. Devis #{devis.numero} créé.")
+            )
+            return redirect('ventes:devis_detail', pk=devis.pk)
+            
+        except Exception as e:
+            messages.error(
+                request, 
+                _(f"Erreur lors de la conversion: {str(e)}")
+            )
+            return redirect('crm:opportunite_detail', pk=opportunite.pk)
+
+
+
+
 
 class OpportuniteUpdateView(EntrepriseAccessMixin, UpdateView):
     model = Opportunite
@@ -1030,3 +1143,62 @@ class GetActivitesMensuellesView(EntrepriseAccessMixin, TemplateView):
             
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
+        
+        
+        
+# crm/views.py
+
+from django.contrib.auth.decorators import login_required
+
+logger = logging.getLogger(__name__)
+
+@login_required
+def envoyer_message_clients(request):
+    if request.method == 'POST':
+        message = request.POST.get('message', '').strip()
+        sujet = request.POST.get('sujet', 'Message important de notre équipe')
+
+        if not message:
+            messages.error(request, "❌ Veuillez écrire un message avant d'envoyer.")
+            return render(request, 'crm/envoyer_message_clients.html', {
+                'sujet': sujet,
+                'message': message,
+            })
+
+        # Récupérer l'entreprise de l'utilisateur connecté
+        if not hasattr(request.user, 'entreprise'):
+            messages.error(request, "❌ Votre utilisateur n'est lié à aucune entreprise.")
+            return render(request, 'crm/envoyer_message_clients.html')
+
+        entreprise = request.user.entreprise
+
+        # Récupérer tous les clients actifs de cette entreprise avec email
+        clients = Client.objects.filter(
+            entreprise=entreprise,
+            statut='ACT',
+            email__isnull=False
+        ).exclude(email='')
+
+        count = 0
+        for client in clients:
+            try:
+                send_mail(
+                    sujet,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [client.email],
+                    fail_silently=False,
+                )
+                count += 1
+            except Exception as e:
+                logger.error(f"Erreur envoi à {client.email}: {e}")
+                continue  # On continue même si un email échoue
+
+        messages.success(request, f"✅ Message envoyé à {count} clients sur {clients.count()}.")
+        logger.info(f"{request.user} a envoyé un message à {count} clients de {entreprise.nom}")
+
+        return HttpResponseRedirect(reverse('crm:envoyer_message_clients'))
+
+    return render(request, 'crm/envoyer_message_clients.html', {
+        'title': 'Envoyer un message à tous les clients',
+    })

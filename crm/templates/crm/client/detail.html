@@ -135,7 +135,7 @@
                                     <tr>
                                         <td>{{ facture.numero }}</td>
                                         <td>{{ facture.date_facture|date:"d/m/Y" }}</td>
-                                        <td>{{ facture.total_ttc }} €</td>
+                                        <td>{{ facture.total_ttc }} {{ devise_symbole }}</td>
                                         <td>
                                             <span class="badge bg-success">{{ facture.get_statut_display }}</span>
                                         </td>
@@ -171,7 +171,7 @@
                                     <tr>
                                         <td>{{ commande.numero }}</td>
                                         <td>{{ commande.date|date:"d/m/Y" }}</td>
-                                        <td>{{ commande.total_ttc }} €</td>
+                                        <td>{{ commande.total_ttc }} {{ devise_symbole }}</td>
                                         <td>
                                             <span class="badge bg-info">{{ commande.get_statut_display }}</span>
                                         </td>
@@ -207,7 +207,7 @@
                                     <tr>
                                         <td>{{ devis.numero }}</td>
                                         <td>{{ devis.date|date:"d/m/Y" }}</td>
-                                        <td>{{ devis.total_ttc }} €</td>
+                                        <td>{{ devis.total_ttc }} {{ devise_symbole }}</td>
                                         <td>
                                             <span class="badge bg-warning">{{ devis.get_statut_display }}</span>
                                         </td>

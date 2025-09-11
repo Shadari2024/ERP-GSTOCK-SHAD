@@ -17,11 +17,13 @@ path('statuts-opportunite/', views.StatutOpportuniteListView.as_view(), name='st
 path('statuts-opportunite/nouveau/', views.StatutOpportuniteCreateView.as_view(), name='statut_opportunite_create'),
 path('statuts-opportunite/<int:pk>/modifier/', views.StatutOpportuniteUpdateView.as_view(), name='statut_opportunite_update'),
 path('statuts-opportunite/<int:pk>/supprimer/', views.StatutOpportuniteDeleteView.as_view(), name='statut_opportunite_delete'),
+path('opportunites/kanban/', views.OpportuniteKanbanView.as_view(), name='opportunite_kanban'),
     # Opportunités
     path('opportunites/', views.OpportuniteListView.as_view(), name='opportunite_list'),
     path('opportunites/nouvelle/', views.OpportuniteCreateView.as_view(), name='opportunite_create'),
     path('opportunites/<int:pk>/', views.OpportuniteDetailView.as_view(), name='opportunite_detail'),
     path('opportunites/<int:pk>/modifier/', views.OpportuniteUpdateView.as_view(), name='opportunite_update'),
+     path('opportunites/<int:pk>/convertir-devis/', views.ConvertirOpportuniteEnDevisView.as_view(), name='opportunite_convertir_devis'),
     
     
     
@@ -48,4 +50,5 @@ path('types-activite/<int:pk>/supprimer/', views.TypeActiviteDeleteView.as_view(
     # API endpoints
     path('api/opportunites-par-statut/', views.GetOpportunitesParStatutView.as_view(), name='api_opportunites_par_statut'),
     path('api/activites-mensuelles/', views.GetActivitesMensuellesView.as_view(), name='api_activites_mensuelles'),
+     path('envoyer-message-clients/', views.envoyer_message_clients, name='envoyer_message_clients'),
 ]

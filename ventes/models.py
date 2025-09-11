@@ -45,6 +45,7 @@ class Devis(models.Model):
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
 
     def generate_devis_number(self):
         """Génère un numéro de devis unique sous la forme DEV-AAAA-MM-JJ-XXXXX"""

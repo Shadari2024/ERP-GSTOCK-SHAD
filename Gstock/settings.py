@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 import os
+from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -315,7 +316,12 @@ PROPHET_CONFIG = {
 
 
 
-
+CELERY_BEAT_SCHEDULE = {
+    'send-opportunity-reminders': {
+        'task': 'crm.tasks.send_opportunity_reminders',
+        'schedule': crontab(hour=8, minute=0),  # Tous les jours à 8h
+    },
+}
 
 # ==============================================================================
 # PARAMÈTRES PERSONNALISÉS DE L'APPLICATION

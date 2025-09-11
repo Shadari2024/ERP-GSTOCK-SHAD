@@ -1,0 +1,320 @@
+<!-- achats/templates/achats/rapports/rapports.html -->
+{% extends "base.html" %}
+{% load static humanize %}
+
+{% block title %}Rapports Achats - {{ entreprise.nom }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- En-tête avec filtres -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Rapports d'Achats</h5>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-success btn-sm" onclick="window.print()">
+                            <i class="fas fa-print me-1"></i>Imprimer
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="exportToExcel()">
+                            <i class="fas fa-file-excel me-1"></i>Excel
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Période prédéfinie</label>
+                            <select name="periode" class="form-select" onchange="this.form.submit()">
+                                <option value="30_jours" {% if periode_active == '30_jours' %}selected{% endif %}>30 derniers jours</option>
+                                <option value="mois_courant" {% if periode_active == 'mois_courant' %}selected{% endif %}>Mois courant</option>
+                                <option value="mois_precedent" {% if periode_active == 'mois_precedent' %}selected{% endif %}>Mois précédent</option>
+                                <option value="trimestre_courant" {% if periode_active == 'trimestre_courant' %}selected{% endif %}>Trimestre courant</option>
+                                <option value="annee_courante" {% if periode_active == 'annee_courante' %}selected{% endif %}>Année courante</option>
+                                <option value="personnalise" {% if periode_active == 'personnalise' %}selected{% endif %}>Personnalisée</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label class="form-label">Date début</label>
+                            <input type="date" name="date_debut" class="form-control" 
+                                   value="{{ current_date_debut }}" 
+                                   {% if periode_active != 'personnalise' %}disabled{% endif %}>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label class="form-label">Date fin</label>
+                            <input type="date" name="date_fin" class="form-control" 
+                                   value="{{ current_date_fin }}" 
+                                   {% if periode_active != 'personnalise' %}disabled{% endif %}>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-filter me-1"></i>Filtrer
+                                </button>
+                                <a href="{% url 'achats:rapports' %}" class="btn btn-outline-secondary">
+                                    Réinitialiser
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-3 text-muted">
+                        <small>
+                            Période du {{ date_debut|date:"d/m/Y" }} au {{ date_fin|date:"d/m/Y" }}
+                            - {{ rapport_commandes.stats.total_commandes }} commandes analysées
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Résumé des indicateurs -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary h-100">
+                <div class="card-body">
+                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                        Total Commandes
+                    </div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">
+                        {{ rapport_commandes.stats.total_commandes }}
+                    </div>
+                    <div class="mt-2 text-success">
+                        <strong>{{ rapport_commandes.stats.montant_total|floatformat:2|intcomma }} {{ devise_principale.symbole|default:"€" }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success h-100">
+                <div class="card-body">
+                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                        Commandes Livrées
+                    </div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">
+                        {{ rapport_commandes.stats.commandes_livrees }}
+                    </div>
+                    <div class="mt-2">
+                        <small>{{ rapport_commandes.stats.commandes_envoyees }} en cours</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info h-100">
+                <div class="card-body">
+                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                        Fournisseurs Actifs
+                    </div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">
+                        {{ rapport_fournisseurs.total_fournisseurs }}
+                    </div>
+                    <div class="mt-2">
+                        <small>Top 10 analysés</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning h-100">
+                <div class="card-body">
+                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                        Bons Réception
+                    </div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">
+                        {{ rapport_bons_reception.stats.total_bons }}
+                    </div>
+                    <div class="mt-2 text-danger">
+                        <small>{{ rapport_bons_reception.stats.en_attente }} en attente</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rapport détaillé par statut -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-tasks me-2"></i>Répartition par Statut
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Statut</th>
+                                    <th>Nombre de Commandes</th>
+                                    <th>Montant Total</th>
+                                    <th>Pourcentage</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in rapport_commandes.par_statut %}
+                                <tr>
+                                    <td>
+                                        <span class="badge bg-{% if item.statut == 'livree' %}success{% elif item.statut == 'annulee' %}danger{% else %}warning{% endif %}">
+                                            {{ item.statut|title }}
+                                        </span>
+                                    </td>
+                                    <td>{{ item.count }}</td>
+                                    <td>{{ item.montant|floatformat:2|intcomma }} {{ devise_principale.symbole|default:"€" }}</td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar" role="progressbar" 
+                                                 style="width: {% widthratio item.count rapport_commandes.stats.total_commandes 100 %}%;"
+                                                 aria-valuenow="{% widthratio item.count rapport_commandes.stats.total_commandes 100 %}" 
+                                                 aria-valuemin="0" aria-valuemax="100">
+                                                {% widthratio item.count rapport_commandes.stats.total_commandes 100 %}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top fournisseurs -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-users me-2"></i>Top 10 Fournisseurs
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fournisseur</th>
+                                    <th>Nombre de Commandes</th>
+                                    <th>Montant Total</th>
+                                    <th>Part du Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for fournisseur in rapport_fournisseurs.top_10 %}
+                                <tr>
+                                    <td>{{ fournisseur.nom }}</td>
+                                    <td>{{ fournisseur.nb_commandes }}</td>
+                                    <td>{{ fournisseur.montant_total|floatformat:2|intcomma }} {{ devise_principale.symbole|default:"€" }}</td>
+                                    <td>
+                                        {% widthratio fournisseur.montant_total rapport_commandes.stats.montant_total 100 %}%
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Aucun fournisseur trouvé pour cette période</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Évolution mensuelle -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-chart-line me-2"></i>Évolution Mensuelle
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Mois</th>
+                                    <th>Nombre de Commandes</th>
+                                    <th>Montant Total</th>
+                                    <th>Évolution</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in rapport_commandes.evolution_mensuelle %}
+                                <tr>
+                                    <td>{{ item.mois|date:"F Y" }}</td>
+                                    <td>{{ item.nb_commandes }}</td>
+                                    <td>{{ item.montant|floatformat:2|intcomma }} {{ devise_principale.symbole|default:"€" }}</td>
+                                    <td>
+                                        <span class="text-success">
+                                            <i class="fas fa-arrow-up"></i> +5%
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Aucune donnée pour cette période</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function exportToExcel() {
+    // Implémentation basique de l'export Excel
+    const tables = document.querySelectorAll('table');
+    let csvContent = "";
+    
+    tables.forEach((table, index) => {
+        const rows = table.querySelectorAll('tr');
+        rows.forEach(row => {
+            const cols = row.querySelectorAll('td, th');
+            const rowContent = Array.from(cols).map(col => `"${col.textContent.trim()}"`).join(';');
+            csvContent += rowContent + '\r\n';
+        });
+        csvContent += '\r\n';
+    });
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", "rapport_achats_{{ date_debut|date:'Y-m-d' }}_au_{{ date_fin|date:'Y-m-d' }}.csv");
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Activer les champs de date si période personnalisée
+document.querySelector('select[name="periode"]').addEventListener('change', function() {
+    const isPersonnalise = this.value === 'personnalise';
+    document.querySelector('input[name="date_debut"]').disabled = !isPersonnalise;
+    document.querySelector('input[name="date_fin"]').disabled = !isPersonnalise;
+});
+</script>
+{% endblock %}

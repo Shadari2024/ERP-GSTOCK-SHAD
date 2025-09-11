@@ -4908,58 +4908,125 @@ class NouvelleVenteSimpleView(LoginRequiredMixin, PermissionRequiredMixin, View)
         
         # Rediriger vers la page de vente avec la session
         return redirect('ventes:nouvelle_vente_pos', pk=point_de_vente.pk, session_pk=session.pk)
-
 # ventes/views.py
+import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 import json
-
+logger = logging.getLogger(__name__)
+# ventes/views.py (version étendue)
 @require_GET
 @csrf_exempt
+@login_required
 def api_search_by_barcode(request):
-    """API pour rechercher un produit par code-barres"""
-    barcode = request.GET.get('barcode', '').strip()
+    """API pour rechercher un produit par code-barres ou par nom"""
+    search_term = request.GET.get('barcode', '').strip()
+    logger.info(f"Recherche: {search_term}")
     
-    if not barcode:
+    if not search_term:
+        logger.warning("Terme de recherche vide reçu")
         return JsonResponse({
             'success': False,
-            'message': 'Code-barres requis'
+            'message': 'Terme de recherche requis'
         }, status=400)
     
     try:
         from STOCK.models import Produit
         
-        # Recherche par code-barres exact
-        produit = Produit.objects.filter(
-            Q(code_barre=barcode) | Q(code_barre_secondaire=barcode),
-            entreprise=request.entreprise,
-            actif=True
-        ).first()
-        
-        if produit:
+        # Vérification de l'entreprise
+        if not hasattr(request.user, 'entreprise') or not request.user.entreprise:
+            logger.error(f"Utilisateur {request.user} n'a pas d'entreprise associée")
             return JsonResponse({
-                'success': True,
-                'product': {
-                    'id': produit.id,
-                    'nom': produit.nom,
-                    'code_barre': produit.code_barre,
-                    'prix_vente': float(produit.prix_vente) if produit.prix_vente else 0.0,
-                    'taux_tva': float(produit.taux_tva) if produit.taux_tva else 20.0,
-                    'stock': produit.stock,
-                    'photo_url': produit.photo.url if produit.photo else '',
-                    'unite_mesure': produit.unite_mesure
-                }
-            })
+                'success': False,
+                'message': 'Aucune entreprise associée à cet utilisateur'
+            }, status=400)
+        
+        logger.info(f"Recherche dans l'entreprise: {request.user.entreprise}")
+        
+        # Recherche d'abord par code-barre
+        produits = Produit.objects.filter(
+            Q(code_barre_numero=search_term),
+            entreprise=request.user.entreprise,
+            actif=True
+        )
+        
+        # Si aucun résultat par code-barre, recherche par nom
+        if not produits.exists():
+            produits = Produit.objects.filter(
+                Q(nom__icontains=search_term),
+                entreprise=request.user.entreprise,
+                actif=True
+            )[:5]  # Limiter à 5 résultats pour la recherche par nom
+        
+        logger.info(f"{produits.count()} produit(s) trouvé(s) pour: {search_term}")
+        
+        if produits.exists():
+            # Si recherche par nom, retourner tous les résultats
+            if produits.count() > 1:
+                product_list = []
+                for produit in produits:
+                    photo_url = ''
+                    if produit.photo and hasattr(produit.photo, 'url'):
+                        photo_url = request.build_absolute_uri(produit.photo.url)
+                    
+                    product_list.append({
+                        'id': produit.id,
+                        'nom': produit.nom,
+                        'code_barre': produit.code_barre_numero or '',
+                        'prix_vente': float(produit.prix_vente) if produit.prix_vente else 0.0,
+                        'taux_tva': float(produit.taux_tva) if produit.taux_tva else 20.0,
+                        'stock': produit.stock,
+                        'photo_url': photo_url,
+                        'unite_mesure': produit.libelle or ''
+                    })
+                
+                return JsonResponse({
+                    'success': True,
+                    'multiple': True,
+                    'products': product_list,
+                    'message': f'{len(product_list)} produits trouvés'
+                })
+            else:
+                # Un seul produit trouvé
+                produit = produits.first()
+                photo_url = ''
+                if produit.photo and hasattr(produit.photo, 'url'):
+                    photo_url = request.build_absolute_uri(produit.photo.url)
+                
+                logger.info(f"Produit trouvé: {produit.nom} (ID: {produit.id})")
+                
+                return JsonResponse({
+                    'success': True,
+                    'multiple': False,
+                    'product': {
+                        'id': produit.id,
+                        'nom': produit.nom,
+                        'code_barre': produit.code_barre_numero or '',
+                        'prix_vente': float(produit.prix_vente) if produit.prix_vente else 0.0,
+                        'taux_tva': float(produit.taux_tva) if produit.taux_tva else 20.0,
+                        'stock': produit.stock,
+                        'photo_url': photo_url,
+                        'unite_mesure': produit.libelle or ''
+                    }
+                })
         else:
+            logger.warning(f"Aucun produit trouvé pour: {search_term}")
             return JsonResponse({
                 'success': False,
                 'message': 'Produit non trouvé'
             }, status=404)
             
+    except ImportError as e:
+        logger.error(f"Erreur d'importation: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Erreur: Module STOCK non trouvé'
+        }, status=500)
     except Exception as e:
+        logger.error(f"Erreur inattendue: {str(e)}")
         return JsonResponse({
             'success': False,
             'message': f'Erreur serveur: {str(e)}'

@@ -1,0 +1,15 @@
+Bonjour {{ opportunite.assigne_a.get_full_name }},
+
+L'opportunité "{{ opportunite.nom }}" approche de sa date de fermeture prévue.
+
+Détails :
+- Client : {{ opportunite.client.nom }}
+- Montant : {{ opportunite.montant_estime }} €
+- Date de fermeture : {{ opportunite.date_fermeture_prevue }}
+- Jours restants : {{ jours_restants }}
+
+Vous pouvez consulter l'opportunité ici : 
+{{ settings.SITE_URL }}/crm/opportunites/{{ opportunite.pk }}/
+
+Cordialement,
+L'équipe {{ entreprise.nom }}

@@ -5,6 +5,11 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.conf import settings
 from django.utils import timezone
+import logging
+
+from .models import Opportunite, Activite, Notification, RegleAutomatisation, TemplateEmail
+
+logger = logging.getLogger(__name__)
 
 from .models import Opportunite, Activite, ObjectifCommercial, ClientCRM
 
@@ -100,3 +105,68 @@ def client_post_save(sender, instance, created, **kwargs):
         print(f"Nouveau client CRM créé: {instance.nom}")
 
 # Vous pouvez ajouter d'autres signaux selon vos besoins
+
+@receiver(post_save, sender=Opportunite)
+def update_opportunite_statut_apres_devis(sender, instance, created, **kwargs):
+    """Met à jour le statut de l'opportunité lorsqu'un devis est lié"""
+    if instance.devis_lie and not created:
+        # Mettre à jour la probabilité lorsque le devis est créé
+        if instance.probabilite < 50:
+            instance.probabilite = 50
+            instance.save()
+            
+
+
+
+@receiver(post_save, sender=Opportunite)
+def gerer_automatisation_opportunite(sender, instance, created, **kwargs):
+    """Gère l'automatisation pour les opportunités"""
+    from .services import AutomationService
+    
+    try:
+        service = AutomationService(instance.entreprise)
+        
+        if created:
+            # Nouvelle opportunité créée
+            service.executer_regles('creation_opportunite', opportunite=instance)
+        else:
+            # Vérifier les changements
+            if instance.tracker.has_changed('assigne_a'):
+                # Assignation changée
+                service.executer_regles('assignation', opportunite=instance)
+            
+            if instance.tracker.has_changed('statut'):
+                # Statut changé
+                service.executer_regles('changement_statut', opportunite=instance)
+            
+            # Vérifier les dates approchantes
+            if instance.date_fermeture_prevue:
+                jours_restants = (instance.date_fermeture_prevue - timezone.now().date()).days
+                if 0 <= jours_restants <= 7:  # 7 jours avant la date
+                    service.executer_regles('date_approchant', opportunite=instance, jours_restants=jours_restants)
+    
+    except Exception as e:
+        logger.error(f"Erreur dans l'automatisation des opportunités: {str(e)}")
+
+@receiver(post_save, sender=Activite)
+def gerer_automatisation_activite(sender, instance, created, **kwargs):
+    """Gère l'automatisation pour les activités"""
+    from .services import AutomationService
+    
+    try:
+        if instance.statut == 'termine':
+            service = AutomationService(instance.entreprise)
+            service.executer_regles('activite_terminee', activite=instance)
+    
+    except Exception as e:
+        logger.error(f"Erreur dans l'automatisation des activités: {str(e)}")
+
+def creer_notification(utilisateur, type_notification, titre, message, lien=None):
+    """Crée une notification pour un utilisateur"""
+    Notification.objects.create(
+        utilisateur=utilisateur,
+        type_notification=type_notification,
+        titre=titre,
+        message=message,
+        lien=lien
+    )

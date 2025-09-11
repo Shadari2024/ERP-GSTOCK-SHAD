@@ -1,0 +1,15 @@
+Bonjour {{ commercial.get_full_name|default:commercial.username }},
+
+Une nouvelle opportunité vous a été assignée :
+
+Nom : {{ opportunite.nom }}
+Client : {{ opportunite.client.nom }}
+Montant estimé : {{ opportunite.montant_estime }} €
+Date de fermeture prévue : {{ opportunite.date_fermeture_prevue|date:"d/m/Y" }}
+
+Accédez ici : {{ site_url }}{{ opportunite.get_absolute_url }}
+
+Merci de suivre ce dossier.
+
+Cordialement,
+L'équipe CRM

@@ -1,0 +1,24 @@
+<!-- templates/crm/envoyer_bonjour.html -->
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="container" style="padding: 20px;">
+    <h2>📧 Envoyer un email de "Bonjour" à tous les clients</h2>
+    <p>Cette action enverra un email personnalisé à tous les clients actifs de chaque entreprise.</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">
+            ✉️ Envoyer maintenant
+        </button>
+    </form>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} mt-3">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
+{% endblock %}

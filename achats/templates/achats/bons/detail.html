@@ -1,11 +1,10 @@
 {% extends 'base.html' %}
 {% load static humanize %}
-
+{% load static calcul_filters %}
 {% block title %}Bon de Réception {{ object.numero_bon }}{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
-    <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{% url 'achats:liste_commandes' %}" class="text-decoration-none">Commandes</a></li>
@@ -14,7 +13,6 @@
         </ol>
     </nav>
 
-    <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h1 class="h2 mb-1">
@@ -31,8 +29,16 @@
             </a>
         </div>
     </div>
-
-    <!-- Stats Cards -->
+<div class="d-flex flex-wrap gap-2">
+    <form method="post" action="{% url 'achats:recalculer_totaux_bon' pk=object.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-warning" data-bs-toggle="tooltip" title="Recalculer les totaux">
+            <i class="fas fa-calculator me-1"></i> Recalculer
+        </button>
+    </form>
+    
+    <!-- ... autres boutons ... -->
+</div>
     <div class="row mb-4">
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-start border-3 border-primary bg-dark-dm bg-light-lm h-100">
@@ -88,7 +94,7 @@
                     <div class="d-flex align-items-center">
                         <div class="flex-grow-1">
                             <h6 class="text-muted mb-1">Total HT</h6>
-                            <h4 class="mb-0">{{ total_bon|floatformat:2|intcomma }} {{ symbole_devise }}</h4>
+                            <h4 class="mb-0">{{ total_bon_ht|floatformat:2|intcomma }} {{ symbole_devise }}</h4>
                         </div>
                         <div class="flex-shrink-0">
                             <i class="fas fa-receipt text-warning fa-2x"></i>
@@ -97,12 +103,42 @@
                 </div>
             </div>
         </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start border-3 border-danger bg-dark-dm bg-light-lm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="text-muted mb-1">Total TVA</h6>
+                            <h4 class="mb-0">{{ total_bon_tva|floatformat:2|intcomma }} {{ symbole_devise }}</h4>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-percent text-danger fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-start border-3 border-success bg-dark-dm bg-light-lm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <h6 class="text-muted mb-1">Total TTC</h6>
+                            <h4 class="mb-0">{{ total_bon_ttc|floatformat:2|intcomma }} {{ symbole_devise }}</h4>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-dollar-sign text-success fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="row">
-        <!-- Left Column - Information -->
         <div class="col-xl-4 col-lg-5 mb-4">
-            <!-- Bon Details Card -->
             <div class="card bg-dark-dm bg-light-lm mb-4">
                 <div class="card-header bg-primary text-white">
                     <h5 class="card-title mb-0">
@@ -129,7 +165,6 @@
                 </div>
             </div>
 
-            <!-- Commande Info Card -->
             <div class="card bg-dark-dm bg-light-lm">
                 <div class="card-header bg-info text-white">
                     <h5 class="card-title mb-0">
@@ -164,75 +199,108 @@
             </div>
         </div>
 
-        <!-- Right Column - Articles -->
         <div class="col-xl-8 col-lg-7">
             <div class="card bg-dark-dm bg-light-lm">
-                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <div class="card-header bg-success text-white-dm d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">
                         <i class="fas fa-list-ul me-2"></i>Articles Reçus
                     </h5>
                     <span class="badge bg-light text-success fs-6">{{ lignes.count }} article(s)</span>
                 </div>
                 <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="table-dark-dm table-light-lm">
-                                <tr>
-                                    <th width="5%">#</th>
-                                    <th width="25%">Produit</th>
-                                    <th width="15%">Référence</th>
-                                    <th width="10%" class="text-end">Quantité</th>
-                                    <th width="15%" class="text-end">Prix Unitaire</th>
-                                    <th width="15%" class="text-end">Total HT</th>
-                                    <th width="15%">Conditionnement</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for ligne in lignes %}
-                                <tr class="hover-shadow">
-                                    <td class="fw-bold">{{ forloop.counter }}</td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="flex-grow-1">
-                                                <strong class="d-block">{{ ligne.ligne_commande.produit.nom }}</strong>
-                                                {% if ligne.notes %}
-                                                <small class="text-muted">{{ ligne.notes }}</small>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary">{{ ligne.ligne_commande.produit.reference|default:"-" }}</span>
-                                    </td>
-                                    <td class="text-end fw-bold">{{ ligne.quantite|floatformat:2|intcomma }}</td>
-                                    <td class="text-end text-success fw-bold">{{ ligne.ligne_commande.prix_unitaire|floatformat:2|intcomma }} {{ symbole_devise }}</td>
-                                    <td class="text-end text-primary fw-bold">{{ ligne.total_ht_ligne|floatformat:2|intcomma }} {{ symbole_devise }}</td>
-                                    <td>
-                                        <span class="badge bg-info">{{ ligne.conditionnement|default:"-" }}</span>
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr>
-                                    <td colspan="7" class="text-center text-muted py-5">
-                                        <i class="fas fa-box-open fa-3x mb-3 d-block"></i>
-                                        Aucun article reçu
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                            <tfoot class="table-dark-dm table-light-lm">
-                                <tr>
-                                    <th colspan="5" class="text-end">Total HT</th>
-                                    <th class="text-end text-primary fw-bold">{{ total_bon|floatformat:2|intcomma }} {{ symbole_devise }}</th>
-                                    <th></th>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
+               <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark-dm table-light-lm">
+                <tr>
+                    <th width="5%">#</th>
+                    <th width="25%">Produit</th>
+                    <th width="15%">Référence</th>
+                    <th width="10%" class="text-end">Quantité</th>
+                    <th width="15%" class="text-end">Prix Unitaire HT</th>
+                    <th width="15%" class="text-end">Total HT</th>
+                    <th width="15%" class="text-end">TVA</th>
+                    <th width="15%" class="text-end">Total TTC</th>
+                    <th width="15%">Conditionnement</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ligne in lignes %}
+                <tr class="hover-shadow">
+                    <td class="fw-bold">{{ forloop.counter }}</td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">
+                                <strong class="d-block">{{ ligne.ligne_commande.produit.nom }}</strong>
+                                {% if ligne.notes %}
+                                <small class="text-muted">{{ ligne.notes }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-secondary">{{ ligne.ligne_commande.produit.reference|default:"-" }}</span>
+                    </td>
+                    <td class="text-end fw-bold">{{ ligne.quantite|floatformat:2|intcomma }}</td>
+                    
+                    <!-- Prix unitaire AVEC remise -->
+                    <td class="text-end text-success fw-bold">
+                        {{ ligne.ligne_commande.prix_unitaire|avec_remise:ligne.ligne_commande.remise|floatformat:2|intcomma }} {{ symbole_devise }}
+                    </td>
+                    
+                    <!-- Total HT (déjà calculé avec la remise dans la vue) -->
+                    <td class="text-end text-primary fw-bold">{{ ligne.total_ht_ligne|floatformat:2|intcomma }} {{ symbole_devise }}</td>
+                    
+                    <!-- TVA (déjà calculée dans la vue) -->
+                    <td class="text-end">{{ ligne.tva_ligne|floatformat:2|intcomma }} {{ symbole_devise }}</td>
+                    
+                    <!-- Total TTC (déjà calculé dans la vue) -->
+                    <td class="text-end fw-bold">{{ ligne.ttc_ligne|floatformat:2|intcomma }} {{ symbole_devise }}</td>
+                    
+                    <td>
+                        <span class="badge bg-info">{{ ligne.conditionnement|default:"-" }}</span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="9" class="text-center text-muted py-5">
+                        <i class="fas fa-box-open fa-3x mb-3 d-block"></i>
+                        Aucun article reçu
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="table-dark-dm table-light-lm">
+                <tr>
+                    <th colspan="5" class="text-end">Total HT</th>
+                    <th class="text-end text-primary fw-bold">{{ total_bon_ht|floatformat:2|intcomma }} {{ symbole_devise }}</th>
+                    <th colspan="3"></th>
+                </tr>
+                <tr>
+                    <th colspan="5" class="text-end">Total TVA</th>
+                    <th class="text-end text-danger fw-bold">{{ total_bon_tva|floatformat:2|intcomma }} {{ symbole_devise }}</th>
+                    <th colspan="3"></th>
+                </tr>
+                <tr>
+                    <th colspan="5" class="text-end">Total TTC</th>
+                    <th class="text-end text-success fw-bold">{{ total_bon_ttc|floatformat:2|intcomma }} {{ symbole_devise }}</th>
+                    <th colspan="3"></th>
+                </tr>
+                
+                <!-- Ligne de vérification de cohérence -->
+                {% if not totaux_coherents %}
+                <tr class="table-warning">
+                    <th colspan="9" class="text-center">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Attention: Incohérence détectée dans les totaux. Veuillez recalculer le bon.
+                    </th>
+                </tr>
+                {% endif %}
+            </tfoot>
+        </table>
+    </div> 
                 </div>
             </div>
 
-            <!-- Actions Card -->
             <div class="card bg-dark-dm bg-light-lm mt-4">
                 <div class="card-header bg-dark text-white-dm">
                     <h5 class="card-title mb-0">
@@ -252,7 +320,6 @@
                         </div>
                         
                         <div class="d-flex flex-wrap gap-2">
-                            <!-- Générer Facture -->
                             <form method="post" action="{% url 'achats:generer_facture_depuis_bon' pk=object.pk %}">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-success" data-bs-toggle="tooltip" title="Générer une facture à partir de ce bon">
@@ -260,17 +327,14 @@
                                 </button>
                             </form>
                             
-                            <!-- Export PDF -->
                             <a href="{% url 'achats:export_bon_pdf' pk=object.pk %}" class="btn btn-outline-danger" data-bs-toggle="tooltip" title="Exporter en PDF">
                                 <i class="fas fa-file-pdf me-1"></i> PDF
                             </a>
                             
-                            <!-- Export Excel -->
                             <a href="{% url 'achats:export_bon_excel' pk=object.pk %}" class="btn btn-outline-success" data-bs-toggle="tooltip" title="Exporter en Excel">
                                 <i class="fas fa-file-excel me-1"></i> Excel
                             </a>
                             
-                            <!-- Imprimer -->
                             <button class="btn btn-outline-secondary" onclick="window.print()" data-bs-toggle="tooltip" title="Imprimer le document">
                                 <i class="fas fa-print me-1"></i> Imprimer
                             </button>

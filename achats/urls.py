@@ -23,7 +23,8 @@ urlpatterns = [
     path('fournisseurs/<int:pk>/', DetailFournisseurView.as_view(), name='detail_fournisseur'),
     path('fournisseurs/<int:pk>/modifier/', ModifierFournisseurView.as_view(), name='modifier_fournisseur'),
     path('fournisseurs/<int:pk>/supprimer/', SupprimerFournisseurView.as_view(), name='supprimer_fournisseur'),
-    
+      path('get-fournisseur-tva/', get_fournisseur_tva, name='get_fournisseur_tva'),
+
     path('fournisseurs/importer/', ImporterFournisseursView.as_view(), name='importer_fournisseurs'),
     path('fournisseurs/exporter/excel/', exporter_fournisseurs_excel, name='exporter_fournisseurs_excel'),
     path('fournisseurs/exporter/pdf/', exporter_fournisseurs_pdf, name='exporter_fournisseurs_pdf'),
@@ -63,4 +64,6 @@ urlpatterns = [
      path('paiements/<int:pk>/supprimer/', 
          PaiementDeleteView.as_view(), 
          name='supprimer_paiement'),
+     path('rapports/', RapportsAchatsView.as_view(), name='rapports'),
+     path('bon/<int:pk>/recalculer-totaux/', RecalculerTotauxBonView.as_view(), name='recalculer_totaux_bon'),
 ]

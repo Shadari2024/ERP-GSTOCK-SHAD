@@ -141,13 +141,22 @@ def generate_bon_reception_pdf(bon_reception):
     elements.append(info_table)
     elements.append(Spacer(1, 15))
     
-    # Lignes de réception
-    ligne_data = [['Produit', 'Code', 'Quantité', 'Prix Unitaire', 'Total HT']]
+    ligne_data = [['Produit', 'Code', 'Quantité', 'Prix Unitaire', 'TVA %', 'Total HT', 'Montant TVA']]
     
-    total_general = Decimal('0.00')
+    total_ht = Decimal('0.00')
+    total_tva = Decimal('0.00')
+    
     for ligne in bon_reception.lignes.all():
-        total_ligne = ligne.quantite * ligne.ligne_commande.prix_unitaire
-        total_general += total_ligne
+        # Calcul cohérent avec le modèle
+        remise = ligne.ligne_commande.remise or Decimal('0.00')
+        remise_factor = Decimal('1') - (remise / Decimal('100'))
+        prix_apres_remise = ligne.prix_unitaire_ht * remise_factor
+        
+        ligne_ht = ligne.quantite * prix_apres_remise
+        ligne_tva = ligne_ht * (ligne.taux_tva / Decimal('100'))
+        
+        total_ht += ligne_ht
+        total_tva += ligne_tva
         
         # Récupération du code produit
         code_produit = getattr(ligne.ligne_commande.produit, 'code_barre_numero', 
@@ -158,14 +167,19 @@ def generate_bon_reception_pdf(bon_reception):
             ligne.ligne_commande.produit.nom,
             code_produit or '-',
             str(ligne.quantite),
-            f"{ligne.ligne_commande.prix_unitaire:.2f}",
-            f"{total_ligne:.2f}"
+            f"{ligne.prix_unitaire_ht:.2f}",
+            f"{ligne.taux_tva:.2f}%",
+            f"{ligne_ht:.2f}",
+            f"{ligne_tva:.2f}"
         ])
     
-    # Ligne de total
-    ligne_data.append(['', '', '', 'TOTAL HT:', f"{total_general:.2f}"])
+    # Lignes de totaux - CORRECTION : Ajouter les totaux TVA et TTC
+    ligne_data.append(['', '', '', '', '', 'TOTAL HT:', f"{total_ht:.2f}"])
+    ligne_data.append(['', '', '', '', '', 'TOTAL TVA:', f"{total_tva:.2f}"])
+    ligne_data.append(['', '', '', '', '', 'TOTAL TTC:', f"{total_ht + total_tva:.2f}"])
     
-    ligne_table = Table(ligne_data, colWidths=[70*mm, 30*mm, 25*mm, 30*mm, 25*mm])
+    # Ajuster les largeurs de colonnes
+    ligne_table = Table(ligne_data, colWidths=[50*mm, 25*mm, 20*mm, 25*mm, 20*mm, 25*mm, 25*mm])
     ligne_table.setStyle(TableStyle([
         ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 10),
         ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
@@ -301,21 +315,24 @@ def generate_bon_reception_excel(bon_reception):
         ws[f'B{i}'] = value
         ws[f'A{i}'].font = Font(bold=True)
     
-    # Lignes de réception
-    headers = ['Produit', 'Code', 'Quantité', 'Prix Unitaire', 'Total HT']
+    # Lignes de réception - CORRECTION : Ajouter les colonnes TVA
+    headers = ['Produit', 'Code', 'Quantité', 'Prix Unitaire', 'TVA %', 'Total HT', 'Montant TVA']
     start_row = 10
     
-    for col, header in enumerate(headers, start=1):
-        cell = ws.cell(row=start_row, column=col, value=header)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = header_alignment
-        cell.border = thin_border
+    total_ht = Decimal('0.00')
+    total_tva = Decimal('0.00')
     
-    total_general = Decimal('0.00')
     for row, ligne in enumerate(bon_reception.lignes.all(), start=start_row + 1):
-        total_ligne = ligne.quantite * ligne.ligne_commande.prix_unitaire
-        total_general += total_ligne
+        # Calcul cohérent avec le modèle
+        remise = ligne.ligne_commande.remise or Decimal('0.00')
+        remise_factor = Decimal('1') - (remise / Decimal('100'))
+        prix_apres_remise = ligne.prix_unitaire_ht * remise_factor
+        
+        ligne_ht = ligne.quantite * prix_apres_remise
+        ligne_tva = ligne_ht * (ligne.taux_tva / Decimal('100'))
+        
+        total_ht += ligne_ht
+        total_tva += ligne_tva
         
         # Récupération du code produit
         code_produit = getattr(ligne.ligne_commande.produit, 'code_barre_numero', 
@@ -325,29 +342,40 @@ def generate_bon_reception_excel(bon_reception):
         ws.cell(row=row, column=1, value=ligne.ligne_commande.produit.nom).border = thin_border
         ws.cell(row=row, column=2, value=code_produit or '-').border = thin_border
         ws.cell(row=row, column=3, value=float(ligne.quantite)).border = thin_border
-        ws.cell(row=row, column=4, value=float(ligne.ligne_commande.prix_unitaire)).border = thin_border
-        ws.cell(row=row, column=5, value=float(total_ligne)).border = thin_border
+        ws.cell(row=row, column=4, value=float(ligne.prix_unitaire_ht)).border = thin_border
+        ws.cell(row=row, column=5, value=float(ligne.taux_tva)).border = thin_border
+        ws.cell(row=row, column=6, value=float(ligne_ht)).border = thin_border
+        ws.cell(row=row, column=7, value=float(ligne_tva)).border = thin_border
     
-    # Ligne de total
+    # Lignes de totaux - CORRECTION : Ajouter les totaux TVA et TTC
     total_row = start_row + 1 + bon_reception.lignes.count()
-    ws.cell(row=total_row, column=4, value="TOTAL HT:").font = total_font
-    ws.cell(row=total_row, column=4).fill = total_fill
-    ws.cell(row=total_row, column=4).border = thin_border
-    ws.cell(row=total_row, column=4).alignment = Alignment(horizontal='right')
     
-    ws.cell(row=total_row, column=5, value=float(total_general)).font = total_font
+    ws.cell(row=total_row, column=5, value="TOTAL HT:").font = total_font
     ws.cell(row=total_row, column=5).fill = total_fill
     ws.cell(row=total_row, column=5).border = thin_border
+    ws.cell(row=total_row, column=5).alignment = Alignment(horizontal='right')
+    ws.cell(row=total_row, column=6, value=float(total_ht)).font = total_font
+    ws.cell(row=total_row, column=6).fill = total_fill
+    ws.cell(row=total_row, column=6).border = thin_border
     
-    # Notes
-    if bon_reception.notes:
-        note_row = total_row + 2
-        ws.cell(row=note_row, column=1, value="Notes:").font = Font(bold=True)
-        ws.merge_cells(f'A{note_row + 1}:E{note_row + 3}')
-        ws.cell(row=note_row + 1, column=1, value=bon_reception.notes)
+    ws.cell(row=total_row + 1, column=5, value="TOTAL TVA:").font = total_font
+    ws.cell(row=total_row + 1, column=5).fill = total_fill
+    ws.cell(row=total_row + 1, column=5).border = thin_border
+    ws.cell(row=total_row + 1, column=5).alignment = Alignment(horizontal='right')
+    ws.cell(row=total_row + 1, column=6, value=float(total_tva)).font = total_font
+    ws.cell(row=total_row + 1, column=6).fill = total_fill
+    ws.cell(row=total_row + 1, column=6).border = thin_border
+    
+    ws.cell(row=total_row + 2, column=5, value="TOTAL TTC:").font = total_font
+    ws.cell(row=total_row + 2, column=5).fill = total_fill
+    ws.cell(row=total_row + 2, column=5).border = thin_border
+    ws.cell(row=total_row + 2, column=5).alignment = Alignment(horizontal='right')
+    ws.cell(row=total_row + 2, column=6, value=float(total_ht + total_tva)).font = total_font
+    ws.cell(row=total_row + 2, column=6).fill = total_fill
+    ws.cell(row=total_row + 2, column=6).border = thin_border
     
     # Ajustement des largeurs de colonnes
-    column_widths = [40, 20, 15, 15, 15]
+    column_widths = [40, 20, 15, 15, 12, 15, 15]
     for i, width in enumerate(column_widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = width
     
@@ -362,6 +390,7 @@ logger = logging.getLogger(__name__)
 def generer_facture_depuis_bon(bon_reception, request):
     """
     Génère une facture fournisseur avec écritures comptables à partir d'un bon de réception
+    VERSION CORRIGÉE - Utilise les taux TVA réels du bon
     """
     try:
         with transaction.atomic():
@@ -375,27 +404,25 @@ def generer_facture_depuis_bon(bon_reception, request):
                 messages.warning(request, f"Une facture existe déjà pour ce bon: {facture_existante.numero_facture}")
                 return facture_existante
             
-            # Calculer les montants
-            total_ht = Decimal('0.00')
-            for ligne in bon_reception.lignes.all():
-                total_ligne = ligne.quantite * ligne.ligne_commande.prix_unitaire
-                total_ht += total_ligne
+            # FORCER le recalcul des totaux du bon AVANT de créer la facture
+            bon_reception.calculer_totaux()
+            bon_reception.refresh_from_db()
             
-            # Récupérer le taux de TVA (supposons 18% par défaut)
-            taux_tva = Decimal('0.18')
-            montant_tva = total_ht * taux_tva
-            montant_ttc = total_ht + montant_tva
+            # VÉRIFICATION CRITIQUE : S'assurer que les totaux sont valides
+            if bon_reception.total_ht <= 0 or bon_reception.total_ttc <= 0:
+                messages.error(request, "Les totaux du bon de réception sont invalides")
+                return None
             
-            # Créer la facture
+            # Créer la facture avec les totaux RECALCULÉS du bon
             facture = FactureFournisseur(
                 entreprise=request.entreprise,
                 fournisseur=bon_reception.commande.fournisseur,
                 bon_reception=bon_reception,
                 date_facture=timezone.now().date(),
                 date_echeance=timezone.now().date() + timezone.timedelta(days=30),
-                montant_ht=total_ht,
-                montant_tva=montant_tva,
-                montant_ttc=montant_ttc,
+                montant_ht=bon_reception.total_ht,      # UTILISER LES VALEURS DU BON
+                montant_tva=bon_reception.total_tva,    # UTILISER LES VALEURS DU BON
+                montant_ttc=bon_reception.total_ttc,    # UTILISER LES VALEURS DU BON
                 statut='brouillon',
                 created_by=request.user
             )
