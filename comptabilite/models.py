@@ -229,14 +229,12 @@ class EcritureComptable(models.Model):
         verbose_name=_("Paiement lié")
     )
     # Dans le modèle EcritureComptable, ajouter ce champ :
-    # Dans comptabilite/models.py, dans la classe EcritureComptable, ajoutez :
     paiement_fournisseur_lie = models.ForeignKey(
         'achats.PaiementFournisseur',
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True,
-        verbose_name=_("Paiement fournisseur lié"),
-        related_name='ecritures_comptables'  # AJOUT IMPORTANT
+        verbose_name=_("Paiement fournisseur lié")
     )
     
     paiement_pos = models.ForeignKey(

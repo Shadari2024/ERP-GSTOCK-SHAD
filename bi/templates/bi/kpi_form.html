@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% load i18n static crispy_forms_tags %}
+
+{% block title %}{% if object %}{% trans "Modifier KPI" %}{% else %}{% trans "Créer un KPI" %}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        {% if object %}
+                            <i class="fas fa-edit"></i> {% trans "Modifier le KPI" %}
+                        {% else %}
+                            <i class="fas fa-plus"></i> {% trans "Créer un nouveau KPI" %}
+                        {% endif %}
+                    </h6>
+                    <a href="{% url 'bi:kpi_list' %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> {% trans "Retour à la liste" %}
+                    </a>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.nom|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.code|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                {{ form.description|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                {{ form.type_kpi|as_crispy_field }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.periodicite|as_crispy_field }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.module_lie|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.formule|as_crispy_field }}
+                                <small class="form-text text-muted">
+                                    {% trans "Exemples: ventes__montant_total, stock__quantite_total, etc." %}
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.unite|as_crispy_field }}
+                                <small class="form-text text-muted">
+                                    {% trans "Utilisez {{devise}} pour la devise principale" %}
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                {{ form.cible|as_crispy_field }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.seuil_alerte|as_crispy_field }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.actif|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> 
+                                {% if object %}{% trans "Modifier" %}{% else %}{% trans "Créer" %}{% endif %}
+                            </button>
+                            <a href="{% url 'bi:kpi_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> {% trans "Annuler" %}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Ajouter des aides contextuelles pour la formule
+    const formuleHelp = {
+        'ventes': "{% trans 'Données des ventes: montant_total, nombre_commandes, etc.' %}",
+        'achats': "{% trans 'Données des achats: cout_total, nombre_achats, etc.' %}",
+        'stock': "{% trans 'Données du stock: quantite_total, valeur_stock, etc.' %}",
+        'compta': "{% trans 'Données comptables: profit, charges, etc.' %}",
+        'rh': "{% trans 'Données RH: nombre_employes, salaire_moyen, etc.' %}"
+    };
+    
+    const formuleField = document.getElementById('id_formule');
+    if (formuleField) {
+        formuleField.addEventListener('focus', function() {
+            // Afficher une aide contextuelle
+            console.log('Aide pour les formules:', formuleHelp);
+        });
+    }
+});
+</script>
+{% endblock %}

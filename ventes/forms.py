@@ -257,15 +257,15 @@ class LigneVentePOSFormSet(BaseInlineFormSet):
     def _construct_form(self, i, **kwargs):
         kwargs['entreprise'] = self.entreprise
         return super()._construct_form(i, **kwargs)
-
-# CORRECTION CRITIQUE : Utilisez cette définition du formset
+    
+    
 LigneVentePOSFormSet = inlineformset_factory(
     VentePOS,
     LigneVentePOS,
     form=LigneVentePOSForm,
     formset=LigneVentePOSFormSet,
     fields=['produit', 'quantite', 'prix_unitaire'],
-    extra=1,
+    extra=0,
     can_delete=True,
     min_num=1,
     validate_min=True

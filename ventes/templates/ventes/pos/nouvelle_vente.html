@@ -144,7 +144,7 @@
                                     <tr class="ligne-vente align-middle" data-form-index="{{ forloop.counter0 }}">
                                         <td class="ps-4">
                                             {{ form.id }}
-                                            {% if form.DELETE %}
+                                            {% if form.id  %}
                                             {{ form.DELETE }}
                                             {% endif %}
                                             <div class="d-flex align-items-center">
@@ -190,8 +190,12 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            <input type="text" class="form-control form-control-sm total-ligne text-end" readonly>
+                                        <input type="text"
+                                                class="form-control form-control-sm total-ligne text-end"
+                                                id="id_form-{{ forloop.counter0 }}-total"
+                                                readonly>
                                         </td>
+
                                         <td class="text-end pe-4">
                                             <button type="button" class="btn btn-sm btn-outline-danger supprimer-ligne" title="{% trans 'Supprimer' %}">
                                                 <i class="fas fa-trash"></i>
@@ -665,68 +669,77 @@
         updateClock();
 
         // Gestion de l'ajout de lignes
-        $('#ajouter-ligne').click(function() {
-            const formCount = parseInt($('#id_form-TOTAL_FORMS').val());
-            const template = $('.ligne-vente:first').clone();
-            // Supprime la ligne de détails si elle existe (plus besoin avec TVA)
-            const detailsTemplate = template.next('.ligne-details').length ? template.next('.ligne-details').clone() : null;
+   $('#ajouter-ligne').click(function() {
+    const formCount = parseInt($('#id_form-TOTAL_FORMS').val());
+    const template = $('.ligne-vente:first').clone(false, false);
 
-            // Réinitialiser tous les champs
-            template.find('input, select').val('');
-            template.removeClass('deleted highlight');
-            template.find('.product-image-container').hide();
-            template.find('.total-ligne').val('0,00 ' + DEVISE_SYMBOLE);
-            template.find('.product-info').text('');
+    // Réinitialiser tous les champs
+// Nettoyer les valeurs des champs mais ne pas toucher aux name/id
+template.find('input, select').each(function() {
+    if (!$(this).hasClass('total-ligne')) {
+        $(this).val('');
+    } else {
+        $(this).val('0,00 ' + DEVISE_SYMBOLE);
+    }
+});
 
-            // Mettre à jour les noms et IDs des champs
-            template.find(':input').each(function() {
-                const name = $(this).attr('name');
-                if (name) {
-                    const newName = name.replace(/-\d+-/, `-${formCount}-`);
-                    const newId = 'id_' + newName.replace(/-/g, '_');
-                    $(this).attr({
-                        'name': newName,
-                        'id': newId
-                    });
-                }
-            });
 
-            // Ajouter la nouvelle ligne
-            $('#lignes-vente tbody').append(template);
-            if (detailsTemplate) {
-                $('#lignes-vente tbody').append(detailsTemplate);
-            }
-            $('#id_form-TOTAL_FORMS').val(formCount + 1);
-            updateArticleCount();
-            calculerTotal();
+    // Supprimer artefacts Select2
+    template.find('span.select2').remove();
 
-            // Animation de mise en évidence
-            template.addClass('highlight');
-            setTimeout(() => template.removeClass('highlight'), 1000);
+    // Ajouter la ligne clonée
+    $('#lignes-vente tbody').append(template);
+
+    // Ré-initialiser Select2
+    template.find('select[name$="-produit"]').each(function() {
+        $(this).removeData('select2');
+        $(this).select2({
+            language: 'fr',
+            placeholder: "Sélectionnez un produit",
+            allowClear: true,
+            width: '100%',
+            minimumResultsForSearch: 3
         });
+    });
 
-        // Gestion de la suppression de lignes — SUPPRESSION IMMÉDIATE (comme Odoo)
-        $(document).on('click', '.supprimer-ligne', function() {
-            const ligne = $(this).closest('.ligne-vente');
-            const details = ligne.next('.ligne-details');
-            
-            // Jouer le son de suppression
-            removeSound.play();
-            
-            // Supprimer immédiatement du DOM
-            const deleteInput = ligne.find('input[id$="-DELETE"]');
-            if (deleteInput.length) {
-                deleteInput.val('on');
-            }
-            
-            ligne.remove();
-            if (details.length) {
-                details.remove();
-            }
-            
-            updateArticleCount();
-            calculerTotal();
-        });
+    // ✅ Appel obligatoire pour que Django reconnaisse les nouvelles lignes
+    updateFormsetIndices(); // ⬅️ C'est ici la clé !
+
+    updateArticleCount();
+    calculerTotal();
+});
+
+
+       // Gestion de la suppression de lignes
+ $(document).on('click', '.supprimer-ligne', function() {
+    const ligne = $(this).closest('.ligne-vente');
+    
+    // Marquer comme supprimé plutôt que de supprimer immédiatement
+    const deleteInput = ligne.find('input[id$="-DELETE"]');
+    if (deleteInput.length) {
+        deleteInput.val('on');
+    } else {
+        const produitField = ligne.find('select[name$="-produit"]'); // ✅ select au lieu de input
+        if (produitField.length) {
+            const deleteName = produitField.attr('name').replace('-produit', '-DELETE');
+            ligne.append('<input type="hidden" name="' + deleteName + '" value="on">');
+        }
+    }
+    
+    // Cacher la ligne avec animation
+    ligne.addClass('deleted');
+    
+    // Jouer le son de suppression
+    removeSound.play();
+    
+    // Mettre à jour les indices après un délai pour l'animation
+    setTimeout(() => {
+        updateFormsetIndices();
+        updateArticleCount();
+        calculerTotal();
+    }, 500);
+});
+
 
         // Incrémentation/décrémentation des quantités
         $(document).on('click', '.increment-quantity', function() {
@@ -1030,6 +1043,42 @@
                 alert("{% trans 'Aide du système POS - Raccourcis disponibles...' %}");
             }
         });
+      // Re-indexe tous les inputs/select/textarea d'après l'ordre des .ligne-vente
+  function updateFormsetIndices() {
+    const $forms = $('.ligne-vente');
+
+    $forms.each(function(index) {
+        const $row = $(this);
+
+        // mettre à jour l'attribut "data-form-index"
+        $row.attr('data-form-index', index);
+
+        $row.find('input, select, textarea').each(function() {
+            const $el = $(this);
+
+            // Ignorer les champs qui n'ont pas de "name" (ex: total calculé)
+            if ($el.attr('name')) {
+                // 🔥 Mise à jour du "name"
+                const name = $el.attr('name').replace(/(form|items)-\d+-/, `items-${index}-`);
+                $el.attr('name', name);
+
+                // 🔥 Mise à jour du "id"
+                const id = 'id_' + name.replace(/-/g, '_');
+                $el.attr('id', id);
+            }
+
+            // Cas particulier : champ "total" calculé qui n’a pas de name
+            if ($el.hasClass('total-ligne')) {
+                $el.attr('id', `id_items_${index}_total`);
+            }
+        });
     });
+
+    // 🔥 Très important : mettre à jour TOTAL_FORMS
+    $('#id_items-TOTAL_FORMS').val($forms.length);
+}
+
+    });
+    
 </script>
 {% endblock %}

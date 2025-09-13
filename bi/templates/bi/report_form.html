@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% load i18n static crispy_forms_tags %}
+
+{% block title %}{% if object %}{% trans "Modifier Rapport" %}{% else %}{% trans "Créer un Rapport" %}{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        {% if object %}
+                            <i class="fas fa-edit"></i> {% trans "Modifier le Rapport" %}
+                        {% else %}
+                            <i class="fas fa-plus"></i> {% trans "Créer un nouveau Rapport" %}
+                        {% endif %}
+                    </h6>
+                    <a href="{% url 'bi:report_list' %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> {% trans "Retour à la liste" %}
+                    </a>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                {{ form.nom|as_crispy_field }}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.type_rapport|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                {{ form.description|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.requete_sql|as_crispy_field }}
+                                <small class="form-text text-muted">
+                                    {% trans "Requête SQL pour récupérer les données du rapport" %}
+                                </small>
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.public|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>{% trans "Paramètres (JSON)" %}</label>
+                                    <textarea name="parametres" class="form-control" rows="3">{{ form.parametres.value|default:'{}' }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> 
+                                {% if object %}{% trans "Modifier" %}{% else %}{% trans "Créer" %}{% endif %}
+                            </button>
+                            <a href="{% url 'bi:report_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> {% trans "Annuler" %}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Aide pour la syntaxe SQL
+    const sqlExamples = {
+        'ventes': "SELECT * FROM ventes_facture WHERE entreprise_id = {{entreprise_id}}",
+        'achats': "SELECT * FROM achats_facturefournisseur WHERE entreprise_id = {{entreprise_id}}",
+        'stock': "SELECT nom, quantite, prix_achat FROM stock_produit WHERE entreprise_id = {{entreprise_id}}"
+    };
+    
+    const sqlField = document.querySelector('textarea[name="requete_sql"]');
+    if (sqlField) {
+        sqlField.addEventListener('focus', function() {
+            console.log('Exemples de requêtes SQL:', sqlExamples);
+        });
+    }
+});
+</script>
+{% endblock %}

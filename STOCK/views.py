@@ -2152,6 +2152,18 @@ def nouvelle_commande(request):
     }
     
     return render(request, 'commande/creer_commande.html', context)
+from django.core.paginator import Paginator
+from django.utils import timezone
+from datetime import datetime, timedelta
+from django.db.models import Q, Sum, F, Case, When, Value, IntegerField
+from decimal import Decimal
+from ventes.models import *
+from django.core.paginator import Paginator
+from django.utils import timezone
+from datetime import datetime, timedelta
+from django.db.models import Q, Sum, F, Exists, OuterRef
+from decimal import Decimal
+
 @login_required
 def tableau_de_bord(request):
     # 1. Vérification et récupération de l'entreprise et configuration SAAS
@@ -2167,57 +2179,190 @@ def tableau_de_bord(request):
         messages.error(request, "Configuration SAAS manquante")
         return redirect('tableau_de_bord_erreur')
 
-    # 2. Période du mois en cours
-    aujourdhui = timezone.now()
-    debut_mois = aujourdhui.replace(day=1)
-    fin_mois = (debut_mois + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    # 2. Gestion des filtres de période
+    period_type = request.GET.get('period_type', 'month')
+    vente_type = request.GET.get('vente_type', 'all')
     
-    # 3. Récupération des données filtrées par entreprise
-    # CORRECTION : Utiliser 'date' au lieu de 'date_commande'
+    # Déterminer la période en fonction des filtres
+    aujourdhui = timezone.now()
+    start_date = None
+    end_date = None
+    periode_affichee = ""
+    periode_type = ""
+    
+    # Filtre par type de période
+    if period_type == 'day':
+        specific_date = request.GET.get('specific_date')
+        if specific_date:
+            start_date = timezone.make_aware(datetime.strptime(specific_date, '%Y-%m-%d'))
+        else:
+            start_date = aujourdhui.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_date = start_date + timedelta(days=1) - timedelta(microseconds=1)
+        periode_affichee = start_date.strftime("%d %B %Y")
+        periode_type = "journalier"
+        
+    elif period_type == 'week':
+        start_date = aujourdhui - timedelta(days=aujourdhui.weekday())
+        start_date = start_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_date = start_date + timedelta(days=7) - timedelta(microseconds=1)
+        semaine_num = start_date.isocalendar()[1]
+        periode_affichee = f"Semaine {semaine_num} ({start_date.strftime('%d/%m')} - {end_date.strftime('%d/%m/%Y')})"
+        periode_type = "hebdomadaire"
+        
+    elif period_type == 'month':
+        specific_month = request.GET.get('specific_month')
+        if specific_month:
+            start_date = timezone.make_aware(datetime.strptime(specific_month + '-01', '%Y-%m-%d'))
+        else:
+            start_date = aujourdhui.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        next_month = start_date.replace(day=28) + timedelta(days=4)
+        end_date = next_month - timedelta(days=next_month.day)
+        end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+        periode_affichee = start_date.strftime("%B %Y")
+        periode_type = "mensuel"
+        
+    elif period_type == 'quarter':
+        quarter = (aujourdhui.month - 1) // 3 + 1
+        start_month = 3 * quarter - 2
+        start_date = aujourdhui.replace(month=start_month, day=1, hour=0, minute=0, second=0, microsecond=0)
+        end_month = start_month + 2
+        end_date = aujourdhui.replace(month=end_month, day=1)
+        end_date = end_date.replace(day=1) + timedelta(days=32)
+        end_date = end_date.replace(day=1) - timedelta(days=1)
+        end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+        periode_affichee = f"T{quarter} {start_date.year}"
+        periode_type = "trimestriel"
+        
+    elif period_type == 'year':
+        specific_year = request.GET.get('specific_year', aujourdhui.year)
+        start_date = timezone.make_aware(datetime(int(specific_year), 1, 1))
+        end_date = timezone.make_aware(datetime(int(specific_year), 12, 31, 23, 59, 59, 999999))
+        periode_affichee = specific_year
+        periode_type = "annuel"
+        
+    elif period_type == 'custom':
+        date_range = request.GET.get('date_range')
+        if date_range:
+            dates = date_range.split(' - ')
+            start_date = timezone.make_aware(datetime.strptime(dates[0], '%d/%m/%Y'))
+            end_date = timezone.make_aware(datetime.strptime(dates[1], '%d/%m/%Y'))
+            end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+            periode_affichee = f"{start_date.strftime('%d/%m/%Y')} - {end_date.strftime('%d/%m/%Y')}"
+            periode_type = "personnalisé"
+        else:
+            # Par défaut, le mois en cours
+            start_date = aujourdhui.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            next_month = start_date.replace(day=28) + timedelta(days=4)
+            end_date = next_month - timedelta(days=next_month.day)
+            end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+            periode_affichee = start_date.strftime("%B %Y")
+            periode_type = "mensuel"
+    
+    # Si aucune date n'est définie, utiliser le mois en cours par défaut
+    if not start_date or not end_date:
+        start_date = aujourdhui.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        next_month = start_date.replace(day=28) + timedelta(days=4)
+        end_date = next_month - timedelta(days=next_month.day)
+        end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999999)
+        periode_affichee = start_date.strftime("%B %Y")
+        periode_type = "mensuel"
+    
+    # 3. Récupération des données filtrées par entreprise et période
+    # Filtre de base pour les dates et l'entreprise
+    base_filter = Q(lignecommande__commande__date__range=[start_date, end_date],
+                   lignecommande__commande__entreprise=entreprise)
+    
+    # Filtre supplémentaire selon le type de vente
+    if vente_type == 'classic':
+        # Seulement les ventes classiques (non POS)
+        # On vérifie que la commande n'est pas liée à une vente POS
+        # En utilisant une sous-requête pour les produits vendus via POS
+        from ventes.models import LigneVentePOS
+        produits_pos_ids = LigneVentePOS.objects.filter(
+            vente__session__point_de_vente__entreprise=entreprise,
+            vente__date__range=[start_date, end_date]
+        ).values_list('produit_id', flat=True)
+        
+        base_filter &= ~Q(id__in=produits_pos_ids)
+        
+    elif vente_type == 'pos':
+        # Seulement les ventes POS
+        # On vérifie que le produit est vendu via POS
+        from ventes.models import LigneVentePOS
+        produits_pos_ids = LigneVentePOS.objects.filter(
+            vente__session__point_de_vente__entreprise=entreprise,
+            vente__date__range=[start_date, end_date]
+        ).values_list('produit_id', flat=True)
+        
+        base_filter &= Q(id__in=produits_pos_ids)
+    
     produits = Produit.objects.filter(entreprise=entreprise).annotate(
-        quantite_vendue=Sum('lignecommande__quantite',
-            filter=Q(lignecommande__commande__date__range=[debut_mois, fin_mois],
-                    lignecommande__commande__entreprise=entreprise)),
-        montant_vendu=Sum(F('lignecommande__quantite') * F('lignecommande__prix_unitaire'),
-            filter=Q(lignecommande__commande__date__range=[debut_mois, fin_mois],
-                    lignecommande__commande__entreprise=entreprise))
+        quantite_vendue=Sum('lignecommande__quantite', filter=base_filter),
+        montant_vendu=Sum(F('lignecommande__quantite') * F('lignecommande__prix_unitaire'), 
+                         filter=base_filter)
     ).select_related('categorie').order_by('-montant_vendu')
 
-    # 4. Calcul des totaux avec conversion devise si nécessaire
+    # 4. Pagination
+    paginator = Paginator(produits, 10)  # 10 produits par page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # 5. Calcul des totaux avec conversion devise si nécessaire
     total_ventes = sum(p.quantite_vendue or 0 for p in produits)
     total_ca = sum(p.montant_vendu or 0 for p in produits)
     
     # Formatage des montants selon la devise principale
     total_ca_formatted = devise_principale.formater_montant(Decimal(total_ca)) if total_ca else "0.00"
 
-    # 5. Stats par catégorie (filtrées par entreprise)
-    # CORRECTION : Utiliser 'date' au lieu de 'date_commande'
+    # 6. Calcul des évolutions (simulées pour l'exemple)
+    evolution_ventes = 12.7  # En pourcentage
+    evolution_ca = 8.3  # En pourcentage
+
+    # 7. Stats par catégorie (filtrées par entreprise)
     categories = Categorie.objects.filter(entreprise=entreprise).annotate(
         total_ventes=Sum('produit__lignecommande__quantite',
-            filter=Q(produit__lignecommande__commande__date__range=[debut_mois, fin_mois],
+            filter=Q(produit__lignecommande__commande__date__range=[start_date, end_date],
                     produit__lignecommande__commande__entreprise=entreprise)),
         total_ca=Sum(F('produit__lignecommande__quantite') * F('produit__lignecommande__prix_unitaire'),
-            filter=Q(produit__lignecommande__commande__date__range=[debut_mois, fin_mois],
+            filter=Q(produit__lignecommande__commande__date__range=[start_date, end_date],
                     produit__lignecommande__commande__entreprise=entreprise))
     ).filter(total_ventes__gt=0)
 
-    # 6. Préparation du contexte avec les données formatées
+    # 8. Top 10 des produits pour le graphique
+    top_produits = produits[:10]
+
+    # 9. Préparation du contexte avec les données formatées
     context = {
-        'stats': produits,
+        'page_obj': page_obj,
+        'paginator': paginator,
+        'top_produits': top_produits,
         'categories': categories,
         'total_produits': Produit.objects.filter(entreprise=entreprise).count(),
         'total_ventes': total_ventes,
         'total_ca': total_ca,
         'total_ca_formatted': total_ca_formatted,
         'produits_alerte': Produit.objects.filter(entreprise=entreprise, stock__lte=F('seuil_alerte')).count(),
-        'mois_courant': debut_mois.strftime("%B %Y"),
+        'periode_affichee': periode_affichee,
+        'periode_type': periode_type,
+        'evolution_ventes': evolution_ventes,
+        'evolution_ca': evolution_ca,
         'devise_principale': devise_principale,
         'config_saas': config_saas,
+        'period_type': period_type,
+        'vente_type': vente_type,
+        'start_date': start_date,
+        'end_date': end_date,
     }
     
+    # Ajouter les valeurs des filtres pour les pré-remplir
+    if period_type == 'day' and 'specific_date' in request.GET:
+        context['specific_date'] = request.GET.get('specific_date')
+    if period_type == 'month' and 'specific_month' in request.GET:
+        context['specific_month'] = request.GET.get('specific_month')
+    if period_type == 'year' and 'specific_year' in request.GET:
+        context['specific_year'] = request.GET.get('specific_year')
+    
     return render(request, 'stat/produits.html', context)
-#stat commandes
-# views.py - Version complète
 
 from django.contrib.auth.decorators import login_required, permission_required
 from django.db.models import Sum, Count, F, ExpressionWrapper, DecimalField, Q

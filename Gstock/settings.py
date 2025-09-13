@@ -147,6 +147,7 @@ INSTALLED_APPS = [
     'ventes.apps.VentesConfig',
     'grh',  # Ajoutez cette ligne
     'crm.apps.CrmConfig',  # Ajoutez cette ligne
+    'bi',
     'vitrine',
     'django_countries',
     'django.contrib.humanize',

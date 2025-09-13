@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_bi_kpi,bi.kpi,model_bi_kpi,group_bi_user,1,1,1,0
+access_bi_kpi_manager,bi.kpi,model_bi_kpi,group_bi_manager,1,1,1,1
+access_bi_report,bi.report,model_bi_report,group_bi_user,1,1,1,0
+access_bi_report_manager,bi.report,model_bi_report,group_bi_manager,1,1,1,1
+access_bi_export,bi.dataexport,model_bi_dataexport,group_bi_user,1,0,1,0
+access_bi_import,bi.dataimport,model_bi_dataimport,group_bi_manager,1,1,1,1

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load i18n static crispy_forms_tags %}
+
+{% block title %}{% trans "Importer des Données" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-upload"></i> {% trans "Importer des Données" %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.type_import|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.nom_fichier|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>{% trans "Fichier à importer" %}</label>
+                                    <input type="file" name="fichier" class="form-control-file" required accept=".csv,.xlsx,.xls,.json">
+                                    <small class="form-text text-muted">
+                                        {% trans "Formats supportés: CSV, Excel (XLSX, XLS), JSON" %}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>{% trans "Instructions:" %}</strong><br>
+                            {% trans "Assurez-vous que le fichier respecte le format attendu pour le type d'import sélectionné." %}
+                        </div>
+                        
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-upload"></i> {% trans "Importer" %}
+                            </button>
+                            <a href="{% url 'bi:accueil' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> {% trans "Annuler" %}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

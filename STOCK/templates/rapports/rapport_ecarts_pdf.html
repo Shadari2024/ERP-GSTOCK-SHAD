@@ -138,7 +138,7 @@
         <tbody>
             {% for ecart in ecarts %}
             <tr class="{% if ecart.ecart < 0 %}alert-row{% endif %}">
-                <td>{{ ecart.produit.reference }}</td>
+                <td>{{ ecart.produit.nom }}</td>
                 <td>{{ ecart.produit.designation }}</td>
                 <td>{{ ecart.stock_theorique }}</td>
                 <td>{{ ecart.stock_physique }}</td>

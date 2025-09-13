@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load i18n static crispy_forms_tags %}
+
+{% block title %}{% trans "Exporter des Données" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-download"></i> {% trans "Exporter des Données" %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" novalidate>
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.nom_fichier|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.format_export|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>{% trans "Date de début" %}</label>
+                                    <input type="date" name="date_debut" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>{% trans "Date de fin" %}</label>
+                                    <input type="date" name="date_fin" class="form-control" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>{% trans "Type de données à exporter" %}</label>
+                                    <select name="type_donnees" class="form-control" required>
+                                        <option value="">{% trans "Sélectionnez le type" %}</option>
+                                        <option value="ventes">{% trans "Ventes" %}</option>
+                                        <option value="achats">{% trans "Achats" %}</option>
+                                        <option value="stock">{% trans "Stock" %}</option>
+                                        <option value="compta">{% trans "Comptabilité" %}</option>
+                                        <option value="rh">{% trans "Ressources Humaines" %}</option>
+                                        <option value="crm">{% trans "CRM" %}</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-download"></i> {% trans "Exporter" %}
+                            </button>
+                            <a href="{% url 'bi:accueil' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> {% trans "Annuler" %}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

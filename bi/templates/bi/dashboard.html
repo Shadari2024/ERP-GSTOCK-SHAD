@@ -1,0 +1,307 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Tableau de Bord Business Intelligence" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h3 mb-4">{% trans "Tableau de Bord BI" %}</h1>
+        </div>
+    </div>
+
+   <!-- Section Diagnostic -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-success">
+                    <i class="fas fa-database"></i> {% trans "Données en Temps Réel" %}
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3 mb-3">
+                        <div class="text-primary">
+                            <i class="fas fa-shopping-cart fa-2x"></i>
+                            <h4 class="mt-2">{{ diagnostic.ventes_count }}</h4>
+                            <p class="mb-0">{% trans "Ventes totales" %}</p>
+                            <small class="text-muted">
+                                {{ diagnostic.ventes_mois }} {% trans "ce mois" %}<br>
+                                <span class="badge badge-info">{% trans "Factures + POS" %}</span>
+                            </small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="text-success">
+                            <i class="fas fa-truck-loading fa-2x"></i>
+                            <h4 class="mt-2">{{ diagnostic.achats_count }}</h4>
+                            <p class="mb-0">{% trans "Achats factures" %}</p>
+                            <small class="text-muted">{% trans "Total des factures" %}</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="text-warning">
+                            <i class="fas fa-boxes fa-2x"></i>
+                            <h4 class="mt-2">{{ diagnostic.produits_count }}</h4>
+                            <p class="mb-0">{% trans "Stocks produits" %}</p>
+                            <small class="text-muted">{% trans "Articles en stock" %}</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="text-info">
+                            <i class="fas fa-file-invoice fa-2x"></i>
+                            <h4 class="mt-2">{{ diagnostic.commandes_count }}</h4>
+                            <p class="mb-0">{% trans "Commandes" %}</p>
+                            <small class="text-muted">{% trans "Commandes fournisseurs" %}</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Détails des ventes -->
+                <div class="mt-3 p-3 bg-light rounded">
+                    <h6 class="text-muted">{% trans "Détail des ventes:" %}</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <small class="text-muted">
+                                <i class="fas fa-file-invoice"></i> 
+                                {% trans "Factures:" %} 
+                                <strong>{{ diagnostic.factures_count|default:0 }}</strong>
+                            </small>
+                        </div>
+                        <div class="col-md-6">
+                            <small class="text-muted">
+                                <i class="fas fa-cash-register"></i> 
+                                {% trans "Ventes POS:" %} 
+                                <strong>{{ diagnostic.ventes_pos_count|default:0 }}</strong>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    <!-- KPIs Principaux -->
+    <div class="row mb-4">
+        {% for kpi in kpis %}
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-{{ forloop.counter|divisibleby:2|yesno:'primary,success' }} shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-{{ forloop.counter|divisibleby:2|yesno:'primary,success' }} text-uppercase mb-1">
+                                {{ kpi.nom }}
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {% if kpi_values.kpi.id != None %}
+                                    {{ kpi_values.kpi.id }} {{ kpi.unite|safe }}
+                                {% else %}
+                                    <span class="text-danger">N/A</span>
+                                {% endif %}
+                            </div>
+                            <div class="text-xs text-muted mt-1">
+                                {{ kpi_details.kpi.id }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-{{ kpi.type_kpi|default:'chart-line' }} fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                {% trans "Aucun KPI configuré. Veuillez créer des indicateurs dans la section KPIs." %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Graphiques -->
+    <div class="row mb-4">
+        <!-- Graphique des Ventes -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">{% trans "Évolution des Ventes" %}</h6>
+                </div>
+                <div class="card-body">
+                    {% if ventes_data.labels %}
+                    <div class="chart-area">
+                        <canvas id="ventesChart" height="200"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-chart-line fa-3x mb-2"></i>
+                        <p>{% trans "Aucune donnée de vente disponible" %}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Graphique des Stocks -->
+        <div class="col-xl-6 col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-success">{% trans "Valeur des Stocks par Produit" %}</h6>
+                </div>
+                <div class="card-body">
+                    {% if stocks_data.labels %}
+                    <div class="chart-pie pt-4 pb-2">
+                        <canvas id="stocksChart" height="200"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-boxes fa-3x mb-2"></i>
+                        <p>{% trans "Aucune donnée de stock disponible" %}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rapports Rapides -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">{% trans "Rapports Disponibles" %}</h6>
+                </div>
+                <div class="card-body">
+                    {% if rapports %}
+                    <div class="row">
+                        {% for rapport in rapports %}
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ rapport.nom }}</h5>
+                                    <p class="card-text text-muted small">{{ rapport.description|truncatewords:15 }}</p>
+                                    <div class="mt-2">
+                                        <span class="badge badge-{{ rapport.type_rapport|default:'info' }}">
+                                            {{ rapport.get_type_rapport_display }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent">
+                                    <a href="{% url 'bi:report_detail' rapport.pk %}" class="btn btn-primary btn-sm btn-block">
+                                        <i class="fas fa-eye"></i> {% trans "Voir le rapport" %}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-file-alt fa-3x mb-2"></i>
+                        <p>{% trans "Aucun rapport disponible" %}</p>
+                        <a href="{% url 'bi:report_create' %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> {% trans "Créer un rapport" %}
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertes et Notifications -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-warning">{% trans "Alertes et Notifications" %}</h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>{% trans "Attention:" %}</strong>
+                        {% trans "Certains KPIs nécessitent une configuration supplémentaire pour fonctionner correctement." %}
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>{% trans "Info:" %}</strong>
+                        {% trans "Le module BI est maintenant intégré avec tous vos modules existants." %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if ventes_data.labels %}
+    // Graphique des ventes
+    var ventesCtx = document.getElementById('ventesChart').getContext('2d');
+    var ventesChart = new Chart(ventesCtx, {
+        type: 'line',
+        data: {
+            labels: {{ ventes_data.labels|safe }},
+            datasets: [{
+                label: '{% trans "Ventes" %} ({{ devise_symbole }})',
+                data: {{ ventes_data.data }},
+                borderColor: '#4e73df',
+                backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                pointBackgroundColor: '#4e73df',
+                fill: true
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString() + ' {{ devise_symbole }}';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+
+    {% if stocks_data.labels %}
+    // Graphique des stocks
+    var stocksCtx = document.getElementById('stocksChart').getContext('2d');
+    var stocksChart = new Chart(stocksCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ stocks_data.labels|safe }},
+            datasets: [{
+                data: {{ stocks_data.data }},
+                backgroundColor: [
+                    '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', 
+                    '#e74a3b', '#858796', '#f8f9fc', '#5a5c69'
+                ]
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + context.raw.toLocaleString() + ' {{ devise_symbole }}';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+});
+</script>
+{% endblock %}

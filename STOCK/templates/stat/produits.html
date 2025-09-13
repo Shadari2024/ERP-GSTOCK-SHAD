@@ -3,78 +3,98 @@
 
 {% block content %}
 <div class="container-fluid py-4">
+    <!-- Filtres de période -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white text-dark border-0 d-flex justify-content-between align-items-center" style="border-bottom: 2px solid #e9ecef !important;">
+                    <h5 class="mb-0"><i class="fas fa-filter me-2 text-primary"></i> Filtres de période</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" id="filterForm" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="period_type" class="form-label">Type de période</label>
+                            <select class="form-select" id="period_type" name="period_type">
+                                <option value="day" {% if period_type == 'day' %}selected{% endif %}>Journalier</option>
+                                <option value="week" {% if period_type == 'week' %}selected{% endif %}>Hebdomadaire</option>
+                                <option value="month" {% if period_type == 'month' %}selected{% endif %}>Mensuel</option>
+                                <option value="quarter" {% if period_type == 'quarter' %}selected{% endif %}>Trimestriel</option>
+                                <option value="year" {% if period_type == 'year' %}selected{% endif %}>Annuel</option>
+                                <option value="custom" {% if period_type == 'custom' %}selected{% endif %}>Personnalisé</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-3" id="date_range_field" style="display: {% if period_type == 'custom' %}block{% else %}none{% endif %};">
+                            <label for="date_range" class="form-label">Plage de dates</label>
+                            <input type="text" class="form-control date-range-picker" id="date_range" name="date_range" 
+                                   value="{% if start_date and end_date %}{{ start_date|date:'d/m/Y' }} - {{ end_date|date:'d/m/Y' }}{% endif %}">
+                        </div>
+                        
+                        <div class="col-md-3" id="specific_date_field" style="display: {% if period_type == 'day' %}block{% else %}none{% endif %};">
+                            <label for="specific_date" class="form-label">Date spécifique</label>
+                            <input type="date" class="form-control" id="specific_date" name="specific_date" 
+                                   value="{% if specific_date %}{{ specific_date|date:'Y-m-d' }}{% endif %}">
+                        </div>
+                        
+                        <div class="col-md-3" id="specific_month_field" style="display: {% if period_type == 'month' %}block{% else %}none{% endif %};">
+                            <label for="specific_month" class="form-label">Mois spécifique</label>
+                            <input type="month" class="form-control" id="specific_month" name="specific_month" 
+                                   value="{% if specific_month %}{{ specific_month|date:'Y-m' }}{% endif %}">
+                        </div>
+                        
+                        <div class="col-md-3" id="specific_year_field" style="display: {% if period_type == 'year' %}block{% else %}none{% endif %};">
+                            <label for="specific_year" class="form-label">Année spécifique</label>
+                            <input type="number" class="form-control" id="specific_year" name="specific_year" 
+                                   value="{% if specific_year %}{{ specific_year }}{% else %}{{ current_year }}{% endif %}" min="2020" max="2030">
+                        </div>
+                        
+                       
+                        <div class="col-md-12 mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search me-1"></i> Appliquer les filtres
+                            </button>
+                            <a href="{% url 'statistiques_produits' %}" class="btn btn-outline-secondary ms-2">
+                                <i class="fas fa-times me-1"></i> Réinitialiser
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Cartes de synthèse - Version professionnelle -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow-sm border-0">
-                <div class="card-header bg-dark text-white border-0">
+                <div class="card-header bg-white text-dark border-0" style="border-bottom: 2px solid #e9ecef !important;">
                     <div class="d-flex justify-content-between align-items-center">
-                        <h2 class="mb-0"><i class="fas fa-tachometer-alt me-2"></i> Tableau de Bord stock</h2>
+                        <h2 class="mb-0"><i class="fas fa-tachometer-alt me-2 text-primary"></i> Tableau de Bord Stock</h2>
                         <div>
-                            <span class="badge bg-light text-dark me-2">
-                                <i class="fas fa-calendar-day me-1"></i> {{ mois_courant }}
+                            <span class="badge bg-light text-dark me-2 border">
+                                <i class="fas fa-calendar-day me-1 text-info"></i> {{ periode_affichee }}
                             </span>
-                            <span class="badge bg-primary">
-                                <i class="fas fa-building me-1"></i> {{ config_saas.entreprise.nom }}
+                            <span class="badge bg-light text-dark border">
+                                <i class="fas fa-building me-1 text-primary"></i> {{ config_saas.entreprise.nom }}
                             </span>
                         </div>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body bg-light">
                     <div class="row">
                         <!-- Carte Produits -->
                         <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-0 h-100 bg-gradient-blue">
+                            <div class="card border-0 h-100" style="background: linear-gradient(135deg, #ffffff 0%, #e3f2fd 100%); border-left: 4px solid #2196F3 !important;">
                                 <div class="card-body p-3">
                                     <div class="d-flex align-items-center">
-                                        <div class="flex-shrink-0 bg-white-10 rounded-circle p-3 me-3">
-                                            <i class="fas fa-warehouse fa-2x text-white"></i>
+                                        <div class="flex-shrink-0 bg-primary-10 rounded-circle p-3 me-3">
+                                            <i class="fas fa-warehouse fa-2x text-primary"></i>
                                         </div>
                                         <div class="flex-grow-1">
-                                            <h6 class="mb-1 text-white-70">STOCK TOTAL</h6>
-                                            <h3 class="mb-0 text-white">{{ total_produits }}</h3>
-                                            <div class="mt-2 text-white-50">
-                                                <i class="fas fa-arrow-up me-1"></i> 5.2% vs mois dernier
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Carte Ventes -->
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-0 h-100 bg-gradient-green">
-                                <div class="card-body p-3">
-                                    <div class="d-flex align-items-center">
-                                        <div class="flex-shrink-0 bg-white-10 rounded-circle p-3 me-3">
-                                            <i class="fas fa-chart-line fa-2x text-white"></i>
-                                        </div>
-                                        <div class="flex-grow-1">
-                                            <h6 class="mb-1 text-white-70">VENTES MOIS</h6>
-                                            <h3 class="mb-0 text-white">{{ total_ventes }}</h3>
-                                            <div class="mt-2 text-white-50">
-                                                <i class="fas fa-arrow-up me-1"></i> 12.7% vs mois dernier
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Carte CA -->
-                        <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-0 h-100 bg-gradient-purple">
-                                <div class="card-body p-3">
-                                    <div class="d-flex align-items-center">
-                                        <div class="flex-shrink-0 bg-white-10 rounded-circle p-3 me-3">
-                                            <i class="{{ devise_principale.symbole_classe|default:'fas fa-euro-sign' }} fa-2x text-white"></i>
-                                        </div>
-                                        <div class="flex-grow-1">
-                                            <h6 class="mb-1 text-white-70">CHIFFRE D'AFFAIRES</h6>
-                                            <h3 class="mb-0 text-white">{{ total_ca_formatted }}</h3>
-                                            <div class="mt-2 text-white-50">
-                                                <i class="fas fa-arrow-up me-1"></i> 8.3% vs mois dernier
+                                            <h6 class="mb-1 text-secondary">STOCK TOTAL</h6>
+                                            <h3 class="mb-0 text-dark">{{ total_produits }}</h3>
+                                            <div class="mt-2 text-success">
+                                                <i class="fas fa-arrow-up me-1"></i> 5.2% vs période précédente
                                             </div>
                                         </div>
                                     </div>
@@ -84,17 +104,17 @@
 
                         <!-- Carte Alertes -->
                         <div class="col-xl-3 col-md-6 mb-4">
-                            <div class="card border-0 h-100 bg-gradient-orange">
+                            <div class="card border-0 h-100" style="background: linear-gradient(135deg, #ffffff 0%, #ffecb3 100%); border-left: 4px solid #FF9800 !important;">
                                 <div class="card-body p-3">
                                     <div class="d-flex align-items-center">
-                                        <div class="flex-shrink-0 bg-white-10 rounded-circle p-3 me-3">
-                                            <i class="fas fa-exclamation-triangle fa-2x text-white"></i>
+                                        <div class="flex-shrink-0 bg-warning-10 rounded-circle p-3 me-3">
+                                            <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
                                         </div>
                                         <div class="flex-grow-1">
-                                            <h6 class="mb-1 text-white-70">ALERTES STOCK</h6>
-                                            <h3 class="mb-0 text-white">{{ produits_alerte }}</h3>
-                                            <div class="mt-2 text-white-50">
-                                                <i class="fas fa-arrow-down me-1"></i> 2.1% vs mois dernier
+                                            <h6 class="mb-1 text-secondary">ALERTES STOCK</h6>
+                                            <h3 class="mb-0 text-dark">{{ produits_alerte }}</h3>
+                                            <div class="mt-2 text-danger">
+                                                <i class="fas fa-arrow-down me-1"></i> 2.1% vs période précédente
                                             </div>
                                         </div>
                                     </div>
@@ -112,26 +132,20 @@
         <!-- Graphique des ventes -->
         <div class="col-lg-8 mb-4">
             <div class="card shadow-sm h-100 border-0">
-                <div class="card-header bg-white border-0">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h6 class="m-0 font-weight-bold">
-                            <i class="fas fa-shopping-basket me-2 text-primary"></i> PERFORMANCE DES PRODUITS
-                        </h6>
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-sm btn-outline-secondary active">Mois</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary">Trimestre</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary">Année</button>
-                        </div>
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center py-3" style="border-bottom: 1px solid #e9ecef !important;">
+                    <h6 class="m-0 font-weight-bold text-dark">
+                        <i class="fas fa-shopping-basket me-2 text-primary"></i> PERFORMANCE DES PRODUITS
+                    </h6>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-primary active">{{ periode_type|title }}</button>
                     </div>
                 </div>
                 <div class="card-body">
                     <canvas id="ventesChart" height="300"></canvas>
                 </div>
-                <div class="card-footer bg-white border-0">
-                    <div class="d-flex justify-content-between">
-                        <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Top 10 des produits les plus vendus</small>
-                        <small class="text-primary"><i class="fas fa-download me-1"></i> Exporter</small>
-                    </div>
+                <div class="card-footer bg-white border-0 d-flex justify-content-between py-2" style="border-top: 1px solid #e9ecef !important;">
+                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Top 10 des produits les plus vendus</small>
+                    <small class="text-primary"><i class="fas fa-download me-1"></i> Exporter</small>
                 </div>
             </div>
         </div>
@@ -139,8 +153,8 @@
         <!-- Graphique des catégories -->
         <div class="col-lg-4 mb-4">
             <div class="card shadow-sm h-100 border-0">
-                <div class="card-header bg-white border-0">
-                    <h6 class="m-0 font-weight-bold">
+                <div class="card-header bg-white border-0 py-3" style="border-bottom: 1px solid #e9ecef !important;">
+                    <h6 class="m-0 font-weight-bold text-dark">
                         <i class="fas fa-tags me-2 text-primary"></i> RÉPARTITION PAR CATÉGORIE
                     </h6>
                 </div>
@@ -151,9 +165,9 @@
                     <div class="mt-3">
                         {% for c in categories|slice:":4" %}
                         <div class="d-flex align-items-center mb-2">
-                            <span class="legend-indicator" style="background-color: {{ c.couleur }}"></span>
-                            <span class="ms-2">{{ c.nom }}</span>
-                            <span class="ms-auto fw-bold">{{ c.total_ventes|default:0 }} unités</span>
+                            <span class="legend-indicator" style="background-color: {{ c.couleur }}; width: 12px; height: 12px; border-radius: 50%; display: inline-block;"></span>
+                            <span class="ms-2 text-dark">{{ c.nom }}</span>
+                            <span class="ms-auto fw-bold text-dark">{{ c.total_ventes|default:0 }} unités</span>
                         </div>
                         {% endfor %}
                     </div>
@@ -166,35 +180,29 @@
     <div class="row mt-4">
         <div class="col-12">
             <div class="card shadow-sm border-0">
-                <div class="card-header bg-white border-0">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">
-                            <i class="fas fa-cubes me-2 text-primary"></i> DETAILS DES PRODUITS
-                        </h5>
-                        <div>
-                            <button class="btn btn-sm btn-primary">
-                                <i class="fas fa-plus me-1"></i> Nouveau produit
-                            </button>
-                        </div>
-                    </div>
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center py-3" style="border-bottom: 1px solid #e9ecef !important;">
+                    <h5 class="mb-0 text-dark">
+                        <i class="fas fa-cubes me-2 text-primary"></i> DÉTAILS DES PRODUITS
+                    </h5>
+                
                 </div>
                 <div class="card-body px-0">
                     <div class="table-responsive">
                         <table class="table table-hover align-middle mb-0">
                             <thead class="bg-light">
                                 <tr>
-                                    <th class="ps-4 border-0">PRODUIT</th>
-                                    <th class="border-0">CATÉGORIE</th>
-                                    <th class="border-0">STOCK</th>
-                                    <th class="border-0">SEUIL</th>
-                                    <th class="border-0">VENTES</th>
-                                    <th class="border-0">CA ({{ devise_principale.symbole }})</th>
-                                    <th class="border-0">STATUT</th>
-                                    <th class="pe-4 border-0">ACTIONS</th>
+                                    <th class="ps-4 border-0 text-dark">PRODUIT</th>
+                                    <th class="border-0 text-dark">CATÉGORIE</th>
+                                    <th class="border-0 text-dark">STOCK</th>
+                                    <th class="border-0 text-dark">SEUIL</th>
+                                    <th class="border-0 text-dark">VENTES</th>
+                                    <th class="border-0 text-dark">CA ({{ devise_principale.symbole }})</th>
+                                    <th class="border-0 text-dark">STATUT</th>
+                                    <th class="pe-4 border-0 text-dark">ACTIONS</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for p in stats %}
+                                {% for p in page_obj %}
                                 <tr class="{% if p.stock == 0 %}table-danger{% elif p.stock <= p.seuil_alerte %}table-warning{% endif %}">
                                     <td class="ps-4">
                                         <div class="d-flex align-items-center">
@@ -206,14 +214,14 @@
                                             </div>
                                             {% endif %}
                                             <div>
-                                                <strong>{{ p.nom }}</strong><br>
+                                                <strong class="text-dark">{{ p.nom }}</strong><br>
                                                 <small class="text-muted">{{ p.code_barres|default:"" }}</small>
                                             </div>
                                         </div>
                                     </td>
                                     <td>
                                         {% if p.categorie %}
-                                        <span class="badge py-1 px-2 rounded-pill" style="background-color: {{ p.categorie.couleur }}; color: white">
+                                        <span class="badge py-1 px-2 rounded-pill" style="background-color: {{ p.categorie.couleur }}; color: dark">
                                             <i class="fas fa-tag me-1"></i> {{ p.categorie.nom }}
                                         </span>
                                         {% else %}
@@ -228,12 +236,12 @@
                                                      style="width: {{ progress }}%">
                                                 </div>
                                             </div>
-                                            <small class="ms-2 fw-bold">{{ p.stock }}</small>
+                                            <small class="ms-2 fw-bold text-dark">{{ p.stock }}</small>
                                         </div>
                                     </td>
-                                    <td>{{ p.seuil_alerte }}</td>
-                                    <td>{{ p.quantite_vendue|default:"0" }}</td>
-                                    <td class="fw-bold">
+                                    <td class="text-dark">{{ p.seuil_alerte }}</td>
+                                    <td class="text-dark">{{ p.quantite_vendue|default:"0" }}</td>
+                                    <td class="fw-bold text-dark">
                                         {% if p.montant_vendu %}
                                             {{ p.montant_vendu|floatformat:2 }} {{ devise_principale.symbole }}
                                         {% else %}
@@ -255,14 +263,14 @@
                                         </span>
                                         {% endif %}
                                     </td>
-                                    <td class="pe-4">
+                                    {% comment %} <td class="pe-4">
                                         <button class="btn btn-sm btn-outline-primary rounded-circle me-1" title="Voir">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                         <button class="btn btn-sm btn-outline-secondary rounded-circle" title="Éditer">
                                             <i class="fas fa-pencil-alt"></i>
                                         </button>
-                                    </td>
+                                    </td> {% endcomment %}
                                 </tr>
                                 {% empty %}
                                 <tr>
@@ -281,29 +289,49 @@
                         </table>
                     </div>
                 </div>
-                <div class="card-footer bg-white border-0">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="text-muted">
-                            Affichage de <span class="fw-bold">1</span> à <span class="fw-bold">10</span> sur <span class="fw-bold">{{ stats.count }}</span> produits
-                        </div>
-                        <nav aria-label="Page navigation">
-                            <ul class="pagination pagination-sm mb-0">
-                                <li class="page-item disabled">
-                                    <a class="page-link" href="#" tabindex="-1">
-                                        <i class="fas fa-chevron-left"></i>
-                                    </a>
-                                </li>
-                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                                <li class="page-item"><a class="page-link" href="#">3</a></li>
-                                <li class="page-item">
-                                    <a class="page-link" href="#">
-                                        <i class="fas fa-chevron-right"></i>
-                                    </a>
-                                </li>
-                            </ul>
-                        </nav>
+                <div class="card-footer bg-white border-0 d-flex justify-content-between align-items-center py-3" style="border-top: 1px solid #e9ecef !important;">
+                    <div class="text-muted">
+                        Affichage de <span class="fw-bold text-dark">{{ page_obj.start_index }}</span> à <span class="fw-bold text-dark">{{ page_obj.end_index }}</span> sur <span class="fw-bold text-dark">{{ paginator.count }}</span> produits
                     </div>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination pagination-sm mb-0">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link text-dark" href="?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#" tabindex="-1">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                            
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                <li class="page-item active"><a class="page-link bg-primary border-primary" href="#">{{ num }}</a></li>
+                                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                                <li class="page-item"><a class="page-link text-dark" href="?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}page={{ num }}">{{ num }}</a></li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link text-dark" href="?{% if request.GET %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <a class="page-link" href="#">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
                 </div>
             </div>
         </div>
@@ -318,10 +346,10 @@
     new Chart(ventesCtx, {
         type: 'bar',
         data: {
-            labels: [{% for p in stats|slice:":10" %}"{{ p.nom|truncatechars:20 }}",{% endfor %}],
+            labels: [{% for p in top_produits %}"{{ p.nom|truncatechars:20 }}",{% endfor %}],
             datasets: [{
                 label: 'Quantité vendue',
-                data: [{% for p in stats|slice:":10" %}{{ p.quantite_vendue|default:0 }},{% endfor %}],
+                data: [{% for p in top_produits %}{{ p.quantite_vendue|default:0 }},{% endfor %}],
                 backgroundColor: '#4e73df',
                 borderColor: '#4e73df',
                 borderWidth: 0,
@@ -412,5 +440,64 @@
             }
         }
     });
+
+    // Script pour gérer l'affichage dynamique des champs de filtre
+    document.addEventListener('DOMContentLoaded', function() {
+        const periodTypeSelect = document.getElementById('period_type');
+        const dateRangeField = document.getElementById('date_range_field');
+        const specificDateField = document.getElementById('specific_date_field');
+        const specificMonthField = document.getElementById('specific_month_field');
+        const specificYearField = document.getElementById('specific_year_field');
+        
+        function toggleFilterFields() {
+            const selectedValue = periodTypeSelect.value;
+            
+            // Masquer tous les champs
+            dateRangeField.style.display = 'none';
+            specificDateField.style.display = 'none';
+            specificMonthField.style.display = 'none';
+            specificYearField.style.display = 'none';
+            
+            // Afficher le champ approprié
+            if (selectedValue === 'custom') {
+                dateRangeField.style.display = 'block';
+            } else if (selectedValue === 'day') {
+                specificDateField.style.display = 'block';
+            } else if (selectedValue === 'month') {
+                specificMonthField.style.display = 'block';
+            } else if (selectedValue === 'year') {
+                specificYearField.style.display = 'block';
+            }
+        }
+        
+        // Initialiser l'affichage
+        toggleFilterFields();
+        
+        // Écouter les changements
+        periodTypeSelect.addEventListener('change', toggleFilterFields);
+        
+        // Initialiser le date range picker
+        if (document.querySelector('.date-range-picker')) {
+            $('.date-range-picker').daterangepicker({
+                locale: {
+                    format: 'DD/MM/YYYY',
+                    applyLabel: 'Appliquer',
+                    cancelLabel: 'Annuler',
+                    daysOfWeek: ['Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa'],
+                    monthNames: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+                }
+            });
+        }
+    });
 </script>
+
+<style>
+    .bg-primary-10 { background-color: rgba(33, 150, 243, 0.1) !important; }
+    .bg-success-10 { background-color: rgba(76, 175, 80, 0.1) !important; }
+    .bg-purple-10 { background-color: rgba(156, 39, 176, 0.1) !important; }
+    .bg-warning-10 { background-color: rgba(255, 152, 0, 0.1) !important; }
+    .text-purple { color: #9C27B0 !important; }
+    .btn-outline-secondary { border-color: #dee2e6; color: #6c757d; }
+    .btn-outline-secondary:hover { background-color: #f8f9fa; color: #495057; }
+</style>
 {% endblock %}

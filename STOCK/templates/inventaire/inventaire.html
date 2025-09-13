@@ -37,10 +37,30 @@
                 <div class="app-hover-effect"></div>
             </a>
         </div>
-
-        <!-- Statistiques -->
-        <div class="col">
+<div class="col">
             <a href="{% url 'statistiquesVente' %}" class="app-card" data-aos="zoom-in" data-aos-delay="100">
+                <div class="app-icon bg-purple-light">
+                    <i class="bi bi-graph-up"></i>
+                </div>
+                <div class="app-name">Statistiques Ventes </div>
+                <div class="app-badge">Analyse des ventes</div>
+                <div class="app-hover-effect"></div>
+            </a>
+        </div>
+
+        <div class="col">
+            <a href="{% url 'achats:dashboard' %}" class="app-card" data-aos="zoom-in" data-aos-delay="100">
+                <div class="app-icon bg-purple-light">
+                    <i class="bi bi-graph-up"></i>
+                </div>
+                <div class="app-name">Statistiques Achats</div>
+                <div class="app-badge">Analyse des ventes</div>
+                <div class="app-hover-effect"></div>
+            </a>
+        </div>
+  <!-- Statistiques -->
+        <div class="col">
+            <a href="{% url 'statistiques_produits' %}" class="app-card" data-aos="zoom-in" data-aos-delay="100">
                 <div class="app-icon bg-purple-light">
                     <i class="bi bi-graph-up"></i>
                 </div>
@@ -51,6 +71,8 @@
         </div>
     </div>
 </div>
+
+
 
 <!-- Styles personnalisés -->
 <style>

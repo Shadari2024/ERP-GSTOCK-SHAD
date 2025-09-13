@@ -50,9 +50,21 @@ class PromotionLigneForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Rendre le champ valeur_secondaire obligatoire pour certains types de promotion
+        if self.instance and self.instance.promotion:
+            if self.instance.promotion.type_promotion in ['acheter_x_obtenir_y', 'lot']:
+                self.fields['valeur_secondaire'].required = True
     
-    # La validation de la valeur secondaire est déplacée dans la vue pour éviter l'erreur.
-    # Ne pas implémenter la méthode clean ici.
+    def clean(self):
+        cleaned_data = super().clean()
+        valeur_secondaire = cleaned_data.get('valeur_secondaire')
+        
+        # Vérifier si la valeur secondaire est requise
+        if self.instance and self.instance.promotion:
+            if self.instance.promotion.type_promotion in ['acheter_x_obtenir_y', 'lot'] and not valeur_secondaire:
+                raise forms.ValidationError(_('La valeur secondaire est requise pour ce type de promotion.'))
+        
+        return cleaned_data
 
 PromotionLigneFormSet = forms.inlineformset_factory(
     Promotion, 

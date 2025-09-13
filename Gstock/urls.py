@@ -19,6 +19,7 @@ urlpatterns = [
     path('crm/', include('crm.urls')),
     path('grh/', include('grh.urls', namespace='grh')),
     path('vitrine/', include('vitrine.urls', namespace='vitrine')),
+     path('bi/', include('bi.urls', namespace='bi')),
 ]
 
 if settings.DEBUG:

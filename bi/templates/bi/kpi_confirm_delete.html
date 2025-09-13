@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Supprimer KPI" %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-danger">
+                        <i class="fas fa-exclamation-triangle"></i> {% trans "Confirmation de suppression" %}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="lead">{% trans "Êtes-vous sûr de vouloir supprimer ce KPI ?" %}</p>
+                    
+                    <div class="alert alert-warning">
+                        <strong>{{ object.nom }}</strong> ({{ object.code }})<br>
+                        <small class="text-muted">{{ object.description|truncatewords:20 }}</small>
+                    </div>
+                    
+                    <p class="text-danger">
+                        <i class="fas fa-exclamation-circle"></i>
+                        {% trans "Cette action est irréversible. Toutes les données historiques associées seront également supprimées." %}
+                    </p>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i> {% trans "Confirmer la suppression" %}
+                            </button>
+                            <a href="{% url 'bi:kpi_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> {% trans "Annuler" %}
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

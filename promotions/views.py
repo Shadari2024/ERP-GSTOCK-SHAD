@@ -180,6 +180,9 @@ class PromotionCreateView(LoginRequiredMixin, PermissionRequiredMixin, Entrepris
         else:
             messages.error(self.request, "Veuillez corriger les erreurs ci-dessous.")
             return self.form_invalid(form)
+from django.contrib import messages
+from django.shortcuts import redirect
+from parametres.models import ConfigurationSAAS
 
 class PromotionUpdateView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMixin, UpdateView):
     model = Promotion
