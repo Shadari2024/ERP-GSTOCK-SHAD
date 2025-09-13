@@ -1,55 +1,227 @@
-<!-- templates/crm/envoyer_message_clients.html -->
+{% extends "crm/base.html" %}
+{% load static %}
 
-<!DOCTYPE html>
-<html>
-<head>
-    <title>📩 Envoyer un message à tous les clients</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        textarea { height: 200px; }
-        button {
-            background-color: #007bff;
-            color: white;
-            padding: 12px 20px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        button:hover { background-color: #0056b3; }
-        .messages { margin: 20px 0; padding: 10px; background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
-    </style>
-</head>
-<body>
+{% block page_title %}Message aux clients{% endblock %}
 
-    <h1>📩 Envoyer un message à tous les clients</h1>
+{% block crm_content %}
+<div class="message-client-container">
+    <div class="message-header">
+        <h1><i class="fas fa-envelope"></i> Envoyer un message à tous les clients</h1>
+        <p>Rédigez un message qui sera envoyé à l'ensemble de votre base clients.</p>
+    </div>
 
     {% if messages %}
         {% for message in messages %}
-            <div class="messages">{{ message }}</div>
+            <div class="alert alert-success">{{ message }}</div>
         {% endfor %}
     {% endif %}
 
-    <form method="post">
-        {% csrf_token %}
+    <div class="message-card">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="sujet">Sujet de l'email</label>
+                <input type="text" name="sujet" id="sujet" placeholder="Ex: Offre spéciale, Message important..." required>
+                <div class="form-helper">Un sujet clair augmente le taux d'ouverture</div>
+            </div>
 
-        <div class="form-group">
-            <label for="sujet">Sujet de l'email :</label>
-            <input type="text" name="sujet" id="sujet" placeholder="Ex: Offre spéciale, Message important, Bonne journée..." required>
+            <div class="form-group">
+                <label for="message">Votre message</label>
+                <textarea name="message" id="message" placeholder="Écrivez ici votre message pour les clients..." required></textarea>
+                <div class="form-helper">Ce message sera envoyé à tous vos clients</div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-paper-plane"></i> Envoyer à tous les clients
+                </button>
+                <a href="#" class="btn-secondary">Annuler</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="sending-info">
+        <h3><i class="fas fa-info-circle"></i> Informations d'envoi</h3>
+        <p>Le message sera envoyé à <strong>{{ client_count }}</strong> clients.</p>
+        <div class="info-tips">
+            <p><strong>Conseils pour votre message :</strong></p>
+            <ul>
+                <li>Soyez concis et direct</li>
+                <li>Utilisez un ton approprié à votre audience</li>
+                <li>Vérifiez l'orthographe avant l'envoi</li>
+                <li>Pensez à inclure un appel à l'action clair</li>
+            </ul>
         </div>
+    </div>
+</div>
 
-        <div class="form-group">
-            <label for="message">Message :</label>
-            <textarea name="message" id="message" placeholder="Écrivez ici votre message pour les clients..." required></textarea>
-        </div>
+<style>
+    .message-client-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #333;
+    }
 
-        <button type="submit">✉️ Envoyer à tous les clients</button>
-    </form>
+    .message-header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #eaeaea;
+    }
 
-</body>
-</html>
+    .message-header h1 {
+        color: #2c3e50;
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+
+    .message-header p {
+        color: #7f8c8d;
+        font-size: 16px;
+    }
+
+    .message-card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        padding: 25px;
+        margin-bottom: 30px;
+    }
+
+    .form-group {
+        margin-bottom: 25px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    input, textarea {
+        width: 100%;
+        padding: 12px 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 16px;
+        transition: border-color 0.3s;
+        box-sizing: border-box;
+    }
+
+    input:focus, textarea:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+    }
+
+    textarea {
+        min-height: 200px;
+        resize: vertical;
+    }
+
+    .form-helper {
+        font-size: 13px;
+        color: #7f8c8d;
+        margin-top: 5px;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+    }
+
+    .btn-primary {
+        background-color: #3498db;
+        color: white;
+        padding: 12px 25px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: background-color 0.3s;
+    }
+
+    .btn-primary:hover {
+        background-color: #2980b9;
+    }
+
+    .btn-secondary {
+        background-color: #e7e7e7;
+        color: #333;
+        padding: 12px 25px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        transition: background-color 0.3s;
+    }
+
+    .btn-secondary:hover {
+        background-color: #ddd;
+    }
+
+    .alert {
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 25px;
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+
+    .sending-info {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        border-left: 4px solid #3498db;
+    }
+
+    .sending-info h3 {
+        color: #2c3e50;
+        margin-top: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .info-tips {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #eaeaea;
+    }
+
+    .info-tips ul {
+        padding-left: 20px;
+        margin-bottom: 0;
+    }
+
+    .info-tips li {
+        margin-bottom: 5px;
+    }
+
+    @media (max-width: 768px) {
+        .form-actions {
+            flex-direction: column;
+        }
+        
+        .btn-primary, .btn-secondary {
+            justify-content: center;
+        }
+    }
+</style>
+
+<!-- Font Awesome pour les icônes -->
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+{% endblock %}

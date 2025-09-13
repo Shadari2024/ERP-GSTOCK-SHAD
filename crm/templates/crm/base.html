@@ -62,6 +62,12 @@
                             <i class="fas fa-calendar me-2"></i> Calendrier
                         </a>
                     </li>
+                       <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'envoyer_message_clients' %}active{% endif %}" href="{% url 'crm:envoyer_message_clients' %}">
+                            <i class="fas fa-calendar me-2"></i> Envoyez message aux clients
+                        </a>
+                    </li>
+                    
                     
                     <li class="nav-item">
                         <a class="nav-link {% if 'performances' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'crm:performances' %}">

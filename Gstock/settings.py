@@ -178,6 +178,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'security.middleware.VerificationAccesMiddleware',  # Après l'authentification
     'security.middleware.JournalisationMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # ✅ juste après SecurityMiddleware
     'parametres.middlewares.CurrentEntrepriseMiddleware',
     'parametres.middlewares.EnsureSAASConfigMiddleware',
     'ventes.middleware.PosAccessMiddleware',
@@ -218,6 +219,7 @@ TEMPLATES = [
     },
 ]
 WSGI_APPLICATION = 'Gstock.wsgi.application'
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 # Database
