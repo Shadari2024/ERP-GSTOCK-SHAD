@@ -219,7 +219,6 @@ TEMPLATES = [
     },
 ]
 WSGI_APPLICATION = 'Gstock.wsgi.application'
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 # Database
@@ -233,9 +232,30 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 #     }
 # }
 
+# DATABASES = {
+#     'default':dj_database_url.parse(config('DATABASE_URL'))
+# }
+# from decouple import config
+# import dj_database_url
+
+# Base de données
 DATABASES = {
-    'default':dj_database_url.parse(config('DATABASE_URL'))
+    'default': dj_database_url.parse(config('DATABASE_URL'))
 }
+
+# Cloudinary
+INSTALLED_APPS += [
+    "cloudinary",
+    "cloudinary_storage",
+]
+
+CLOUDINARY_URL = config("CLOUDINARY_URL")
+
+# Fichiers médias (images uploadées)
+DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+
+# Fichiers statiques (CSS, JS, logos par défaut)
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -283,13 +303,31 @@ TIME_FORMAT = 'H:i'
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
-STATIC_URL = 'static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-STATICFILES_DIRS = (os.path.join(BASE_DIR, 'static/'),)
-# Correction des URLs média
-MEDIA_URL = '/media/'  # ✅ Ajoutez le slash initial
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # ✅ Retirez le slash final
+# Configuration pour la production
+if not DEBUG:
+    # Configuration des fichiers statiques
+    STATIC_URL = '/static/'
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+    
+    # Configuration des fichiers média
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+    
+    # Serveur de fichiers statiques en production
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    
+    # Middleware supplémentaire pour servir les fichiers statiques
+    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+    
+else:
+    # Configuration développement
+    STATIC_URL = '/static/'
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+    STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+    
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
