@@ -1,0 +1,30 @@
+{# ventes/commandes/change_status.html #}
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Changer le Statut de la Commande #{{ commande.numero }}{% endblock %}
+
+{% block content %}
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-8 offset-md-2">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0">Changer le Statut de la Commande #{{ commande.numero }}</h4>
+                        <p class="mb-0">Statut actuel : <span class="badge bg-info">{{ commande.get_statut_display }}</span></p>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" novalidate>
+                            {% csrf_token %}
+
+                            {{ form|crispy }}
+
+                            <button type="submit" class="btn btn-success mt-3"><i class="fas fa-sync-alt"></i> Mettre à jour le statut</button>
+                            <a href="{% url 'ventes:commande_detail' commande.pk %}" class="btn btn-secondary mt-3">Annuler</a>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

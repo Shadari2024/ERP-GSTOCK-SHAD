@@ -1,0 +1,81 @@
+{# ventes/commandes/audit_log_list.html #}
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Journal d'Audit des Commandes{% endblock %}
+
+{% block content %}
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-dark text-white">
+                        <h4 class="mb-0">Journal d'Audit des Commandes</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if audit_logs %}
+                            <table class="table table-bordered table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date & Heure</th>
+                                        <th>Commande #</th>
+                                        <th>Action</th>
+                                        <th>Description</th>
+                                        <th>Effectué par</th>
+                                        <th>Détails</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for log in audit_logs %}
+                                        <tr>
+                                            <td>{{ log.performed_at|date:"d/m/Y H:i:s" }}</td>
+                                            <td>
+                                                {% if log.commande %}
+                                                    <a href="{% url 'ventes:commande_detail' log.commande.pk %}">{{ log.commande.numero }}</a>
+                                                {% else %}
+                                                    N/A (Supprimée)
+                                                {% endif %}
+                                            </td>
+                                            <td><span class="badge bg-primary">{{ log.get_action_display }}</span></td>
+                                            <td>{{ log.description }}</td>
+                                            <td>{{ log.performed_by.username|default:"Utilisateur inconnu" }}</td>
+                                            <td>
+                                                {% if log.details %}
+                                                    <pre class="mb-0 small bg-light p-1 rounded">{{ log.details|json_script:"audit_details_commande" }}</pre>
+                                                    <script>
+                                                        const jsonDetails_{{ log.pk }} = JSON.parse(document.getElementById('audit_details_commande').textContent);
+                                                        document.querySelector('#audit_details_commande').textContent = JSON.stringify(jsonDetails_{{ log.pk }}, null, 2);
+                                                    </script>
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+
+                            {# Pagination #}
+                            {% if is_paginated %}
+                                <nav aria-label="Page navigation">
+                                    <ul class="pagination justify-content-center">
+                                        {% if page_obj.has_previous %}
+                                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Précédent</a></li>
+                                        {% endif %}
+                                        <li class="page-item active"><a class="page-link" href="#">{{ page_obj.number }}</a></li>
+                                        {% if page_obj.has_next %}
+                                            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Suivant</a></li>
+                                        {% endif %}
+                                    </ul>
+                                </nav>
+                            {% endif %}
+
+                        {% else %}
+                            <p>Aucun événement d'audit enregistré pour les commandes.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
