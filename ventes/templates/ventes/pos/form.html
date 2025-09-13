@@ -111,9 +111,9 @@
                     <div class="alert alert-warning mt-3">
                         <i class="fas fa-exclamation-triangle mr-2"></i>
                         Aucun caissier disponible. 
-                        <a href="{% url 'security:user_create' %}" class="alert-link">
+                        {% comment %} <a href="{% url 'security:user_create' %}" class="alert-link">
                             Créer des caissiers
-                        </a>
+                        </a> {% endcomment %}
                     </div>
                     {% endif %}
                 </div>

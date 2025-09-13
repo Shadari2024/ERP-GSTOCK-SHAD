@@ -3794,7 +3794,7 @@ def telecharger_rapport_cloture_pdf(request):
 
 @method_decorator([
     login_required,
-    permission_required('stock.add_produit', raise_exception=True)
+    permission_required('STOCK.add_produit', raise_exception=True)
 ], name='dispatch')
 class AjoutMultipleProduitsView(EntrepriseAccessMixin, View):
 
