@@ -1,0 +1,123 @@
+/* Styles spécifiques au module GRH */
+
+/* Amélioration des tables */
+.table-grh {
+    font-size: 0.9rem;
+}
+
+.table-grh th {
+    border-top: none;
+    font-weight: 600;
+    background-color: #f8f9fa;
+}
+
+.table-grh tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Cartes améliorées */
+.card-grh {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-grh .card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    font-weight: 600;
+}
+
+/* Badges personnalisés */
+.badge-statut {
+    font-size: 0.75em;
+    padding: 0.4em 0.6em;
+}
+
+/* Formulaires */
+.form-grh .form-label {
+    font-weight: 500;
+    margin-bottom: 0.3rem;
+}
+
+.form-grh .required-field::after {
+    content: " *";
+    color: #dc3545;
+}
+
+/* Navigation */
+.navbar-brand {
+    font-weight: 600;
+}
+
+/* Breadcrumb personnalisé */
+.breadcrumb {
+    padding: 0.5rem 0;
+    margin-bottom: 1rem;
+    background-color: transparent;
+    border-radius: 0;
+}
+
+/* Titres de page */
+.page-title {
+    font-weight: 600;
+    color: #343a40;
+    margin-bottom: 0.5rem;
+}
+
+/* Actions */
+.action-buttons .btn {
+    margin-left: 0.3rem;
+}
+
+/* Tableaux responsives */
+.table-responsive {
+    border-radius: 0.25rem;
+}
+
+/* Pied de page fixe */
+.footer {
+    z-index: 1000;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .table-grh {
+        font-size: 0.8rem;
+    }
+    
+    .action-buttons .btn {
+        margin-bottom: 0.3rem;
+    }
+    
+    .page-title {
+        font-size: 1.5rem;
+    }
+}
+
+/* Animation pour les chargements */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+/* Couleurs spécifiques pour les statuts */
+.bg-statut-actif {
+    background-color: #28a745 !important;
+}
+
+.bg-statut-inactif {
+    background-color: #dc3545 !important;
+}
+
+.bg-statut-conge {
+    background-color: #ffc107 !important;
+    color: #212529;
+}
+
+.bg-statut-suspendu {
+    background-color: #6c757d !important;
+}

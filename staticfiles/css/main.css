@@ -1,0 +1,60 @@
+:root {
+    --primary-color: #4e73df;
+    --secondary-color: #1cc88a;
+    --dark-color: #5a5c69;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f8f9fc;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+}
+
+.navbar-brand {
+    font-weight: 600;
+    font-size: 1.5rem;
+}
+
+.card {
+    border-radius: 0.5rem;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: #2e59d9;
+    border-color: #2653d4;
+}
+
+.alert {
+    border-radius: 0.5rem;
+}
+
+/* Animation for form elements */
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(78, 115, 223, 0.25);
+}
+
+/* Dark mode support */
+[data-bs-theme="dark"] {
+    background-color: #1a1a2e;
+    color: #f8f9fa;
+}
+
+[data-bs-theme="dark"] .card {
+    background-color: #16213e;
+    border-color: #1f4068;
+}
