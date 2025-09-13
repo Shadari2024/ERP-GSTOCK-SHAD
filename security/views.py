@@ -101,16 +101,44 @@ class ConnexionView(View):
         })
     
     def _get_redirect_url(self, user):
-        """Méthode interne pour déterminer la redirection"""
-        # Utilise reverse() pour obtenir les URLs absolues
-        if user.role == 'ADMIN':
+        """Méthode interne pour déterminer la redirection - PRIORITÉ AUX GROUPES"""
+        print(f"🔍 CONNEXION REDIRECT - User: {user.username}")
+        print(f"🔍 CONNEXION REDIRECT - Role field: {getattr(user, 'role', 'NOT_SET')}")
+        print(f"🔍 CONNEXION REDIRECT - Groups: {[g.name for g in user.groups.all()]}")
+        
+        # PRIORITÉ 1: Vérification par groupes
+        if user.is_superuser or user.is_staff:
+            print("🔍 REDIRECTION: Admin dashboard")
             return reverse('security:admin_dashboard')
-        elif user.role == 'security:MANAGER':
-            return reverse('manager_dashboard')
-        elif user.role == 'CAISSIER':
-            return reverse('ventes:caissier_dashboard')
-        elif user.role == 'STOCK':
+        elif user.groups.filter(name='Manager').exists():
+            print("🔍 REDIRECTION: Manager dashboard")
+            return reverse('security:manager_dashboard')
+        elif user.groups.filter(name='Caissier').exists():
+            print("🔍 REDIRECTION: Caissier dashboard")
+            return reverse('security:caissier_dashboard')
+        elif user.groups.filter(name='Vendeur').exists():
+            print("🔍 REDIRECTION: Vendeur dashboard")
+            return reverse('security:vendeur_dashboard')
+        elif user.groups.filter(name='Stock').exists():
+            print("🔍 REDIRECTION: Stock dashboard")
             return reverse('security:stock_dashboard')
+        
+        # PRIORITÉ 2: Fallback vers le champ role
+        if hasattr(user, 'role') and user.role:
+            print(f"🔍 Fallback to role field: {user.role}")
+            if user.role == 'ADMIN':
+                return reverse('security:admin_dashboard')
+            elif user.role == 'MANAGER':  # ✅ CORRECTION ICI
+                return reverse('security:manager_dashboard')
+            elif user.role == 'CAISSIER':
+                return reverse('security:caissier_dashboard')
+            elif user.role == 'VENDEUR':
+                return reverse('security:vendeur_dashboard')
+            elif user.role == 'STOCK':
+                return reverse('security:stock_dashboard')
+        
+        # PRIORITÉ 3: Fallback final
+        print("🔍 REDIRECTION: Fallback to vendeur dashboard")
         return reverse('security:vendeur_dashboard')
 
 def deconnexion(request):
@@ -475,6 +503,52 @@ class TableauDeBordVendeur(View):
             })
         
         return alertes
+    
+    
+   
+    
+@method_decorator([login_required, role_requis(['STOCK'])], name='dispatch')
+class TableauDeBordStock(View):
+    template_name = 'security/dashboard/stock.html'
+    
+    def get(self, request):
+        return render(request, self.template_name)
+    
+    
+@login_required
+def dashboard_redirect(request):
+    """Redirige vers le dashboard approprié selon le rôle"""
+    print(f"🔍 DASHBOARD REDIRECT - User: {request.user.username}")
+    print(f"🔍 DASHBOARD REDIRECT - Role field: {getattr(request.user, 'role', 'NOT_SET')}")
+    print(f"🔍 DASHBOARD REDIRECT - Groups: {[g.name for g in request.user.groups.all()]}")
+    
+    if not request.user.is_authenticated:
+        return redirect('security:connexion')
+    
+    next_url = request.GET.get('next')
+    if next_url:
+        print(f"🔍 Redirecting to next URL: {next_url}")
+        return redirect(next_url)
+    
+    # ✅ UTILISEZ LA MÊME LOGIQUE QUE VOTRE AUTRE FONCTION
+    if request.user.is_superuser or request.user.is_staff:
+        print("🔍 Redirecting to ADMIN dashboard")
+        return redirect('security:admin_dashboard')
+    elif request.user.groups.filter(name='Manager').exists():
+        print("🔍 Redirecting to MANAGER dashboard")
+        return redirect('security:manager_dashboard')
+    elif request.user.groups.filter(name='Caissier').exists():
+        print("🔍 Redirecting to CAISSIER dashboard")
+        return redirect('security:caissier_dashboard')
+    elif request.user.groups.filter(name='Vendeur').exists():
+        print("🔍 Redirecting to VENDEUR dashboard")
+        return redirect('security:vendeur_dashboard')
+    elif request.user.groups.filter(name='Stock').exists():
+        print("🔍 Redirecting to STOCK dashboard")
+        return redirect('security:stock_dashboard')
+    
+    print("🔍 Fallback to VENDEUR dashboard")
+    return redirect('security:vendeur_dashboard')
 
 @method_decorator([login_required, permission_requise('gerer_utilisateurs')], name='dispatch')
 class ListeUtilisateurs(View):
@@ -722,40 +796,7 @@ class MonProfil(View):
         return redirect('security:mon_profil')
 
 
-    
-    
-@method_decorator([login_required, role_requis(['STOCK'])], name='dispatch')
-class TableauDeBordStock(View):
-    template_name = 'security/dashboard/stock.html'
-    
-    def get(self, request):
-        return render(request, self.template_name)
-    
-    
-    
-
-@login_required
-def dashboard_redirect(request):
-    """Redirige vers le dashboard approprié selon le rôle"""
-    if not request.user.is_authenticated:
-        return redirect('security:connexion')
-    
-    # Vérifiez d'abord si une redirection 'next' est spécifiée
-    next_url = request.GET.get('next')
-    if next_url:
-        return redirect(next_url)
-    
-    # Redirection selon le rôle - utilisez les noms d'URL de votre application
-    if request.user.role == 'ADMIN':
-        return redirect('security:admin_dashboard')  # Utilisez le bon nom d'URL
-    elif request.user.role == 'MANAGER':
-        return redirect('security:manager_dashboard')
-    elif request.user.role == 'CAISSIER':
-        return redirect('security:caissier_dashboard')
-    elif request.user.role == 'STOCK':
-        return redirect('security:stock_dashboard')
-    return redirect('security:vendeur_dashboard')  # Redirection par défaut
-    
+ 
     
 @method_decorator([login_required, permission_requise('voir_statistiques')], name='dispatch')
 class JournalActiviteView(View):

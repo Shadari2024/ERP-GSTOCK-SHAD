@@ -4,14 +4,47 @@ from django.shortcuts import redirect
 from django.contrib.auth.decorators import user_passes_test
 
 def role_requis(roles_autorises):
-    """Décorateur pour restreindre l'accès aux vues par rôle"""
+    """Décorateur pour restreindre l'accès aux vues par rôle (groupes + champ role)"""
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
             if not request.user.is_authenticated:
                 return redirect('security:connexion')
             
-            if request.user.role in roles_autorises or request.user.is_superuser:
+            # ✅ Vérification des groupes D'ABORD
+            user_groups = [group.name for group in request.user.groups.all()]
+            
+            # Mapping des noms de groupes vers les rôles
+            group_to_role_map = {
+                'Manager': 'MANAGER',
+                'Vendeur': 'VENDEUR', 
+                'Caissier': 'CAISSIER',
+                'Stock': 'STOCK',
+                'Admin': 'ADMIN'
+            }
+            
+            # Convertir les groupes en rôles
+            user_roles_from_groups = []
+            for group_name in user_groups:
+                if group_name in group_to_role_map:
+                    user_roles_from_groups.append(group_to_role_map[group_name])
+            
+            # ✅ Combiner les rôles des groupes et le champ role
+            user_all_roles = user_roles_from_groups.copy()
+            if hasattr(request.user, 'role') and request.user.role:
+                user_all_roles.append(request.user.role)
+            
+            print(f"🔍 ROLE REQUIS - User: {request.user.username}")
+            print(f"🔍 ROLE REQUIS - Groups: {user_groups}")
+            print(f"🔍 ROLE REQUIS - Roles from groups: {user_roles_from_groups}")
+            print(f"🔍 ROLE REQUIS - Role field: {getattr(request.user, 'role', 'NOT_SET')}")
+            print(f"🔍 ROLE REQUIS - All roles: {user_all_roles}")
+            print(f"🔍 ROLE REQUIS - Required: {roles_autorises}")
+            
+            # ✅ Vérifier si l'utilisateur a un des rôles requis
+            has_required_role = any(role in user_all_roles for role in roles_autorises)
+            
+            if has_required_role or request.user.is_superuser:
                 return view_func(request, *args, **kwargs)
             
             raise PermissionDenied("Vous n'avez pas le rôle requis pour accéder à cette page")
