@@ -272,7 +272,7 @@ class CommandeCreateView(
 ):
     model = Commande
     form_class = CommandeForm
-    template_name = "ventes/commandes/form.html"
+    template_name = "ventes/form.html"
     permission_required = "ventes.add_commande"
 
     def get_initial(self):
@@ -437,7 +437,7 @@ class CommandeUpdateView(
 ):
     model = Commande
     form_class = CommandeForm
-    template_name = "ventes/commandes/form.html"
+    template_name = "ventes/form.html"
     permission_required = "ventes.change_commande"
 
     def get_form_kwargs(self):
@@ -522,7 +522,7 @@ class CommandeDeleteView(
     LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMixin, DeleteView
 ):
     model = Commande
-    template_name = "ventes/commandes/confirm_delete.html"
+    template_name = "ventes/confirm_delete.html"
     success_url = reverse_lazy("ventes:commande_list")
     permission_required = "ventes.delete_commande"
 
@@ -546,7 +546,7 @@ class CommandeStatutUpdateView(
 ):
     model = Commande
     form_class = CommandeStatutForm
-    template_name = "ventes/commandes/change_status.html"
+    template_name = "ventes/change_status.html"
     permission_required = "ventes.change_commande"
 
     def get_success_url(self):
@@ -592,7 +592,7 @@ class CommandeDetailView(
     LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMixin, DetailView
 ):
     model = Commande
-    template_name = "ventes/commandes/detail.html"
+    template_name = "ventes/detail.html"
     permission_required = "ventes.view_commande"
 
     def get_context_data(self, **kwargs):
@@ -646,7 +646,7 @@ class CommandeAuditLogListView(
     LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMixin, ListView
 ):
     model = CommandeAuditLog
-    template_name = "ventes/commandes/audit_log_list.html"
+    template_name = "ventes/audit_log_list.html"
     context_object_name = "audit_logs"
     permission_required = "ventes.view_audit_log"
     paginate_by = 25
@@ -688,7 +688,7 @@ class CommandePrintView(
     LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMixin, DetailView
 ):
     model = Commande
-    template_name = "ventes/commandes/print.html"
+    template_name = "ventes/print.html"
     context_object_name = "commande"
     permission_required = "ventes.view_commande"
 
@@ -728,7 +728,7 @@ def send_commande_pdf_email(commande, recipient_email):
                 else ""
             ),
         }
-        pdf = render_to_pdf("ventes/commandes/print.html", pdf_context)
+        pdf = render_to_pdf("ventes/print.html", pdf_context)
         if not pdf:
             logger.error(
                 f"La génération du PDF a échoué pour la commande {commande.numero}. L'e-mail ne peut pas être envoyé."
