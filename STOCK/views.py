@@ -783,7 +783,7 @@ from .models import Produit, Categorie
 
 @method_decorator([
     login_required,
-    permission_required('stock.add_produit', raise_exception=True)
+    permission_required('STOCK.add_produit', raise_exception=True)
 ], name='dispatch')
 class AjouterProduitView(EntrepriseAccessMixin, View):
     template_name = 'produit/ajouter_produit.html'
