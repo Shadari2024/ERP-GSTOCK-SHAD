@@ -5092,43 +5092,39 @@ class PaiementVenteView(LoginRequiredMixin, View):
             pk=kwargs.get('vente_id'),
             session__point_de_vente__entreprise=request.user.entreprise
         )
-        
+
         form = PaiementPOSForm(request.POST)
-        
+
         if form.is_valid():
-            with transaction.atomic():
-                paiement = form.save(commit=False)
-                paiement.vente = vente
-                paiement.session = vente.session
-                paiement.save()
-                
-                # Enregistrement comptable
-                try:
+            try:
+                with transaction.atomic():
+                    paiement = form.save(commit=False)
+                    paiement.vente = vente
+                    paiement.session = vente.session
+                    paiement.save()
+
+                    # Enregistrement comptable
                     ecriture = paiement.enregistrer_ecriture_comptable()
-                    if ecriture:
-                        messages.success(request, _("Paiement et écriture comptable enregistrés avec succès."))
-                    else:
-                        messages.warning(request, _("Paiement enregistré mais erreur lors de l'écriture comptable."))
-                except Exception as e:
-                    messages.warning(request, _("Paiement enregistré mais erreur comptable: {}").format(str(e)))
-                
-                # Vérifier si la vente est complètement payée
-                montant_total_paye = vente.paiementpos_set.aggregate(
-                    total=Sum('montant')
-                )['total'] or 0
-                
-                if montant_total_paye >= vente.total_ht:
-                    vente.est_payee = True
-                    vente.save()
-                    messages.success(request, _("Vente complètement payée."))
-                else:
-                    messages.success(request, _("Paiement partiel enregistré."))
-                
-                # Générer le ticket si demandé
-                if request.POST.get('imprimer_ticket'):
-                    return redirect('ventes:impression_ticket', vente_id=vente.id)
-                
+                    if not ecriture:
+                        raise Exception("Impossible de générer l'écriture comptable")
+
+                    # Vérifier si la vente est payée
+                    montant_total_paye = vente.paiementpos_set.aggregate(
+                        total=Sum('montant')
+                    )['total'] or 0
+                    if montant_total_paye >= vente.total_ht:
+                        vente.est_payee = True
+                        vente.save()
+
+            except Exception as e:
+                messages.error(request, _("Erreur : {}").format(str(e)))
                 return redirect('ventes:pos_dashboard', pk=vente.session.point_de_vente.id)
+
+            messages.success(request, _("Paiement enregistré avec succès."))
+            if request.POST.get('imprimer_ticket'):
+                return redirect('ventes:impression_ticket', vente_id=vente.id)
+            return redirect('ventes:pos_dashboard', pk=vente.session.point_de_vente.id)
+
         
         # En cas d'erreur du formulaire
         montant_deja_paye = vente.paiementpos_set.aggregate(

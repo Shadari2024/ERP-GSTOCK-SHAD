@@ -185,7 +185,7 @@ User = get_user_model()
 class EcritureComptable(models.Model):
     """Modèle pour les écritures comptables"""
     journal = models.ForeignKey('JournalComptable', on_delete=models.PROTECT, verbose_name=_("Journal"))
-    numero = models.CharField(max_length=20, verbose_name=_("Numéro d'écriture"))
+    numero = models.CharField(max_length=500, verbose_name=_("Numéro d'écriture"))
     date_ecriture = models.DateTimeField(verbose_name=_("Date d'écriture"))
     date_comptable = models.DateField(verbose_name=_("Date comptable"))
     libelle = models.CharField(max_length=200, verbose_name=_("Libellé"))
