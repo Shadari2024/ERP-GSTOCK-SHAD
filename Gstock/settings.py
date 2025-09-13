@@ -198,14 +198,14 @@ REST_FRAMEWORK = {
     ],
 }
 ROOT_URLCONF = 'Gstock.urls'
-
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            os.path.join(BASE_DIR, 'templates'),  # Ajoutez cette ligne
+            os.path.join(BASE_DIR, 'templates'),
+            os.path.join(BASE_DIR, 'ventes', 'templates'),  # Ajoutez cette ligne
         ],
-        'APP_DIRS': True,
+        'APP_DIRS': True,  # Doit être True pour trouver les templates dans les apps
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
