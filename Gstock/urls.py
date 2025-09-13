@@ -9,8 +9,9 @@ from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 urlpatterns = [
     #path('admin/', admin.site.urls),
     # path('admin/', RedirectView.as_view(url='/dashboard/admin', permanent=True)),
-    path('', dashboard_redirect, name='root_redirect'),
-    path('', include('security.urls')),
+    path('', include('vitrine.urls', namespace='vitrine')),
+    path('dashboarb', dashboard_redirect, name='root_redirect'),
+    path('security/', include('security.urls')),  # évite le conflit
     path('parametres/', include('parametres.urls')),
     path('Achats/', include('achats.urls')),
     path('ventes/', include('ventes.urls')),
@@ -19,7 +20,7 @@ urlpatterns = [
     path('comptabilite/', include('comptabilite.urls')),
     path('crm/', include('crm.urls')),
     path('grh/', include('grh.urls', namespace='grh')),
-    path('vitrine/', include('vitrine.urls', namespace='vitrine')),
+
      path('bi/', include('bi.urls', namespace='bi')),
 ]
 

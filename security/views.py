@@ -156,23 +156,49 @@ class DashboardRedirectView(View):
     def dispatch(self, *args, **kwargs):
         return super().dispatch(*args, **kwargs)
     
-    def get(self, request):
-        if request.user.is_superuser or request.user.is_staff:
-            return redirect('security:admin_dashboard')
-        elif request.user.groups.filter(name='Manager').exists():
-            return redirect('security:manager_dashboard')
-        elif request.user.groups.filter(name='Caissier').exists():
-            return redirect('security:caissier_dashboard')
-        elif request.user.groups.filter(name='Vendeur').exists():
-            return redirect('security:vendeur_dashboard')
-        elif request.user.groups.filter(name='Stock').exists():
-            return redirect('security:stock_dashboard')
-        else:
-            return redirect('security:admin_dashboard')
+    def _get_redirect_url(self, user):
+        """Méthode interne pour déterminer la redirection - PRIORITÉ AUX GROUPES"""
+        print(f"🔍 DEBUG CONNEXION - User: {user.username}")
+        print(f"🔍 DEBUG CONNEXION - Role field: {getattr(user, 'role', 'NOT_SET')}")
+        print(f"🔍 DEBUG CONNEXION - Groups: {[g.name for g in user.groups.all()]}")
+        
+        # PRIORITÉ 1: Vérification par groupes (comme dans dashboard_redirect)
+        if user.is_superuser or user.is_staff:
+            print("🔍 REDIRECTION: Admin dashboard (superuser/staff)")
+            return reverse('security:admin_dashboard')
+        elif user.groups.filter(name='Manager').exists():
+            print("🔍 REDIRECTION: Manager dashboard")
+            return reverse('security:manager_dashboard')
+        elif user.groups.filter(name='Caissier').exists():
+            print("🔍 REDIRECTION: Caissier dashboard")
+            return reverse('security:caissier_dashboard')
+        elif user.groups.filter(name='Vendeur').exists():
+            print("🔍 REDIRECTION: Vendeur dashboard")
+            return reverse('security:vendeur_dashboard')
+        elif user.groups.filter(name='Stock').exists():
+            print("🔍 REDIRECTION: Stock dashboard")
+            return reverse('security:stock_dashboard')
+        
+        # PRIORITÉ 2: Fallback vers le champ role (si existant)
+        if hasattr(user, 'role') and user.role:
+            print(f"🔍 Fallback to role field: {user.role}")
+            if user.role == 'ADMIN':
+                return reverse('security:admin_dashboard')
+            elif user.role == 'MANAGER':
+                return reverse('security:manager_dashboard')
+            elif user.role == 'CAISSIER':
+                return reverse('security:caissier_dashboard')
+            elif user.role == 'VENDEUR':
+                return reverse('security:vendeur_dashboard')
+            elif user.role == 'STOCK':
+                return reverse('security:stock_dashboard')
+        
+        # PRIORITÉ 3: Fallback final
+        print("🔍 REDIRECTION: Fallback to admin dashboard")
+        return reverse('security:admin_dashboard')
 
 
-
-
+    
 
 
 
