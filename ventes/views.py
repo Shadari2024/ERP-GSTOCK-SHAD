@@ -659,7 +659,8 @@ class CommandeAuditLogListView(
 
 class CommandeListView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMixin, ListView):
     model = Commande
-    template_name = "ventes/commandes/commande_list.html"
+    template_name = "ventes/commande_list.html"
+    context_object_name = "commandes"
     permission_required = "ventes.view_commande"
     paginate_by = 10
 
