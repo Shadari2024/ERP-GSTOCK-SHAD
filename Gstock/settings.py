@@ -16,7 +16,7 @@ from celery import schedules
 crontab = schedules.crontab
 from decouple import config
 import dj_database_url
-
+import cloudinary
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -285,60 +285,32 @@ DATETIME_FORMAT = 'd/m/Y H:i'
 DATE_FORMAT = 'd/m/Y'
 TIME_FORMAT = 'H:i'
 
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
- 
+
 # # Static files (CSS, JavaScript, Images)
 # # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-# Fichiers médias (images uploadées)
+# Static / Media
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+
+# Cloudinary config (SDK)
 DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+# Cloudinary Storage
+cloudinary.config( 
+    cloud_name=config('CLOUDINARY_CLOUD_NAME'),
+    api_key=config('CLOUDINARY_API_KEY'),
+    api_secret=config('CLOUDINARY_API_SECRET'),
+    secure=True
+)
 
+if DEBUG:
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+else:
+    DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+    MEDIA_URL = '/media/'
 
-
-
-# Configuration Cloudinary correcte
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
-    'API_KEY': config('CLOUDINARY_API_KEY'),
-    'API_SECRET': config('CLOUDINARY_API_SECRET'),
-}
-
-# # URLs pour les médias (Cloudinary gère les URLs)
-# MEDIA_URL = '/media/'  # Cette URL sera servie par Cloudinary
-
-# # Désactivez le répertoire media local en production
-# if not DEBUG:
-#     MEDIA_ROOT = None
-# else:
-#     # En développement, utilisez le système de fichiers local
-#     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-#     MEDIA_URL = '/media/'
-
-
-
-# # Configuration pour la production
-
- 
-#     # Configuration des fichiers média
-#     MEDIA_URL = '/media/'
-#     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-    
-#     # Serveur de fichiers statiques en production
-
-#     # Middleware supplémentaire pour servir les fichiers statiques
-#     MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
-    
-# else:
-#     # Configuration développement
-#     STATIC_URL = '/static/'
-#     STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-#     STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
-    
-#     MEDIA_URL = '/media/'
-#     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-# # Default primary key field type
 # # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
