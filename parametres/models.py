@@ -250,7 +250,7 @@ class Entreprise(models.Model):
     email = models.EmailField(_("Email"), blank=True, null=True)
     site_web = models.URLField(_("Site web"), blank=True, null=True)
     domaine = models.CharField(_("Domaine"), max_length=255, unique=True)
-    logo = models.ImageField(_("Logo"), upload_to='logos/', blank=True, null=True)
+    logo = models.ImageField(_("Logo"), upload_to='images/', blank=True, null=True)
     active = models.BooleanField(_("Active"), default=True)
     numero_fiscal = models.CharField(_("Numéro Fiscal"), max_length=50, blank=True, null=True)
 
