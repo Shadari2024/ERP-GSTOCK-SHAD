@@ -9,12 +9,16 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+import sys
 from pathlib import Path
 import os
-from celery.schedules import crontab
+from celery import schedules
+crontab = schedules.crontab
 from decouple import config
 import dj_database_url
+
+import cloudinary
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -160,7 +164,9 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'widget_tweaks',
     'django_filters', 
-    'django_weasyprint'
+  
+    "cloudinary",
+    "cloudinary_storage",
   
 ]
 AUTH_USER_MODEL = 'security.UtilisateurPersonnalise'
@@ -243,19 +249,6 @@ DATABASES = {
     'default': dj_database_url.parse(config('DATABASE_URL'))
 }
 
-# Cloudinary
-INSTALLED_APPS += [
-    "cloudinary",
-    "cloudinary_storage",
-]
-
-CLOUDINARY_URL = config("CLOUDINARY_URL")
-
-# Fichiers médias (images uploadées)
-DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
-
-# Fichiers statiques (CSS, JS, logos par défaut)
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -300,36 +293,77 @@ DATETIME_FORMAT = 'd/m/Y H:i'
 DATE_FORMAT = 'd/m/Y'
 TIME_FORMAT = 'H:i'
 
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+ 
+# # Static files (CSS, JavaScript, Images)
+# # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.1/howto/static-files/
+# Fichiers médias (images uploadées)
+DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
-# Configuration pour la production
+# # Fichiers statiques (CSS, JS, logos par défaut)
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+
+# ✅ CORRECTION :
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),  # ✅ CORRECT
+    'API_KEY': config('CLOUDINARY_API_KEY'),        # ✅ CORRECT
+    'API_SECRET': config('CLOUDINARY_API_SECRET'),  # ✅ CORRECT
+}
+# Configuration optionnelle pour optimiser les images
+CLOUDINARY_URL = f"cloudinary://{config('CLOUDINARY_API_KEY')}:{config('CLOUDINARY_API_SECRET')}@{config('CLOUDINARY_CLOUD_NAME')}"
+
+
+# URLs pour les médias (Cloudinary gère les URLs)
+MEDIA_URL = '/media/'  # Cette URL sera servie par Cloudinary
+
+# Désactivez le répertoire media local en production
 if not DEBUG:
-    # Configuration des fichiers statiques
-    STATIC_URL = '/static/'
-    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-    
-    # Configuration des fichiers média
-    MEDIA_URL = '/media/'
-    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-    
-    # Serveur de fichiers statiques en production
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-    
-    # Middleware supplémentaire pour servir les fichiers statiques
-    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
-    
+    MEDIA_ROOT = None
 else:
-    # Configuration développement
-    STATIC_URL = '/static/'
-    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-    STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
-    
-    MEDIA_URL = '/media/'
+    # En développement, utilisez le système de fichiers local
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
+    MEDIA_URL = '/media/'
+
+
+# Initialisation Cloudinary
+try:
+    cloudinary.config(
+        cloud_name=config('CLOUDINARY_CLOUD_NAME'),
+        api_key=config('CLOUDINARY_API_KEY'),
+        api_secret=config('CLOUDINARY_API_SECRET'),
+        secure=True
+    )
+    print("✅ Cloudinary configuré avec succès")
+except Exception as e:
+    print(f"❌ Erreur configuration Cloudinary: {e}")
+
+# # Configuration pour la production
+
+ 
+#     # Configuration des fichiers média
+#     MEDIA_URL = '/media/'
+#     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+    
+#     # Serveur de fichiers statiques en production
+#     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    
+#     # Middleware supplémentaire pour servir les fichiers statiques
+#     MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+    
+# else:
+#     # Configuration développement
+#     STATIC_URL = '/static/'
+#     STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+#     STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+    
+#     MEDIA_URL = '/media/'
+#     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# # Default primary key field type
+# # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

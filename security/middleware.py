@@ -7,28 +7,29 @@ from .utils import get_client_ip
 import re
 
 class VerificationAccesMiddleware(MiddlewareMixin):
-    """Middleware pour vérifier les accès en fonction des rôles et permissions"""
-
     def process_request(self, request):
-        # URLs publiques (sans authentification requise)
+        # Injecter l'entreprise dans la requête
+        if request.user.is_authenticated and hasattr(request.user, "entreprise"):
+            request.entreprise = request.user.entreprise
+        else:
+            request.entreprise = None
+
+        # --- Ton code actuel ici ---
         public_urls = [
             reverse('security:connexion'),
             reverse('security:deconnexion'),
             '/static/',
             '/media/',
             '/favicon.ico',
-            '/admin/',  # Ajout de l'admin Django
+            '/admin/',
         ]
 
-        # Vérifie accès public
         if any(request.path.startswith(url) for url in public_urls):
             return None
 
-        # Redirection si non connecté
         if not request.user.is_authenticated:
             return redirect(f"{reverse('security:connexion')}?next={request.path}")
 
-        # Accès libre pour les super utilisateurs
         if request.user.is_superuser or request.user.is_staff:
             return None
 

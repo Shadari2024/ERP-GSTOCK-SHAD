@@ -11,38 +11,31 @@ def role_requis(roles_autorises):
             if not request.user.is_authenticated:
                 return redirect('security:connexion')
             
-            # ✅ Vérification des groupes D'ABORD
-            user_groups = [group.name for group in request.user.groups.all()]
+            # ✅ Vérification SIMPLIFIÉE - Plus de mapping compliqué
+            user_roles = []
             
-            # Mapping des noms de groupes vers les rôles
-            group_to_role_map = {
-                'Manager': 'MANAGER',
-                'Vendeur': 'VENDEUR', 
-                'Caissier': 'CAISSIER',
-                'Stock': 'STOCK',
-                'Admin': 'ADMIN'
-            }
-            
-            # Convertir les groupes en rôles
-            user_roles_from_groups = []
-            for group_name in user_groups:
-                if group_name in group_to_role_map:
-                    user_roles_from_groups.append(group_to_role_map[group_name])
-            
-            # ✅ Combiner les rôles des groupes et le champ role
-            user_all_roles = user_roles_from_groups.copy()
+            # 1. Récupérer le rôle du champ
             if hasattr(request.user, 'role') and request.user.role:
-                user_all_roles.append(request.user.role)
+                user_roles.append(request.user.role)
+            
+            # 2. Récupérer les noms de groupes DIRECTEMENT (sans mapping)
+            user_roles.extend([group.name.upper() for group in request.user.groups.all()])
+            
+            # 3. Normaliser tous les rôles en majuscules
+            user_roles_normalized = [role.upper() for role in user_roles]
+            roles_autorises_normalized = [role.upper() for role in roles_autorises]
             
             print(f"🔍 ROLE REQUIS - User: {request.user.username}")
-            print(f"🔍 ROLE REQUIS - Groups: {user_groups}")
-            print(f"🔍 ROLE REQUIS - Roles from groups: {user_roles_from_groups}")
+            print(f"🔍 ROLE REQUIS - Groups: {[g.name for g in request.user.groups.all()]}")
             print(f"🔍 ROLE REQUIS - Role field: {getattr(request.user, 'role', 'NOT_SET')}")
-            print(f"🔍 ROLE REQUIS - All roles: {user_all_roles}")
-            print(f"🔍 ROLE REQUIS - Required: {roles_autorises}")
+            print(f"🔍 ROLE REQUIS - All roles normalized: {user_roles_normalized}")
+            print(f"🔍 ROLE REQUIS - Required normalized: {roles_autorises_normalized}")
             
             # ✅ Vérifier si l'utilisateur a un des rôles requis
-            has_required_role = any(role in user_all_roles for role in roles_autorises)
+            has_required_role = any(
+                role in user_roles_normalized 
+                for role in roles_autorises_normalized
+            )
             
             if has_required_role or request.user.is_superuser:
                 return view_func(request, *args, **kwargs)

@@ -10,6 +10,17 @@ from django.utils.decorators import method_decorator
 from django.contrib import messages
 from django.utils import timezone
 
+from django.shortcuts import render
+from django.views import View
+from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import login_required
+from ventes.models import Devis, Commande, Facture, SessionPOS, VentePOS, LigneVentePOS
+from django.db.models import Count, Sum, Q, F, ExpressionWrapper, DecimalField
+from django.utils import timezone
+from datetime import timedelta
+from decimal import Decimal
+from parametres.models import *
+
 # Assurez-vous d'importer vos formulaires et modèles
 from .forms import UtilisateurForm
 from .models import UtilisateurPersonnalise, ProfilUtilisateur
@@ -61,20 +72,18 @@ from django.db.models import Count
 from django.views.generic import TemplateView
 
 
+# security/views.py
+
 class ConnexionView(View):
     template_name = 'security/login.html'
     form_class = ConnexionForm
-    
+
     def get(self, request):
-        # Vérifie si l'utilisateur est déjà connecté
         if request.user.is_authenticated:
-            # Récupère le paramètre 'next' s'il existe
-            next_url = request.GET.get('next') or None
-            if next_url:
-                return redirect(next_url)
-            return redirect(self._get_redirect_url(request.user))
+            # On redirige directement vers le point d'entrée unique
+            return redirect('security:dashboard_redirect')
         return render(request, self.template_name, {'form': self.form_class()})
-    
+
     def post(self, request):
         form = self.form_class(request.POST)
         if form.is_valid():
@@ -84,62 +93,57 @@ class ConnexionView(View):
             
             if user is not None and user.est_actif:
                 login(request, user)
-                enregistrer_activite(user, 'CONNEXION', f"Connexion réussie", get_client_ip(request))
+                enregistrer_activite(user, 'CONNEXION', "Connexion réussie", get_client_ip(request))
                 
-                # Gestion de la redirection après connexion
-                next_url = request.POST.get('next') or request.GET.get('next') or None
-                if next_url:
-                    return redirect(next_url)
-                return redirect(self._get_redirect_url(user))
+                # Point d'entrée unique pour la redirection
+                return redirect('security:dashboard_redirect')
             else:
                 messages.error(request, "Identifiants incorrects ou compte désactivé")
                 enregistrer_activite(None, 'CONNEXION', f"Tentative de connexion échouée pour {username}", get_client_ip(request))
         
         return render(request, self.template_name, {
             'form': form,
-            'next': request.GET.get('next', '')  # Passe le paramètre next au template
+            'next': request.GET.get('next', '')
         })
-    
     def _get_redirect_url(self, user):
-        """Méthode interne pour déterminer la redirection - PRIORITÉ AUX GROUPES"""
+        """Méthode interne pour déterminer la redirection - SIMPLIFIÉE"""
         print(f"🔍 CONNEXION REDIRECT - User: {user.username}")
         print(f"🔍 CONNEXION REDIRECT - Role field: {getattr(user, 'role', 'NOT_SET')}")
         print(f"🔍 CONNEXION REDIRECT - Groups: {[g.name for g in user.groups.all()]}")
         
-        # PRIORITÉ 1: Vérification par groupes
+        # Liste de tous les rôles/rôles potentiels de l'utilisateur
+        user_roles = []
+        
+        # 1. Rôle du champ
+        if hasattr(user, 'role') and user.role:
+            user_roles.append(user.role.upper())
+        
+        # 2. Noms de groupes
+        user_roles.extend([group.name.upper() for group in user.groups.all()])
+        
+        print(f"🔍 CONNEXION REDIRECT - All roles: {user_roles}")
+        
+        # ✅ Décision de redirection SIMPLIFIÉE
         if user.is_superuser or user.is_staff:
-            print("🔍 REDIRECTION: Admin dashboard")
+            print("🔍 REDIRECTION: Admin dashboard (superuser/staff)")
             return reverse('security:admin_dashboard')
-        elif user.groups.filter(name='Manager').exists():
+        elif 'MANAGER' in user_roles:
             print("🔍 REDIRECTION: Manager dashboard")
             return reverse('security:manager_dashboard')
-        elif user.groups.filter(name='Caissier').exists():
+        elif 'CAISSIER' in user_roles:
             print("🔍 REDIRECTION: Caissier dashboard")
             return reverse('security:caissier_dashboard')
-        elif user.groups.filter(name='Vendeur').exists():
+        elif 'VENDEUR' in user_roles:
             print("🔍 REDIRECTION: Vendeur dashboard")
             return reverse('security:vendeur_dashboard')
-        elif user.groups.filter(name='Stock').exists():
+        elif 'STOCK' in user_roles:
             print("🔍 REDIRECTION: Stock dashboard")
             return reverse('security:stock_dashboard')
         
-        # PRIORITÉ 2: Fallback vers le champ role
-        if hasattr(user, 'role') and user.role:
-            print(f"🔍 Fallback to role field: {user.role}")
-            if user.role == 'ADMIN':
-                return reverse('security:admin_dashboard')
-            elif user.role == 'MANAGER':  # ✅ CORRECTION ICI
-                return reverse('security:manager_dashboard')
-            elif user.role == 'CAISSIER':
-                return reverse('security:caissier_dashboard')
-            elif user.role == 'VENDEUR':
-                return reverse('security:vendeur_dashboard')
-            elif user.role == 'STOCK':
-                return reverse('security:stock_dashboard')
-        
-        # PRIORITÉ 3: Fallback final
+        # Fallback pour les autres cas
         print("🔍 REDIRECTION: Fallback to vendeur dashboard")
         return reverse('security:vendeur_dashboard')
+
 
 def deconnexion(request):
     if request.user.is_authenticated:
@@ -147,36 +151,6 @@ def deconnexion(request):
     logout(request)
     return redirect('security:connexion')
 
-
-
-
-
-
-from django.shortcuts import redirect
-from django.contrib.auth.decorators import login_required
-from django.utils.decorators import method_decorator
-from django.views import View
-
-def dashboard_redirect(request):
-    """
-    Redirige l'utilisateur vers le tableau de bord approprié selon son rôle.
-    """
-    if not request.user.is_authenticated:
-        return redirect('security:connexion')
-    
-    if request.user.is_superuser or request.user.is_staff:
-        return redirect('security:admin_dashboard')
-    elif request.user.groups.filter(name='Manager').exists():
-        return redirect('security:manager_dashboard')
-    elif request.user.groups.filter(name='Caissier').exists():
-        return redirect('security:caissier_dashboard')
-    elif request.user.groups.filter(name='Vendeur').exists():
-        return redirect('security:vendeur_dashboard')
-    elif request.user.groups.filter(name='Stock').exists():
-        return redirect('security:stock_dashboard')
-    else:
-        # Redirection par défaut
-        return redirect('security:admin_dashboard')
 
 # Version basée sur classe si vous préférez
 class DashboardRedirectView(View):
@@ -282,16 +256,6 @@ class TableauDeBordCaissier(View):
     def get(self, request):
         return render(request, self.template_name)
     
-from django.shortcuts import render
-from django.views import View
-from django.utils.decorators import method_decorator
-from django.contrib.auth.decorators import login_required
-from ventes.models import Devis, Commande, Facture, SessionPOS, VentePOS, LigneVentePOS
-from django.db.models import Count, Sum, Q, F, ExpressionWrapper, DecimalField
-from django.utils import timezone
-from datetime import timedelta
-from decimal import Decimal
-from parametres.models import *
 @method_decorator([login_required, role_requis(['VENDEUR', 'CAISSIER'])], name='dispatch')
 class TableauDeBordVendeur(View):
     template_name = 'security/dashboard/vendeur.html'
@@ -521,33 +485,37 @@ def dashboard_redirect(request):
     print(f"🔍 DASHBOARD REDIRECT - User: {request.user.username}")
     print(f"🔍 DASHBOARD REDIRECT - Role field: {getattr(request.user, 'role', 'NOT_SET')}")
     print(f"🔍 DASHBOARD REDIRECT - Groups: {[g.name for g in request.user.groups.all()]}")
-    
+
+    # Si utilisateur pas connecté
     if not request.user.is_authenticated:
         return redirect('security:connexion')
-    
+
+    # Redirection "next" si précisé
     next_url = request.GET.get('next')
     if next_url:
-        print(f"🔍 Redirecting to next URL: {next_url}")
         return redirect(next_url)
-    
-    # ✅ UTILISEZ LA MÊME LOGIQUE QUE VOTRE AUTRE FONCTION
+
+    # Liste de rôles possibles
+    user_roles = []
+    if hasattr(request.user, 'role') and request.user.role:
+        user_roles.append(request.user.role.upper())
+    user_roles.extend([group.name.upper() for group in request.user.groups.all()])
+
+    print(f"🔍 DASHBOARD REDIRECT - All roles: {user_roles}")
+
+    # Redirection selon priorité
     if request.user.is_superuser or request.user.is_staff:
-        print("🔍 Redirecting to ADMIN dashboard")
         return redirect('security:admin_dashboard')
-    elif request.user.groups.filter(name='Manager').exists():
-        print("🔍 Redirecting to MANAGER dashboard")
+    elif 'MANAGER' in user_roles:
         return redirect('security:manager_dashboard')
-    elif request.user.groups.filter(name='Caissier').exists():
-        print("🔍 Redirecting to CAISSIER dashboard")
+    elif 'CAISSIER' in user_roles:
         return redirect('security:caissier_dashboard')
-    elif request.user.groups.filter(name='Vendeur').exists():
-        print("🔍 Redirecting to VENDEUR dashboard")
+    elif 'VENDEUR' in user_roles:
         return redirect('security:vendeur_dashboard')
-    elif request.user.groups.filter(name='Stock').exists():
-        print("🔍 Redirecting to STOCK dashboard")
+    elif 'STOCK' in user_roles:
         return redirect('security:stock_dashboard')
-    
-    print("🔍 Fallback to VENDEUR dashboard")
+
+    # Fallback
     return redirect('security:vendeur_dashboard')
 
 @method_decorator([login_required, permission_requise('gerer_utilisateurs')], name='dispatch')
