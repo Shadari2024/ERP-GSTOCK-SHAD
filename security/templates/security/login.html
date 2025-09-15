@@ -1,75 +1,172 @@
-<!-- security/templates/security/login.html -->
 {% extends 'base.html' %}
 
 {% block content %}
 <style>
     :root {
-        --primary-color: #4361ee;  /* Bleu vif mais professionnel */
-        --secondary-color: #3f37c9; /* Bleu plus foncé */
-        --accent-color: #4cc9f0;   /* Bleu clair pour accents */
-        --light-bg: #f8f9fa;       /* Fond clair */
-        --dark-text: #2b2d42;      /* Texte foncé */
-        --light-text: #f8f9fa;     /* Texte clair */
-        --success-color: #4bb543;   /* Vert pour succès */
-        --error-color: #ff3333;     /* Rouge pour erreurs */
+        --primary-color: #2c3e50;       /* Bleu-gris professionnel */
+        --secondary-color: #3498db;     /* Bleu vif */
+        --accent-color: #1abc9c;        /* Turquoise moderne */
+        --light-bg: #f8f9fa;            /* Fond clair */
+        --dark-text: #2c3e50;           /* Texte foncé */
+        --light-text: #ecf0f1;          /* Texte clair */
+        --success-color: #27ae60;       /* Vert pour succès */
+        --error-color: #e74c3c;         /* Rouge pour erreurs */
+        --card-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+    
+    body {
+        background: linear-gradient(rgba(44, 62, 80, 0.85), rgba(44, 62, 80, 0.9)), url('https://images.unsplash.com/photo-1497366754035-f200968a6e72?ixlib=rb-4.0.3&auto=format&fit=crop&w=1500&q=80') no-repeat center center fixed;
+        background-size: cover;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
     
     .login-container {
-        background-color: var(--light-bg);
         min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     
     .card {
         border: none;
         border-radius: 12px;
         overflow: hidden;
+        box-shadow: var(--card-shadow);
+        backdrop-filter: blur(10px);
+        background: rgba(255, 255, 255, 0.95);
     }
     
     .card-header {
         background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        padding: 2rem;
+        text-align: center;
+        position: relative;
+    }
+    
+    .card-header::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, var(--accent-color), var(--secondary-color));
+    }
+    
+    .logo-container {
+        margin-bottom: 1rem;
+    }
+    
+    .logo {
+        font-size: 2.5rem;
+        color: white;
+        font-weight: bold;
+        letter-spacing: 1px;
     }
     
     .btn-primary {
-        background-color: var(--primary-color);
-        border-color: var(--primary-color);
+        background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+        border: none;
+        border-radius: 6px;
+        padding: 0.8rem;
+        font-weight: 600;
         transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);
     }
     
     .btn-primary:hover {
-        background-color: var(--secondary-color);
-        border-color: var(--secondary-color);
         transform: translateY(-2px);
+        box-shadow: 0 7px 14px rgba(50, 50, 93, 0.1), 0 3px 6px rgba(0, 0, 0, 0.08);
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    }
+    
+    .form-control {
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        padding: 0.8rem 1rem;
+        transition: all 0.3s;
     }
     
     .form-control:focus {
-        border-color: var(--accent-color);
-        box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+    }
+    
+    .input-group-text {
+        background-color: white;
+        border: 1px solid #ddd;
+        border-right: none;
+        border-radius: 6px 0 0 6px;
     }
     
     .toggle-password {
-        color: var(--dark-text);
+        background: white;
+        border: 1px solid #ddd;
+        border-left: none;
+        border-radius: 0 6px 6px 0;
+        cursor: pointer;
     }
     
     .toggle-password:hover {
-        color: var(--primary-color);
+        color: var(--secondary-color);
     }
     
     a {
-        color: var(--primary-color);
+        color: var(--secondary-color);
+        transition: color 0.3s;
     }
     
     a:hover {
-        color: var(--secondary-color);
+        color: var(--primary-color);
         text-decoration: none;
+    }
+    
+    .alert {
+        border-radius: 8px;
+        border: none;
+    }
+    
+    .divider {
+        display: flex;
+        align-items: center;
+        text-align: center;
+        color: #7f8c8d;
+        font-size: 14px;
+        margin: 1.5rem 0;
+    }
+    
+    .divider::before,
+    .divider::after {
+        content: '';
+        flex: 1;
+        border-bottom: 1px solid #ddd;
+    }
+    
+    .divider::before {
+        margin-right: .5em;
+    }
+    
+    .divider::after {
+        margin-left: .5em;
+    }
+    
+    .footer {
+        text-align: center;
+        margin-top: 2rem;
+        color: var(--light-text);
+        font-size: 0.9rem;
     }
 </style>
 
 <div class="login-container">
-    <div class="row justify-content-center align-items-center min-vh-100">
-        <div class="col-lg-5 col-md-7">
-            <div class="card shadow-lg">
-                <div class="card-header py-4 text-center">
-                    <h3 class="text-white mb-0"><i class="bi bi-shield-lock me-2"></i>Connexion Sécurisée</h3>
+    <div class="row justify-content-center w-100">
+        <div class="col-xl-4 col-lg-5 col-md-6 col-sm-8">
+            <div class="card">
+                <div class="card-header py-4">
+                    <div class="logo-container">
+                        <div class="logo">CongoErp-Shad</div>
+                    </div>
+                    <h4 class="text-white mb-0"><i class="bi bi-shield-lock me-2"></i>Connexion Sécurisée</h4>
                 </div>
                 
                 <div class="card-body p-4 p-md-5">
@@ -87,9 +184,9 @@
                         {% csrf_token %}
                         
                         <div class="mb-4">
-                            <label for="username" class="form-label text-dark">Identifiant</label>
+                            <label for="username" class="form-label fw-medium text-dark">Identifiant</label>
                             <div class="input-group">
-                                <span class="input-group-text bg-light">
+                                <span class="input-group-text">
                                     <i class="bi bi-person-fill text-primary"></i>
                                 </span>
                                 <input type="text" 
@@ -102,9 +199,9 @@
                         </div>
                         
                         <div class="mb-4">
-                            <label for="password" class="form-label text-dark">Mot de passe</label>
+                            <label for="password" class="form-label fw-medium text-dark">Mot de passe</label>
                             <div class="input-group">
-                                <span class="input-group-text bg-light">
+                                <span class="input-group-text">
                                     <i class="bi bi-lock-fill text-primary"></i>
                                 </span>
                                 <input type="password" 
@@ -113,9 +210,9 @@
                                        name="password" 
                                        required
                                        placeholder="••••••••">
-                                <button class="btn btn-light toggle-password" type="button">
+                                <span class="input-group-text toggle-password">
                                     <i class="bi bi-eye-fill"></i>
-                                </button>
+                                </span>
                             </div>
                         </div>
                         
@@ -126,7 +223,7 @@
                                     Se souvenir de moi
                                 </label>
                             </div>
-                            {% comment %} <a href="{% url 'security:password_reset' %}" class="text-primary">Mot de passe oublié ?</a> {% endcomment %}
+                            {% comment %} <a href="{% url 'security:password_reset' %}" class="text-primary text-decoration-none">Mot de passe oublié ?</a> {% endcomment %}
                         </div>
                         
                         <input type="hidden" name="next" value="{{ request.GET.next }}">
@@ -138,12 +235,16 @@
                         {% if ALLOW_REGISTRATION %}
                         <div class="text-center mt-4 pt-3 border-top">
                             <p class="text-muted mb-0">Pas encore de compte ? 
-                                <a href="{% url 'security:register' %}" class="fw-bold text-primary">S'inscrire</a>
+                                <a href="{% url 'security:register' %}" class="fw-bold text-primary text-decoration-none">S'inscrire</a>
                             </p>
                         </div>
                         {% endif %}
                     </form>
                 </div>
+            </div>
+            
+            <div class="footer">
+                <p>&copy; {% now "Y" %} ERP PRO. Tous droits réservés.</p>
             </div>
         </div>
     </div>
