@@ -17,7 +17,6 @@ crontab = schedules.crontab
 from decouple import config
 import dj_database_url
 
-import cloudinary
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -96,7 +95,7 @@ PERMISSION_DENIED_TEMPLATE = 'erreurs/403.html'
 SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 # Config CORS
@@ -164,9 +163,9 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
     'widget_tweaks',
     'django_filters', 
+    'cloudinary_storage',
+    'cloudinary',
   
-    "cloudinary",
-    "cloudinary_storage",
   
 ]
 AUTH_USER_MODEL = 'security.UtilisateurPersonnalise'
@@ -238,15 +237,8 @@ WSGI_APPLICATION = 'Gstock.wsgi.application'
 #     }
 # }
 
-# DATABASES = {
-#     'default':dj_database_url.parse(config('DATABASE_URL'))
-# }
-# from decouple import config
-# import dj_database_url
-
-# Base de données
 DATABASES = {
-    'default': dj_database_url.parse(config('DATABASE_URL'))
+    'default':dj_database_url.parse(config('DATABASE_URL'))
 }
 
 
@@ -303,43 +295,28 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 # Fichiers médias (images uploadées)
 DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
-# # Fichiers statiques (CSS, JS, logos par défaut)
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
-# ✅ CORRECTION :
+
+# Configuration Cloudinary correcte
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),  # ✅ CORRECT
-    'API_KEY': config('CLOUDINARY_API_KEY'),        # ✅ CORRECT
-    'API_SECRET': config('CLOUDINARY_API_SECRET'),  # ✅ CORRECT
+    'CLOUD_NAME': config('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': config('CLOUDINARY_API_KEY'),
+    'API_SECRET': config('CLOUDINARY_API_SECRET'),
 }
-# Configuration optionnelle pour optimiser les images
-CLOUDINARY_URL = f"cloudinary://{config('CLOUDINARY_API_KEY')}:{config('CLOUDINARY_API_SECRET')}@{config('CLOUDINARY_CLOUD_NAME')}"
+
+# # URLs pour les médias (Cloudinary gère les URLs)
+# MEDIA_URL = '/media/'  # Cette URL sera servie par Cloudinary
+
+# # Désactivez le répertoire media local en production
+# if not DEBUG:
+#     MEDIA_ROOT = None
+# else:
+#     # En développement, utilisez le système de fichiers local
+#     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+#     MEDIA_URL = '/media/'
 
 
-# URLs pour les médias (Cloudinary gère les URLs)
-MEDIA_URL = '/media/'  # Cette URL sera servie par Cloudinary
-
-# Désactivez le répertoire media local en production
-if not DEBUG:
-    MEDIA_ROOT = None
-else:
-    # En développement, utilisez le système de fichiers local
-    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-    MEDIA_URL = '/media/'
-
-
-# Initialisation Cloudinary
-try:
-    cloudinary.config(
-        cloud_name=config('CLOUDINARY_CLOUD_NAME'),
-        api_key=config('CLOUDINARY_API_KEY'),
-        api_secret=config('CLOUDINARY_API_SECRET'),
-        secure=True
-    )
-    print("✅ Cloudinary configuré avec succès")
-except Exception as e:
-    print(f"❌ Erreur configuration Cloudinary: {e}")
 
 # # Configuration pour la production
 
@@ -349,8 +326,7 @@ except Exception as e:
 #     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
     
 #     # Serveur de fichiers statiques en production
-#     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-    
+
 #     # Middleware supplémentaire pour servir les fichiers statiques
 #     MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
     
