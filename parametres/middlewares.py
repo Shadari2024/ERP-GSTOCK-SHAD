@@ -17,7 +17,7 @@ class CurrentEntrepriseMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # 🔥 CORRECTION COMPLÈTE : URLs PUBLIQUES (vitrine + connexion)
+        # 🔥 CORRECTION : URLs réellement publiques (vitrine + auth uniquement)
         PUBLIC_URLS = [
             '/',                          # Racine
             '/vitrine/',                  # Toute la vitrine
@@ -30,15 +30,17 @@ class CurrentEntrepriseMiddleware:
             '/admin/logout/',             # Admin logout
         ]
 
-        # 🔥 CORRECTION : Vérifier d'abord si l'URL est PUBLIQUE
-        if any(request.path.startswith(url) for url in PUBLIC_URLS) or request.path == '/':
-            print(f"🔍 CURRENT_ENTREPRISE MIDDLEWARE: URL publique → PAS DE VÉRIFICATION")
-            return self.get_response(request)
-
-        # Exclusion des assets statiques et média
+        # 🔥 CORRECTION : Exclusion des assets statiques et média
         if settings.STATIC_URL and request.path.startswith(settings.STATIC_URL):
             return self.get_response(request)
         if settings.MEDIA_URL and request.path.startswith(settings.MEDIA_URL):
+            return self.get_response(request)
+
+        # 🔥 CORRECTION : Vérifier si l'URL est vraiment publique
+        is_public_url = any(request.path.startswith(url) for url in PUBLIC_URLS) or request.path == '/'
+        
+        if is_public_url:
+            print(f"🔍 CURRENT_ENTREPRISE MIDDLEWARE: URL publique → PAS DE VÉRIFICATION")
             return self.get_response(request)
 
         # 🔥 CORRECTION : URLs exemptées de la vérification d'entreprise
@@ -50,8 +52,6 @@ class CurrentEntrepriseMiddleware:
             'parametres:entreprise_select',
             'parametres:account_not_linked_to_entreprise',
             'parametres:abonnement_expirer',
-            'admin:index',
-            'admin:login',
         ]
 
         # Vérification des URLs exemptées
@@ -64,13 +64,15 @@ class CurrentEntrepriseMiddleware:
                 logger.debug(f"URL non résolue dans EXEMPT_URLS: {url_name} - {e}")
                 continue
 
-        # 🔥 Gestion des utilisateurs NON AUTHENTIFIÉS
-        if not request.user.is_authenticated:
-            print(f"🔍 CURRENT_ENTREPRISE MIDDLEWARE: Utilisateur non authentifié → REDIRECTION VERS VITRINE")
-            # 🔥 CORRECTION : Rediriger vers la vitrine au lieu de la connexion
-            return redirect('/vitrine/')
+        # 🔥 CORRECTION : Pour toutes les autres URLs, APPLIQUER la logique d'entreprise
+        print(f"🔍 CURRENT_ENTREPRISE MIDDLEWARE: URL privée → APPLIQUER LA LOGIQUE D'ENTREPRISE")
 
-        # 🔥 Gestion des utilisateurs AUTHENTIFIÉS
+        # Gestion des utilisateurs NON AUTHENTIFIÉS
+        if not request.user.is_authenticated:
+            print(f"🔍 CURRENT_ENTREPRISE MIDDLEWARE: Utilisateur non authentifié → REDIRECTION VERS CONNEXION")
+            return redirect(settings.LOGIN_URL)
+
+        # Gestion des utilisateurs AUTHENTIFIÉS
         print(f"🔍 CURRENT_ENTREPRISE MIDDLEWARE: Utilisateur authentifié → {request.user.username}")
 
         # Initialisation des attributs
@@ -142,6 +144,10 @@ class CurrentEntrepriseMiddleware:
 
             except Exception as e:
                 logger.error(f"Erreur vérification abonnement: {str(e)}")
+
+        # 🔥 CORRECTION : S'assurer que request.entreprise existe pour les vues qui en dépendent
+        if not hasattr(request, 'entreprise'):
+            request.entreprise = None
 
         response = self.get_response(request)
         return response

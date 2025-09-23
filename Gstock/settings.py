@@ -179,27 +179,19 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # Doit être placé tôt
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    
-    # 🔥 CORRECTION : VOTRE MIDDLEWARE EN PREMIER (après l'authentification)
-    'security.middleware.VerificationAccesMiddleware',
-    
-    # 🔥 CORRECTION : Middleware d'entreprise APRÈS votre middleware
+    'security.middleware.VerificationAccesMiddleware',  # Après l'authentification
+    'security.middleware.JournalisationMiddleware',
     'parametres.middlewares.CurrentEntrepriseMiddleware',
     'parametres.middlewares.EnsureSAASConfigMiddleware',
-    
-    # Autres middlewares
-    'security.middleware.JournalisationMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
     'ventes.middleware.PosAccessMiddleware',
-    'api.middleware.NoHTMLRedirectMiddleware',
+    
 ]
-
 
 ROOT_URLCONF = 'Gstock.urls'
 TEMPLATES = [
@@ -228,16 +220,16 @@ WSGI_APPLICATION = 'Gstock.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 # ...existing code...
-# DATABASES = {
-#      'default': {
-#          'ENGINE': 'django.db.backends.sqlite3',
-#          'NAME': BASE_DIR / 'db.sqlite3',  # Correction ici
-#      }
-# }
-
 DATABASES = {
-   'default':dj_database_url.parse(config('DATABASE_URL'))
+     'default': {
+          'ENGINE': 'django.db.backends.sqlite3',
+          'NAME': BASE_DIR / 'db.sqlite3',  # Correction ici
+      }
 }
+
+# DATABASES = {
+#    'default':dj_database_url.parse(config('DATABASE_URL'))
+# }
 
 
 # Password validation

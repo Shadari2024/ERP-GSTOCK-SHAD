@@ -1,38 +1,94 @@
 from django.shortcuts import redirect
-from django.urls import reverse
+from django.urls import reverse, resolve
 from django.contrib import messages
 from django.utils.deprecation import MiddlewareMixin
 from .models import JournalActivite
 from .utils import get_client_ip
+import re
 
 class VerificationAccesMiddleware(MiddlewareMixin):
-    """
-    🔥 MIDDLEWARE SIMPLIFIÉ - NE FAIT RIEN POUR LES URLS PUBLIQUES
-    """
-    
     def process_request(self, request):
-        print(f"🔍 SECURITY MIDDLEWARE: Path={request.path}, Authentifié={request.user.is_authenticated}")
-        
-        # 🔥 CORRECTION : URLs PUBLIQUES COMPLÈTES
-        PUBLIC_URLS = [
-            '/',                          # Racine
-            '/vitrine/',                  # Toute la vitrine
-            '/dashboard/connexion/',      # Page de connexion
-            '/dashboard/deconnexion/',    # Page de déconnexion
-            '/static/',                   # Fichiers statiques
-            '/media/',                    # Médias
-            '/favicon.ico',               # Favicon
-            '/admin/login/',              # Admin login
-            '/admin/logout/',             # Admin logout
+        # Injecter l'entreprise dans la requête
+        if request.user.is_authenticated and hasattr(request.user, "entreprise"):
+            request.entreprise = request.user.entreprise
+        else:
+            request.entreprise = None
+
+        # --- Ton code actuel ici ---
+        public_urls = [
+            reverse('security:connexion'),
+            reverse('security:deconnexion'),
+            '/static/',
+            '/media/',
+            '/favicon.ico',
+            '/admin/',
         ]
 
-        # 🔥 CORRECTION : SI URL PUBLIQUE → AUTORISER IMMÉDIATEMENT
-        if any(request.path.startswith(url) for url in PUBLIC_URLS) or request.path == '/':
-            print(f"🔍 SECURITY MIDDLEWARE: URL publique → ACCÈS IMMÉDIAT")
-            return None  # 🔥 PAS DE REDIRECTION
+        if any(request.path.startswith(url) for url in public_urls):
+            return None
 
-        # 🔥 CORRECTION : Pour les URLs privées, laisser le middleware d'entreprise gérer
-        print(f"🔍 SECURITY MIDDLEWARE: URL privée → LAISSER PASSER")
+        if not request.user.is_authenticated:
+            return redirect(f"{reverse('security:connexion')}?next={request.path}")
+
+        if request.user.is_superuser or request.user.is_staff:
+            return None
+
+        # Vues accessibles à tout utilisateur connecté
+        allowed_common = [
+            reverse('security:mon_profil'),
+            reverse('security:changement_mdp'),
+            reverse('security:dashboard_redirect'),
+            reverse('security:acces_refuse'),  # ✅ CORRECTION : Ajout de la page d'accès refusé
+        ]
+        
+        # Vérification avec correspondance exacte ou préfixe
+        if any(request.path == url or request.path.startswith(url + '/') for url in allowed_common):
+            return None
+
+        # Vérification des tableaux de bord par rôle
+        dashboard_urls = [
+            reverse('security:admin_dashboard'),
+            reverse('security:manager_dashboard'),
+            reverse('security:caissier_dashboard'),
+            reverse('security:vendeur_dashboard'),
+            reverse('security:stock_dashboard'),
+        ]
+        
+        if request.path in dashboard_urls:
+            # L'accès aux dashboards est déjà géré par les décorateurs de vues
+            return None
+
+        # Vérification de permission via nom de vue - APPROCHE PLUS PERMISSIVE
+        try:
+            resolved_view = resolve(request.path_info)
+            view_name = resolved_view.url_name
+            app_name = resolved_view.app_name
+            
+            # Liste des vues qui nécessitent une permission explicite
+            restricted_views = {
+                'liste_client': 'STOCK.view_client',
+                'vente_au_comptoir': 'STOCK.effectuer_vente',
+                'gestion_entreprises': 'auth.view_entreprise',
+                'creer_entreprise': 'auth.add_entreprise',
+            }
+
+            required_perm = restricted_views.get(view_name)
+
+            if required_perm:
+                # Vérification spéciale pour les permissions d'entreprise
+                if required_perm.startswith('auth.') and not (request.user.is_superuser or request.user.is_staff):
+                    return self.handle_unauthorized_access(request)
+                
+                if not request.user.has_perm(required_perm):
+                    return self.handle_unauthorized_access(request)
+
+        except Exception as e:
+            # Si resolve échoue, on autorise par défaut (évite de bloquer le site)
+            print(f"Middleware resolve error: {e}")
+            pass
+
+        # ✅ AUTORISER L'ACCÈS PAR DÉFAUT AUX AUTRES URLS
+        # Les permissions spécifiques seront vérifiées dans les vues
         return None
 
     def handle_unauthorized_access(self, request):
@@ -44,6 +100,8 @@ class VerificationAccesMiddleware(MiddlewareMixin):
             details=f"Tentative d'accès non autorisé à {request.path}",
             ip_address=get_client_ip(request)
         )
+        
+        # ✅ CORRECTION : Utiliser le bon nom d'URL
         return redirect(reverse('security:acces_refuse'))
 
 
