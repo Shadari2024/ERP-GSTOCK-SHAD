@@ -42,3 +42,28 @@ def subtract(value, arg):
         return float(value) - float(arg)
     except (ValueError, TypeError):
         return 0
+    
+    
+    
+
+@register.filter
+def div(value, arg):
+    """
+    Divise la valeur par l'argument.
+    Exemple : {{ value|div:arg }}
+    """
+    try:
+        return float(value) / float(arg)
+    except (ValueError, ZeroDivisionError):
+        return None
+
+@register.filter
+def mul(value, arg):
+    """
+    Multiplie la valeur par l'argument.
+    Exemple : {{ value|mul:arg }}
+    """
+    try:
+        return float(value) * float(arg)
+    except (ValueError, ZeroDivisionError):
+        return None

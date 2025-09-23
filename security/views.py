@@ -244,7 +244,7 @@ class AdminDashboardView(TemplateView):
 
 @method_decorator([login_required, role_requis(['MANAGER'])], name='dispatch')
 class TableauDeBordManager(View):
-    template_name = 'security/dashboard/manager.html'
+    template_name = 'securite/dashboard/manager.html'
     
     def get(self, request):
         return redirect('statistiques_produits')
@@ -478,17 +478,21 @@ class TableauDeBordStock(View):
     def get(self, request):
         return render(request, self.template_name)
     
-    
-@login_required
-def dashboard_redirect(request):
-    """Redirige vers le dashboard approprié selon le rôle"""
-    print(f"🔍 DASHBOARD REDIRECT - User: {request.user.username}")
-    print(f"🔍 DASHBOARD REDIRECT - Role field: {getattr(request.user, 'role', 'NOT_SET')}")
-    print(f"🔍 DASHBOARD REDIRECT - Groups: {[g.name for g in request.user.groups.all()]}")
+from django.shortcuts import redirect
+from django.shortcuts import redirect
+from django.shortcuts import redirect
 
-    # Si utilisateur pas connecté
+def dashboard_redirect(request):
+    """Redirige vers le dashboard approprié selon le rôle OU vers la vitrine si non connecté"""
+    print(f"🔍 DASHBOARD REDIRECT - User authentifié: {request.user.is_authenticated}")
+    
+    # 🔥 CORRECTION : Si utilisateur PAS connecté, rediriger vers la vitrine
     if not request.user.is_authenticated:
-        return redirect('security:connexion')
+        print("🔍 REDIRECTION: Utilisateur non connecté → Vitrine")
+        return redirect('/vitrine/')  # 🔥 Redirection directe vers /vitrine/
+
+    # Si utilisateur connecté, continuer avec la logique existante
+    print(f"🔍 DASHBOARD REDIRECT - User: {request.user.username}")
 
     # Redirection "next" si précisé
     next_url = request.GET.get('next')
@@ -500,8 +504,6 @@ def dashboard_redirect(request):
     if hasattr(request.user, 'role') and request.user.role:
         user_roles.append(request.user.role.upper())
     user_roles.extend([group.name.upper() for group in request.user.groups.all()])
-
-    print(f"🔍 DASHBOARD REDIRECT - All roles: {user_roles}")
 
     # Redirection selon priorité
     if request.user.is_superuser or request.user.is_staff:

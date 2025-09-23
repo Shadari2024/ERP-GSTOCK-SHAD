@@ -1,0 +1,245 @@
+<!-- parametres/templates/parametres/dashboard.html - CORRIGEZ la partie entreprises -->
+{% extends "parametres/base.html" %}
+{% load i18n static %}
+
+{% block title %}Tableau de bord - ERP Pro{% endblock %}
+
+{% block page_icon %}tachometer-alt{% endblock %}
+{% block page_title %}Tableau de bord{% endblock %}
+{% block page_subtitle %}Vue d'ensemble de votre système SAAS{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Tableau de bord</li>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Cartes de statistiques -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="erp-card card-border-primary">
+            <div class="erp-card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title text-muted">Entreprises</h6>
+                        <h3 class="text-primary">{{ total_entreprises }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-building fa-2x text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="erp-card card-border-success">
+            <div class="erp-card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title text-muted">Abonnements actifs</h6>
+                        <h3 class="text-success">{{ abonnements_actifs }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-credit-card fa-2x text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="erp-card card-border-info">
+            <div class="erp-card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title text-muted">Utilisateurs</h6>
+                        <h3 class="text-info">{{ total_utilisateurs }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-users fa-2x text-info"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="erp-card card-border-warning">
+            <div class="erp-card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title text-muted">Total abonnements</h6>
+                        <h3 class="text-warning">{{ total_abonnements }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chart-line fa-2x text-warning"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Alertes -->
+    {% if alertes %}
+    <div class="col-lg-6 mb-4">
+        <div class="erp-card">
+            <div class="erp-card-header">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Alertes</h5>
+            </div>
+            <div class="erp-card-body">
+                {% for alerte in alertes %}
+                <div class="alert alert-{{ alerte.type }} alert-dismissible fade show mb-2">
+                    {{ alerte.message }}
+                    {% if alerte.lien and alerte.lien != '#' %}
+                    <a href="{{ alerte.lien }}" class="alert-link">Voir</a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Abonnements récents -->
+    <div class="col-lg-6 mb-4">
+        <div class="erp-card">
+            <div class="erp-card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Abonnements récents</h5>
+                <a href="{% url 'parametres:abonnement_list' %}" class="btn btn-sm btn-outline-primary">Voir tout</a>
+            </div>
+            <div class="erp-card-body">
+                {% if abonnements_recents %}
+                <div class="list-group list-group-flush">
+                    {% for abonnement in abonnements_recents %}
+                    <div class="list-group-item px-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ abonnement.entreprise.nom }}</h6>
+                                <small class="text-muted">
+                                    {{ abonnement.plan_actuel.nom|default:"Sans plan" }} - 
+                                    {{ abonnement.date_debut|date:"d/m/Y" }}
+                                </small>
+                            </div>
+                            <span class="badge bg-{% if abonnement.est_actif %}success{% else %}secondary{% endif %}">
+                                {{ abonnement.get_statut_display|default:"Inconnu" }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center mb-0">Aucun abonnement récent</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Entreprises récentes -->
+    <div class="col-12">
+        <div class="erp-card">
+            <div class="erp-card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-building me-2"></i>Dernières entreprises</h5>
+                <a href="{% url 'parametres:entreprise_list' %}" class="btn btn-sm btn-outline-primary">Voir tout</a>
+            </div>
+            <div class="erp-card-body">
+                {% if entreprises_recentes %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Email</th>
+                                <th>Téléphone</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entreprise in entreprises_recentes %}
+                            <tr>
+                                <td>
+                                    <strong>{{ entreprise.nom }}</strong>
+                                    {% if entreprise.domaine %}
+                                    <br><small class="text-muted">{{ entreprise.domaine }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>{{ entreprise.email|default:"-" }}</td>
+                                <td>{{ entreprise.telephone|default:"-" }}</td>
+                                <td>
+                                    <span class="badge bg-{% if entreprise.active %}success{% else %}warning{% endif %}">
+                                        {% if entreprise.active %}Actif{% else %}Inactif{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'parametres:entreprise_detail' entreprise.slug %}" 
+                                           class="btn btn-outline-primary" title="Détails">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{% url 'parametres:entreprise_update' entreprise.slug %}" 
+                                           class="btn btn-outline-secondary" title="Modifier">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center mb-0">Aucune entreprise</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Actions rapides -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="erp-card">
+            <div class="erp-card-header">
+                <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Actions rapides</h5>
+            </div>
+            <div class="erp-card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'parametres:entreprise_create' %}" class="btn btn-primary w-100">
+                            <i class="fas fa-plus me-2"></i>Nouvelle entreprise
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'parametres:abonnement_create' %}" class="btn btn-success w-100">
+                            <i class="fas fa-credit-card me-2"></i>Nouvel abonnement
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'parametres:plantarification_create' %}" class="btn btn-info w-100">
+                            <i class="fas fa-tags me-2"></i>Nouveau plan
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <a href="{% url 'parametres:module_list' %}" class="btn btn-warning w-100">
+                            <i class="fas fa-puzzle-piece me-2"></i>Gérer les modules
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.card-border-primary { border-left: 4px solid var(--primary-color); }
+.card-border-success { border-left: 4px solid var(--success-color); }
+.card-border-info { border-left: 4px solid var(--info-color); }
+.card-border-warning { border-left: 4px solid var(--warning-color); }
+</style>
+{% endblock %}

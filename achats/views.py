@@ -2159,17 +2159,22 @@ class PaiementCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView
         paiement.facture = facture
         paiement.created_by = self.request.user
         
-        # Créer l'écriture comptable si le statut est validé
+        # Sauvegarder d'abord en statut brouillon
+        paiement.statut = 'brouillon'
+        paiement.save()
+        
+        # Si le statut doit être validé, mettre à jour et créer l'écriture
         if form.cleaned_data.get('statut') == 'valide':
             paiement.statut = 'valide'
             paiement.save()
+            
+            # Créer l'écriture comptable UNE SEULE FOIS
             ecriture = paiement.creer_ecriture_comptable()
             if ecriture:
                 messages.success(self.request, 'Paiement enregistré et écriture comptable créée avec succès.')
             else:
                 messages.warning(self.request, 'Paiement enregistré mais erreur lors de la création de l\'écriture comptable.')
         else:
-            paiement.save()
             messages.success(self.request, 'Paiement enregistré avec succès.')
         
         return HttpResponseRedirect(self.get_success_url())

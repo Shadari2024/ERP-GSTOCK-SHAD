@@ -243,9 +243,12 @@
             <div class="modal-body text-center py-4"><div class="mb-3"><i class="fas fa-trash-alt fa-4x text-danger"></i></div><h5>Supprimer "<span id="modalProductName"></span>" ?</h5><p class="text-muted">Cette action est irréversible et supprimera définitivement le produit.</p></div>
             <div class="modal-footer justify-content-center border-0">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-1"></i> Annuler</button>
-                <form method="post" id="deleteForm">{% csrf_token %}<button type="submit" class="btn btn-danger"><i class="fas fa-trash-alt me-1"></i> Supprimer</button></form>
-            </div>
-        </div>
+               <form method="post" action="{% url 'supprimer_produit' 0 %}" id="deleteForm">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">
+        <i class="fas fa-trash-alt me-1"></i> Supprimer
+    </button>
+</form>
     </div>
 </div>
 
@@ -327,7 +330,7 @@
                 const productId = deleteBtn.getAttribute('data-id');
                 const productName = deleteBtn.getAttribute('data-nom');
                 document.getElementById('modalProductName').textContent = productName;
-                document.getElementById('deleteForm').action = `/produits/supprimer/${productId}/`;
+              document.getElementById('deleteForm').action = document.getElementById('deleteForm').action.replace('/0/', `/${productId}/`);
                 const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
                 modal.show();
             }

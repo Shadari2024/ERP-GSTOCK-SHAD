@@ -1,119 +1,226 @@
 {% extends "comptabilite/base.html" %}
-{% load static %}
+{% load static humanize %}
 
-{% block title %}Grand Livre{% endblock %}
+{% block title %}Grand Livre Comptable - {{ entreprise.nom }}{% endblock %}
 
 {% block breadcrumb %}
+<li class="breadcrumb-item"><a href="#">Comptabilité</a></li>
 <li class="breadcrumb-item active" aria-current="page">Grand Livre</li>
 {% endblock %}
 
-{% block page_title %}Grand Livre Comptable{% endblock %}
+{% block page_title %}
+<div class="d-flex justify-content-between align-items-center">
+    <div>
+        <h4 class="mb-1">Grand Livre Comptable</h4>
+        <p class="text-muted mb-0">Consultation détaillée des mouvements par compte</p>
+    </div>
+    {% if compte_selectionne %}
+    <span class="badge {% if nature_compte == 'actif' %}bg-primary{% else %}bg-success{% endif %} fs-6">
+        {{ nature_compte|upper }}
+    </span>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block actions %}
+<div class="d-flex gap-2 align-items-center">
+    <div class="input-group" style="width: 200px;">
+        <span class="input-group-text bg-white"><i class="fas fa-calendar-day text-muted"></i></span>
+        <input type="date" class="form-control border-start-0" id="date-debut" value="{{ filters.date_debut }}">
+    </div>
+    
+    <span class="text-muted">à</span>
+    
+    <div class="input-group" style="width: 200px;">
+        <span class="input-group-text bg-white"><i class="fas fa-calendar-day text-muted"></i></span>
+        <input type="date" class="form-control border-start-0" id="date-fin" value="{{ filters.date_fin }}">
+    </div>
+    
+    <select class="form-select" style="width: 300px;" id="compte-select">
+        <option value="">Sélectionner un compte...</option>
+        {% for compte in comptes %}
+        <option value="{{ compte.numero }}" {% if compte_selectionne and compte_selectionne.numero == compte.numero %}selected{% endif %}>
+            {{ compte.numero }} - {{ compte.intitule }}
+        </option>
+        {% endfor %}
+    </select>
+    
+    <button class="btn btn-outline-secondary" onclick="window.print()">
+        <i class="fas fa-print me-1"></i> Imprimer
+    </button>
+</div>
+{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <h5 class="card-title">Grand Livre Comptable</h5>
-        <p class="card-subtitle text-muted">Consultation des mouvements par compte</p>
+<!-- Cartes de synthèse -->
+{% if compte_selectionne %}
+<div class="row mb-4">
+    <div class="col-xxl-3 col-md-6 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-muted mb-2">SOLDE INITIAL</h6>
+                        <h3 class="{% if solde_initial >= 0 %}text-success{% else %}text-danger{% endif %} mb-0">
+                            {{ solde_initial|floatformat:2|intcomma }} {{ devise_principale_symbole }}
+                        </h3>
+                    </div>
+                    <div class="avatar avatar-sm bg-gray-200">
+                        <i class="fas fa-flag text-dark fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="card-body">
-        <!-- Filtres -->
-        <div class="row mb-4">
-            <div class="col-md-4">
-                <select class="form-select" id="compte-select" name="compte">
-                    <option value="">Sélectionner un compte</option>
-                    {% for compte in comptes %}
-                    <option value="{{ compte.numero }}" {% if compte_selectionne and compte_selectionne.numero == compte.numero %}selected{% endif %}>
-                        {{ compte.numero }} - {{ compte.intitule }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-3">
-                <input type="date" class="form-control" id="date-debut" name="date_debut" 
-                       value="{{ filters.date_debut }}" placeholder="Date début">
-            </div>
-            <div class="col-md-3">
-                <input type="date" class="form-control" id="date-fin" name="date_fin" 
-                       value="{{ filters.date_fin }}" placeholder="Date fin">
-            </div>
-            <div class="col-md-2">
-                <button type="button" id="filter-btn" class="btn btn-primary w-100">
-                    <i class="fas fa-filter me-1"></i> Filtrer
-                </button>
+    
+    <div class="col-xxl-3 col-md-6 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-muted mb-2">TOTAL DÉBIT</h6>
+                        <h3 class="text-primary mb-0">{{ total_debit|floatformat:2|intcomma }} {{ devise_principale_symbole }}</h3>
+                    </div>
+                    <div class="avatar avatar-sm bg-primary-light">
+                        <i class="fas fa-arrow-down text-primary fs-4"></i>
+                    </div>
+                </div>
             </div>
         </div>
+    </div>
+    
+    <div class="col-xxl-3 col-md-6 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-muted mb-2">TOTAL CRÉDIT</h6>
+                        <h3 class="text-success mb-0">{{ total_credit|floatformat:2|intcomma }} {{ devise_principale_symbole }}</h3>
+                    </div>
+                    <div class="avatar avatar-sm bg-success-light">
+                        <i class="fas fa-arrow-up text-success fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-xxl-3 col-md-6 mb-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title text-muted mb-2">SOLDE FINAL</h6>
+                        <h3 class="{% if solde_final >= 0 %}text-success{% else %}text-danger{% endif %} mb-0">
+                            {{ solde_final|floatformat:2|intcomma }} {{ devise_principale_symbole }}
+                        </h3>
+                    </div>
+                    <div class="avatar avatar-sm {% if solde_final >= 0 %}bg-success-light{% else %}bg-danger-light{% endif %}">
+                        <i class="fas fa-scale-balanced {% if solde_final >= 0 %}text-success{% else %}text-danger{% endif %} fs-4"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
 
+<!-- Contenu principal -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-0 py-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="card-title mb-1">
+                    {% if compte_selectionne %}
+                    Grand Livre - {{ compte_selectionne.numero }} - {{ compte_selectionne.intitule }}
+                    {% else %}
+                    Grand Livre Comptable
+                    {% endif %}
+                </h5>
+                {% if compte_selectionne %}
+                <p class="text-muted mb-0 small">
+                    Période du {{ date_debut_str }} au {{ date_fin_str }} • 
+                    {{ nombre_mouvements }} mouvement(s)
+                </p>
+                {% endif %}
+            </div>
+            {% if compte_selectionne %}
+            <div class="d-flex gap-2 align-items-center">
+                <span class="badge {% if nature_compte == 'actif' %}bg-primary{% else %}bg-success{% endif %}">
+                    {{ nature_compte|upper }}
+                </span>
+                <span class="badge bg-secondary">{{ compte_selectionne.classe }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="card-body p-0">
         {% if compte_selectionne %}
-        <!-- En-tête du compte -->
-        <div class="alert alert-info mb-4">
-            <div class="row">
-                <div class="col-md-6">
-                    <h6 class="mb-1">Compte: <strong>{{ compte_selectionne.numero }} - {{ compte_selectionne.intitule }}</strong></h6>
-                    <p class="mb-0 small">Type: 
-                        {% if compte_selectionne.type_compte == 'actif' %}
-                            <span class="badge bg-info">Actif</span>
-                        {% elif compte_selectionne.type_compte == 'passif' %}
-                            <span class="badge bg-success">Passif</span>
-                        {% elif compte_selectionne.type_compte == 'charge' %}
-                            <span class="badge bg-danger">Charge</span>
-                        {% elif compte_selectionne.type_compte == 'produit' %}
-                            <span class="badge bg-primary">Produit</span>
-                        {% endif %}
-                    </p>
-                </div>
-                <div class="col-md-6 text-end">
-                    <h6 class="mb-1">Solde final: 
-                        <span class="{% if solde_final >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            {{ solde_final|floatformat:2 }} {{ devise_principale_symbole }}
-                        </span>
-                    </h6>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tableau du Grand Livre -->
+        <!-- Tableau des mouvements -->
         <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead class="table-dark">
+            <table class="table table-hover table-borderless mb-0">
+                <thead class="table-light border-bottom">
                     <tr>
-                        <th>Date</th>
+                        <th class="ps-4">Date</th>
                         <th>Journal</th>
-                        <th>N° Pièce</th>
-                        <th>Libellé</th>
-                        <th class="text-end">Débit ({{ devise_principale_symbole }})</th>
-                        <th class="text-end">Crédit ({{ devise_principale_symbole }})</th>
-                        <th class="text-end">Solde ({{ devise_principale_symbole }})</th>
+                        <th>Pièce</th>
+                        <th width="40%">Libellé</th>
+                        <th class="text-end pe-4">Débit</th>
+                        <th class="text-end pe-4">Crédit</th>
+                        <th class="text-end pe-4">Solde</th>
                     </tr>
                 </thead>
                 <tbody>
                     <!-- Solde initial -->
-                    <tr class="table-warning">
-                        <td colspan="6" class="text-end"><strong>Solde initial:</strong></td>
-                        <td class="text-end"><strong>0.00</strong></td>
+                    <tr class="bg-light">
+                        <td class="ps-4 fw-bold text-muted">Solde initial</td>
+                        <td colspan="3"></td>
+                        <td colspan="2" class="text-end pe-4 fw-bold text-muted">Au {{ date_debut_str }}</td>
+                        <td class="text-end pe-4 fw-bold {% if solde_initial >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ solde_initial|floatformat:2|intcomma }}
+                        </td>
                     </tr>
                     
-                    {% for ligne in lignes %}
-                    <tr>
-                        <td>{{ ligne.ecriture.date_ecriture|date:"d/m/Y" }}</td>
+                    <!-- Mouvements -->
+                    {% for mvt in mouvements %}
+                    <tr class="border-bottom">
+                        <td class="ps-4">{{ mvt.ligne.ecriture.date_comptable|date:"d/m/Y" }}</td>
                         <td>
-                            <span class="badge bg-secondary">{{ ligne.ecriture.journal.code }}</span>
+                            <span class="badge bg-secondary">{{ mvt.ligne.ecriture.journal.code }}</span>
                         </td>
-                        <td>{{ ligne.ecriture.piece_justificative|default:"-" }}</td>
                         <td>
-                            {{ ligne.ecriture.libelle }}
-                            {% if ligne.libelle and ligne.libelle != ligne.ecriture.libelle %}
-                                <br><small class="text-muted">{{ ligne.libelle }}</small>
+                            <small class="text-muted">{{ mvt.ligne.ecriture.piece_justificative|default:"-" }}</small>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-column">
+                                <span class="fw-medium">{{ mvt.ligne.ecriture.libelle }}</span>
+                                {% if mvt.ligne.libelle and mvt.ligne.libelle != mvt.ligne.ecriture.libelle %}
+                                <small class="text-muted">{{ mvt.ligne.libelle }}</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="text-end pe-4">
+                            {% if mvt.debit > 0 %}
+                            <span class="text-primary fw-medium">{{ mvt.debit|floatformat:2|intcomma }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
                             {% endif %}
                         </td>
-                        <td class="text-end">{{ ligne.debit|floatformat:2 }}</td>
-                        <td class="text-end">{{ ligne.credit|floatformat:2 }}</td>
-                        <td class="text-end {% if ligne.solde_cumule >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            <strong>{{ ligne.solde_cumule|floatformat:2 }}</strong>
+                        <td class="text-end pe-4">
+                            {% if mvt.credit > 0 %}
+                            <span class="text-success fw-medium">{{ mvt.credit|floatformat:2|intcomma }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end pe-4 fw-bold {% if mvt.solde_cumule >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ mvt.solde_cumule|floatformat:2|intcomma }}
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center py-4">
+                        <td colspan="7" class="text-center py-5">
                             <div class="text-muted">
                                 <i class="fas fa-search fa-3x mb-3"></i>
                                 <h5>Aucun mouvement trouvé</h5>
@@ -122,65 +229,32 @@
                         </td>
                     </tr>
                     {% endfor %}
-                </tbody>
-                <tfoot class="table-dark">
-                    <tr>
-                        <th colspan="4" class="text-end">Totaux:</th>
-                        <th class="text-end">{{ total_debit|floatformat:2 }}</th>
-                        <th class="text-end">{{ total_credit|floatformat:2 }}</th>
-                        <th class="text-end">{{ solde_final|floatformat:2 }}</th>
+                    
+                    <!-- Solde final -->
+                    <tr class="bg-light fw-bold">
+                        <td class="ps-4">Solde final</td>
+                        <td colspan="3"></td>
+                        <td class="text-end pe-4 text-primary">{{ total_debit|floatformat:2|intcomma }}</td>
+                        <td class="text-end pe-4 text-success">{{ total_credit|floatformat:2|intcomma }}</td>
+                        <td class="text-end pe-4 {% if solde_final >= 0 %}text-success{% else %}text-danger{% endif %}">
+                            {{ solde_final|floatformat:2|intcomma }}
+                        </td>
                     </tr>
-                </tfoot>
+                </tbody>
             </table>
         </div>
-
-        <!-- Statistiques -->
-        <div class="row mt-4">
-            <div class="col-md-3">
-                <div class="card bg-primary text-white">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">{{ lignes|length }}</h5>
-                        <p class="card-text">Mouvements</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-success text-white">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">{{ total_debit|floatformat:2 }}</h5>
-                        <p class="card-text">Total Débit</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-info text-white">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">{{ total_credit|floatformat:2 }}</h5>
-                        <p class="card-text">Total Crédit</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card {% if solde_final >= 0 %}bg-warning{% else %}bg-danger{% endif %} text-white">
-                    <div class="card-body text-center">
-                        <h5 class="card-title">{{ solde_final|floatformat:2 }}</h5>
-                        <p class="card-text">Solde Final</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
+        
         {% else %}
-        <!-- Message de sélection -->
+        <!-- État initial - Sélection de compte -->
         <div class="text-center py-5">
             <div class="text-muted">
                 <i class="fas fa-book-open fa-4x mb-3"></i>
-                <h4>Grand Livre Comptable</h4>
-                <p class="mb-4">Sélectionnez un compte comptable pour afficher ses mouvements</p>
+                <h4 class="fw-bold">Grand Livre Comptable</h4>
+                <p class="mb-4">Sélectionnez un compte comptable pour afficher ses mouvements détaillés</p>
                 
                 <div class="row justify-content-center">
-                    <div class="col-md-6">
-                        <select class="form-select" id="compte-select-initial" onchange="location = '?compte=' + this.value;">
+                    <div class="col-md-8">
+                        <select class="form-select form-select-lg" id="compte-select-initial">
                             <option value="">Choisir un compte...</option>
                             {% for compte in comptes %}
                             <option value="{{ compte.numero }}">{{ compte.numero }} - {{ compte.intitule }}</option>
@@ -193,13 +267,23 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Pied de page -->
+{% if compte_selectionne %}
+<div class="text-center mt-4 py-3 text-muted border-top">
+    <small>
+        <i class="fas fa-print me-1"></i>Document généré le {% now "d/m/Y à H:i" %} | 
+        {{ entreprise.nom }} - Grand Livre Comptable
+    </small>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
     $(document).ready(function() {
-        // Appliquer les filtres
-        $('#filter-btn').click(function() {
+        // Fonction pour appliquer les filtres
+        function applyFilters() {
             const compte = $('#compte-select').val();
             const dateDebut = $('#date-debut').val();
             const dateFin = $('#date-fin').val();
@@ -210,58 +294,73 @@
             if (dateDebut) url += `date_debut=${dateDebut}&`;
             if (dateFin) url += `date_fin=${dateFin}&`;
             
-            // Supprimer le dernier '&' si présent
+            // Retirer le dernier '&' si présent
             if (url.endsWith('&')) url = url.slice(0, -1);
             
             window.location.href = url;
-        });
+        }
 
-        // Entrée dans les champs déclenche le filtre
-        $('#date-debut, #date-fin').keypress(function(e) {
-            if (e.which === 13) {
-                $('#filter-btn').click();
+        // Événements de filtrage
+        $('#compte-select').on('change', applyFilters);
+        $('#date-debut, #date-fin').on('change', function() {
+            if ($('#compte-select').val()) {
+                applyFilters();
             }
         });
 
-        // Changement de compte
-        $('#compte-select').change(function() {
-            $('#filter-btn').click();
+        // Sélection initiale
+        $('#compte-select-initial').on('change', function() {
+            const compte = $(this).val();
+            if (compte) {
+                window.location.href = '{% url "comptabilite:grand_livre" %}?compte=' + compte;
+            }
         });
-
-        // Initialiser les dates si vides
-        if (!$('#date-debut').val()) {
-            const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-            $('#date-debut').val(firstDay.toISOString().split('T')[0]);
-        }
-
-        if (!$('#date-fin').val()) {
-            $('#date-fin').val(new Date().toISOString().split('T')[0]);
-        }
     });
 </script>
 
 <style>
-    .table th {
-        background-color: #2c3e50;
-        color: white;
-    }
-    
-    .table-dark th {
-        background-color: #34495e;
-    }
-    
-    .table-responsive {
-        border-radius: 0.375rem;
-        overflow: hidden;
-    }
-    
     .card {
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border: 1px solid #e3e6f0;
+        border-radius: 0.5rem;
     }
     
-    .card-header {
+    .avatar {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 3rem;
+        height: 3rem;
+        border-radius: 0.5rem;
+    }
+    
+    .avatar-sm {
+        width: 2.5rem;
+        height: 2.5rem;
+    }
+    
+    .bg-primary-light {
+        background-color: rgba(13, 110, 253, 0.1);
+    }
+    
+    .bg-success-light {
+        background-color: rgba(25, 135, 84, 0.1);
+    }
+    
+    .bg-danger-light {
+        background-color: rgba(220, 53, 69, 0.1);
+    }
+    
+    .bg-gray-200 {
+        background-color: #e9ecef;
+    }
+    
+    .table-borderless td {
+        border: none;
+        padding: 0.75rem 0.5rem;
+    }
+    
+    .table-borderless tr:hover {
         background-color: #f8f9fa;
-        border-bottom: 1px solid #e9ecef;
     }
 </style>
 {% endblock %}

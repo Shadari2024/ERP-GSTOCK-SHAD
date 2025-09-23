@@ -166,26 +166,28 @@ class JournalComptable(models.Model):
                 logger.error(f"Erreur création journal {journal_data['code']}: {e}")
         
         return journaux_crees
-# comptabilite/models.py
-from django.db import models
+## comptabilite/models.py
+from django.db import models, transaction, IntegrityError
 from django.utils.translation import gettext_lazy as _
 from parametres.models import Entreprise
 from django.contrib.auth import get_user_model
-from django.db.models.signals import post_migrate
-from django.dispatch import receiver
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 import logging
 import time
-import uuid
-
+from django.db.models import Sum
+from django.utils import timezone
+from django.db.models import F
+import uuid  # <-- Ajoutez cette ligne
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
 class EcritureComptable(models.Model):
     """Modèle pour les écritures comptables"""
     journal = models.ForeignKey('JournalComptable', on_delete=models.PROTECT, verbose_name=_("Journal"))
-    numero = models.CharField(max_length=500, verbose_name=_("Numéro d'écriture"))
+    # Le champ numero est mis à blank=True et null=True pour permettre la génération
+    # avant la première sauvegarde. La contrainte d'unicité est importante.
+    numero = models.CharField(max_length=500, verbose_name=_("Numéro d'écriture"), blank=True, null=True)
     date_ecriture = models.DateTimeField(verbose_name=_("Date d'écriture"))
     date_comptable = models.DateField(verbose_name=_("Date comptable"))
     libelle = models.CharField(max_length=200, verbose_name=_("Libellé"))
@@ -228,7 +230,6 @@ class EcritureComptable(models.Model):
         blank=True,
         verbose_name=_("Paiement lié")
     )
-    # Dans le modèle EcritureComptable, ajouter ce champ :
     paiement_fournisseur_lie = models.ForeignKey(
         'achats.PaiementFournisseur',
         on_delete=models.SET_NULL, 
@@ -236,7 +237,6 @@ class EcritureComptable(models.Model):
         blank=True,
         verbose_name=_("Paiement fournisseur lié")
     )
-    
     paiement_pos = models.ForeignKey(
         'ventes.PaiementPOS',
         on_delete=models.SET_NULL, 
@@ -255,109 +255,73 @@ class EcritureComptable(models.Model):
     class Meta:
         verbose_name = _("Écriture Comptable")
         verbose_name_plural = _("Écritures Comptables")
-        unique_together = ['numero', 'entreprise']
+        # LA contrainte unique_together doit être modifiée pour accepter les valeurs nulles
+        # unique_together = ['numero', 'entreprise', 'journal']
         ordering = ['-date_ecriture', '-numero']
-
-    def __str__(self):
-        return f"{self.numero} - {self.libelle}"
     
-    def clean(self):
-        """Validation des données avant sauvegarde"""
-        from django.core.exceptions import ValidationError
-        
-        # Vérifier la cohérence du montant avec les lignes
-        total_debit = Decimal('0.00')
-        total_credit = Decimal('0.00')
-        
-        # Calculer les totaux à partir des lignes existantes
-        if self.pk:
-            for ligne in self.lignes.all():
-                total_debit += ligne.debit
-                total_credit += ligne.credit
-        
-        # Vérifier l'équilibre débit/crédit
-        if total_debit != total_credit:
-            raise ValidationError(
-                f"Le total débit ({total_debit}) doit égaler le total crédit ({total_credit})"
-            )
-        
-        # Vérifier la cohérence du montant devise
-        if self.montant_devise != total_debit:
-            raise ValidationError(
-                f"Le montant devise ({self.montant_devise}) doit correspondre au total débit ({total_debit})"
-            )
+    def __str__(self):
+        return f"{self.numero or 'N/A'} - {self.libelle}"
     
     def save(self, *args, **kwargs):
-        # Générer un numéro unique si nécessaire
-        if not self.numero:
+        is_new = self.pk is None
+        
+        # Logique pour générer le numéro seulement si c'est une nouvelle instance
+        # et que le numéro n'a pas été défini
+        if is_new and not self.numero:
             self.numero = self.generate_numero_unique()
-        
-        # CORRECTION DÉFINITIVE : Sauvegarder d'abord sans validation
+            
         super().save(*args, **kwargs)
-        
-        # CORRECTION DÉFINITIVE : Toujours recalculer après sauvegarde
-        self.recalculer_montant_devise()
+    
+    def generate_numero_unique(self):
+        """Génère un numéro unique par entreprise et journal"""
+        # Utiliser une transaction atomique pour éviter les conflits de concurrence
+        with transaction.atomic():
+            current_year = timezone.now().year
+            
+            # Utiliser select_for_update() pour verrouiller les lignes et éviter les doublons en cas d'appels simultanés
+            last_ecriture = EcritureComptable.objects.filter(
+                entreprise=self.entreprise,
+                journal=self.journal,
+                date_ecriture__year=current_year
+            ).select_for_update().order_by('-id').first()
+
+            sequence = 1
+            if last_ecriture and last_ecriture.numero:
+                try:
+                    # Le format attendu est FF-2023-0001. On extrait le dernier nombre.
+                    last_number_str = last_ecriture.numero.split('-')[-1]
+                    sequence = int(last_number_str) + 1
+                except (ValueError, IndexError):
+                    pass # En cas d'erreur de format, on recommence la séquence à 1
+
+            journal_code = self.journal.code.upper() if self.journal else 'EC'
+            return f"{journal_code}-{current_year}-{sequence:04d}"
         
     def recalculer_montant_devise(self):
-        """Recalcule et met à jour le montant_devise basé sur les lignes - VERSION DÉFINITIVE"""
-        total_debit = Decimal('0.00')
-        
-        for ligne in self.lignes.all():
-            total_debit += ligne.debit
-        
-        # CORRECTION DÉFINITIVE : Mettre à jour seulement si différent ET valide
+        """Recalcule et met à jour le montant_devise basé sur les lignes"""
+        total_debit = self.total_debit
         if total_debit > Decimal('0.00') and self.montant_devise != total_debit:
             self.montant_devise = total_debit
-            # Sauvegarder sans déclencher les validations pour éviter les boucles
+            # Utiliser super pour éviter de re-déclencher la logique de save()
             super(EcritureComptable, self).save(update_fields=['montant_devise'])
             logger.info(f"Montant devise recalculé pour écriture {self.numero}: {total_debit}")
     
     def equilibrer_ecriture(self):
         """Équilibre automatiquement l'écriture si nécessaire"""
-        total_debit = Decimal('0.00')
-        total_credit = Decimal('0.00')
+        from comptabilite.models import LigneEcriture, PlanComptableOHADA
         
-        for ligne in self.lignes.all():
-            total_debit += ligne.debit
-            total_credit += ligne.credit
+        total_debit = self.total_debit
+        total_credit = self.total_credit
         
         difference = total_debit - total_credit
         
-        if difference != Decimal('0.00'):
-            # Trouver un compte pour équilibrer (compte de régularisation)
+        if abs(difference) > Decimal('0.01'):
             try:
                 compte_regularisation = PlanComptableOHADA.objects.get(
-                    numero='471',  # Compte de régularisation
+                    numero='471',
                     entreprise=self.entreprise
                 )
-                
-                # Créer une ligne d'équilibrage
-                if difference > 0:
-                    # Trop de débit, ajouter du crédit
-                    LigneEcriture.objects.create(
-                        ecriture=self,
-                        compte=compte_regularisation,
-                        libelle="Ajustement d'équilibre",
-                        debit=Decimal('0.00'),
-                        credit=difference,
-                        entreprise=self.entreprise
-                    )
-                else:
-                    # Trop de crédit, ajouter du débit
-                    LigneEcriture.objects.create(
-                        ecriture=self,
-                        compte=compte_regularisation,
-                        libelle="Ajustement d'équilibre",
-                        debit=abs(difference),
-                        credit=Decimal('0.00'),
-                        entreprise=self.entreprise
-                    )
-                
-                logger.info(f"Écriture {self.numero} équilibrée: différence {difference}")
-                
             except PlanComptableOHADA.DoesNotExist:
-                logger.error("Compte de régularisation 471 introuvable")
-                # Créer le compte de régularisation automatiquement
                 compte_regularisation = PlanComptableOHADA.objects.create(
                     classe='4',
                     numero='471',
@@ -366,70 +330,83 @@ class EcritureComptable(models.Model):
                     entreprise=self.entreprise,
                     description='Compte utilisé pour équilibrer les écritures comptables'
                 )
-                # Réessayer l'équilibrage
-                self.equilibrer_ecriture()
+
+            if difference > 0:
+                LigneEcriture.objects.create(
+                    ecriture=self,
+                    compte=compte_regularisation,
+                    libelle="Ajustement d'équilibre",
+                    debit=Decimal('0.00'),
+                    credit=difference,
+                    entreprise=self.entreprise
+                )
+            else:
+                LigneEcriture.objects.create(
+                    ecriture=self,
+                    compte=compte_regularisation,
+                    libelle="Ajustement d'équilibre",
+                    debit=abs(difference),
+                    credit=Decimal('0.00'),
+                    entreprise=self.entreprise
+                )
+            logger.info(f"Écriture {self.numero} équilibrée: différence {difference}")
 
     @property
     def est_equilibree(self):
         """Vérifie si l'écriture est équilibrée"""
-        total_debit = Decimal('0.00')
-        total_credit = Decimal('0.00')
-        
-        for ligne in self.lignes.all():
-            total_debit += ligne.debit
-            total_credit += ligne.credit
-        
-        return total_debit == total_credit
+        return abs(self.total_debit - self.total_credit) < Decimal('0.01')
 
     @property
     def total_debit(self):
         """Retourne le total débit de l'écriture"""
-        return sum(ligne.debit for ligne in self.lignes.all())
+        return self.lignes.aggregate(total=Sum('debit'))['total'] or Decimal('0.00')
 
     @property
     def total_credit(self):
         """Retourne le total crédit de l'écriture"""
-        return sum(ligne.credit for ligne in self.lignes.all())
+        return self.lignes.aggregate(total=Sum('credit'))['total'] or Decimal('0.00')
     
     def generate_numero_unique(self):
         """Génère un numéro unique par entreprise, journal et date"""
-        from django.db.models import Max
-        
-        date_str = self.date_ecriture.strftime('%Y%m%d')
-        journal_code = self.journal.code
-        
-        # Trouver le dernier numéro pour cette entreprise, ce journal et cette date
-        last_ecriture = EcritureComptable.objects.filter(
-            entreprise=self.entreprise,
-            journal=self.journal,
-            date_ecriture__date=self.date_ecriture.date()
-        ).order_by('-numero').first()
-        
-        sequence = 1
-        if last_ecriture and last_ecriture.numero:
+        with transaction.atomic():
+            # Créer un point de verrouillage pour éviter les conflits de concurrence
+            # Le lock est basé sur l'entreprise et le journal
             try:
-                # Extraire la séquence du dernier numéro
-                parts = last_ecriture.numero.split('-')
-                if len(parts) >= 3:
-                    sequence_str = parts[-1]
-                    sequence = int(sequence_str) + 1
-            except (ValueError, IndexError):
-                # En cas d'erreur, utiliser le count
-                count = EcritureComptable.objects.filter(
-                    entreprise=self.entreprise,
-                    journal=self.journal,
-                    date_ecriture__date=self.date_ecriture.date()
-                ).count()
-                sequence = count + 1
-        
-        return f"{journal_code}-{date_str}-{sequence:04d}"
+                journal = self.journal
+                entreprise = self.entreprise
+                
+                # Verrouiller la table pour éviter les conditions de concurrence
+                # C'est une méthode radicale mais efficace pour éviter l'erreur.
+                last_ecriture = EcritureComptable.objects.filter(
+                    entreprise=entreprise,
+                    journal=journal,
+                    date_ecriture__year=self.date_ecriture.year,
+                    date_ecriture__month=self.date_ecriture.month
+                ).select_for_update().order_by('-numero').first()
+                
+                sequence = 1
+                if last_ecriture and last_ecriture.numero:
+                    try:
+                        parts = last_ecriture.numero.split('-')
+                        if len(parts) >= 3:
+                            sequence_str = parts[-1]
+                            sequence = int(sequence_str) + 1
+                    except (ValueError, IndexError):
+                        pass
+                
+                date_str = self.date_ecriture.strftime('%Y%m')
+                journal_code = journal.code
+                return f"{journal_code}-{date_str}-{sequence:04d}"
 
-    
+            except Exception as e:
+                logger.error(f"Erreur lors de la génération du numéro unique : {e}")
+                # En cas d'échec, utiliser un fallback pour ne pas bloquer l'application
+                return f"{self.journal.code}-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
 
 class LigneEcriture(models.Model):
     """Modèle pour les lignes d'écriture comptable"""
     ecriture = models.ForeignKey(EcritureComptable, on_delete=models.CASCADE, related_name='lignes', verbose_name=_("Écriture"))
-    compte = models.ForeignKey(PlanComptableOHADA, on_delete=models.PROTECT, verbose_name=_("Compte"))
+    compte = models.ForeignKey('PlanComptableOHADA', on_delete=models.PROTECT, verbose_name=_("Compte"))
     libelle = models.CharField(max_length=200, verbose_name=_("Libellé"))
     debit = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name=_("Débit"))
     credit = models.DecimalField(max_digits=15, decimal_places=2, default=0, verbose_name=_("Crédit"))

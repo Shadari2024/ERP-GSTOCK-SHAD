@@ -21,50 +21,7 @@
             </div>
         </div>
         
-        <div class="card-body py-3 border-bottom">
-            <div class="row text-center g-3">
-                <div class="col-sm-6 col-md-3">
-                    <div class="card bg-success text-white">
-                        <div class="card-body p-3">
-                            <h6 class="card-title text-uppercase mb-0 opacity-75">Valeur des entrées</h6>
-                            <h4 class="fw-bold mb-0 mt-1">
-                                {{ montant_total_entrees|floatformat:2 }} {{ devise_principale }}
-                            </h4>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-3">
-                    <div class="card bg-danger text-white">
-                        <div class="card-body p-3">
-                            <h6 class="card-title text-uppercase mb-0 opacity-75">Valeur des sorties</h6>
-                            <h4 class="fw-bold mb-0 mt-1">
-                                {{ montant_total_sorties|floatformat:2 }} {{ devise_principale }}
-                            </h4>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-3">
-                    <div class="card bg-info text-white">
-                        <div class="card-body p-3">
-                            <h6 class="card-title text-uppercase mb-0 opacity-75">Valeur inventaire</h6>
-                            <h4 class="fw-bold mb-0 mt-1">
-                                {{ montant_total_inventaire|floatformat:2 }} {{ devise_principale }}
-                            </h4>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-md-3">
-                    <div class="card bg-warning text-white">
-                        <div class="card-body p-3">
-                            <h6 class="card-title text-uppercase mb-0 opacity-75">Valeur ajustement</h6>
-                            <h4 class="fw-bold mb-0 mt-1">
-                                {{ montant_total_ajustement|floatformat:2 }} {{ devise_principale }}
-                            </h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        
         <div class="card-body border-bottom">
             <form method="get" class="row g-3">
                 <div class="col-md-3">
@@ -162,9 +119,6 @@
                             <th class="ps-4">DATE</th>
                             <th>PRODUIT</th>
                             <th>TYPE</th>
-                            <th>QUANTITÉ</th>
-                            <th>PRIX UNITAIRE</th>
-                            <th>VALEUR</th>
                             <th>UTILISATEUR</th>
                             <th class="pe-4">COMMENTAIRE</th>
                         </tr>
@@ -201,11 +155,7 @@
                                 </span>
                                 {% endif %}
                             </td>
-                            <td class="fw-bold">{{ m.quantite }}</td>
-                            <td>{{ m.prix_unitaire_moment }} <span class="fw-bold">{{ devise_principale }}</span></td>
-                            <td class="fw-bold text-{% if m.type_mouvement == 'entree' %}success{% else %}danger{% endif %}">
-                                {{ m.valeur_mouvement }} <span class="fw-bold">{{ devise_principale }}</span>
-                            </td>
+                           
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2" style="width: 30px; height: 30px;">

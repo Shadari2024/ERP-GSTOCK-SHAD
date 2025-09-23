@@ -385,16 +385,26 @@ def generate_bon_reception_excel(bon_reception):
         tmp_path = tmp.name
     
     return tmp_path
+# achats/utils.py
+# achats/utils.py
+
+import logging
+from decimal import Decimal
+from django.db import transaction
+from django.utils import timezone
+from django.contrib import messages
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from comptabilite.models import EcritureComptable, LigneEcriture, PlanComptableOHADA, JournalComptable
+from achats.models import FactureFournisseur
 
 logger = logging.getLogger(__name__)
+
 def generer_facture_depuis_bon(bon_reception, request):
     """
-    Génère une facture fournisseur avec écritures comptables à partir d'un bon de réception
-    VERSION CORRIGÉE - Utilise les taux TVA réels du bon
+    Génère une facture fournisseur avec écritures comptables à partir d'un bon de réception.
     """
     try:
         with transaction.atomic():
-            # Vérifier si une facture existe déjà pour ce bon
             facture_existante = FactureFournisseur.objects.filter(
                 bon_reception=bon_reception,
                 entreprise=request.entreprise
@@ -404,31 +414,33 @@ def generer_facture_depuis_bon(bon_reception, request):
                 messages.warning(request, f"Une facture existe déjà pour ce bon: {facture_existante.numero_facture}")
                 return facture_existante
             
-            # FORCER le recalcul des totaux du bon AVANT de créer la facture
             bon_reception.calculer_totaux()
             bon_reception.refresh_from_db()
             
-            # VÉRIFICATION CRITIQUE : S'assurer que les totaux sont valides
-            if bon_reception.total_ht <= 0 or bon_reception.total_ttc <= 0:
+            if (bon_reception.total_ht <= Decimal('0.00') or 
+                bon_reception.total_ttc <= Decimal('0.00') or
+                bon_reception.total_ttc != bon_reception.total_ht + bon_reception.total_tva):
+                
+                error_msg = f"Totaux invalides du bon de réception: HT={bon_reception.total_ht}, TVA={bon_reception.total_tva}, TTC={bon_reception.total_ttc}"
+                logger.error(error_msg)
                 messages.error(request, "Les totaux du bon de réception sont invalides")
                 return None
             
-            # Créer la facture avec les totaux RECALCULÉS du bon
             facture = FactureFournisseur(
                 entreprise=request.entreprise,
                 fournisseur=bon_reception.commande.fournisseur,
                 bon_reception=bon_reception,
                 date_facture=timezone.now().date(),
                 date_echeance=timezone.now().date() + timezone.timedelta(days=30),
-                montant_ht=bon_reception.total_ht,      # UTILISER LES VALEURS DU BON
-                montant_tva=bon_reception.total_tva,    # UTILISER LES VALEURS DU BON
-                montant_ttc=bon_reception.total_ttc,    # UTILISER LES VALEURS DU BON
+                montant_ht=bon_reception.total_ht,
+                montant_tva=bon_reception.total_tva,
+                montant_ttc=bon_reception.total_ttc,
                 statut='brouillon',
                 created_by=request.user
             )
+            
             facture.save()
             
-            # Créer les écritures comptables
             creer_ecritures_comptables_facture(facture, request)
             
             messages.success(request, f"Facture {facture.numero_facture} créée avec succès avec les écritures comptables.")
@@ -441,109 +453,86 @@ def generer_facture_depuis_bon(bon_reception, request):
 
 def creer_ecritures_comptables_facture(facture, request):
     """
-    Crée les écritures comptables pour une facture fournisseur
-    Utilise les comptes OHADA standards
+    Crée les écritures comptables pour une facture fournisseur.
     """
     try:
         entreprise = request.entreprise
         
-        # Récupérer ou créer les comptes OHADA standards
-        compte_achats, created = PlanComptableOHADA.objects.get_or_create(
-            numero='607',
-            entreprise=entreprise,
-            defaults={
-                'classe': '6',
-                'intitule': 'Achats de marchandises',
-                'type_compte': 'charge',
-                'description': 'Compte pour enregistrer les achats de marchandises'
-            }
-        )
+        if (facture.montant_ttc <= Decimal('0.00') or 
+            facture.montant_ht <= Decimal('0.00') or
+            abs(facture.montant_ttc - (facture.montant_ht + facture.montant_tva)) > Decimal('0.01')):
+            
+            raise ValueError("Incohérence des totaux ou montants invalides sur la facture.")
         
-        # Utiliser le compte TVA OHADA standard (4455)
-        compte_tva, created = PlanComptableOHADA.objects.get_or_create(
-            numero='4455',
-            entreprise=entreprise,
-            defaults={
-                'classe': '4',
-                'intitule': 'TVA à décaisser',
-                'type_compte': 'passif',
-                'description': 'TVA collectée à reverser à l\'état'
-            }
-        )
+        try:
+            compte_achats = PlanComptableOHADA.objects.get(numero='607', entreprise=entreprise)
+            compte_tva = PlanComptableOHADA.objects.get(numero='4456', entreprise=entreprise)
+            compte_fournisseurs = PlanComptableOHADA.objects.get(numero='401', entreprise=entreprise)
+            journal_achats = JournalComptable.objects.get(code='ACH', entreprise=entreprise)
+        except ObjectDoesNotExist as e:
+            raise ValueError(f"Compte ou journal introuvable: {e}")
+
+        with transaction.atomic():
+            ecriture = EcritureComptable(
+                journal=journal_achats,
+                date_ecriture=timezone.now(),
+                date_comptable=facture.date_facture,
+                libelle=f"Facture {facture.numero_facture} - {facture.fournisseur.nom}",
+                piece_justificative=facture.numero_facture,
+                montant_devise=facture.montant_ttc,
+                entreprise=entreprise,
+                created_by=request.user,
+                facture_fournisseur_liee=facture
+            )
+            
+            ecriture.save()
+            
+            LigneEcriture.objects.bulk_create([
+                LigneEcriture(
+                    ecriture=ecriture,
+                    compte=compte_achats,
+                    libelle=f"Achats HT - {facture.fournisseur.nom}",
+                    debit=facture.montant_ht,
+                    credit=Decimal('0.00'),
+                    entreprise=entreprise
+                ),
+                LigneEcriture(
+                    ecriture=ecriture,
+                    compte=compte_fournisseurs,
+                    libelle=f"Dette fournisseur - {facture.fournisseur.nom}",
+                    debit=Decimal('0.00'),
+                    credit=facture.montant_ttc,
+                    entreprise=entreprise
+                )
+            ])
+            
+            if facture.montant_tva > Decimal('0.00'):
+                LigneEcriture.objects.create(
+                    ecriture=ecriture,
+                    compte=compte_tva,
+                    libelle=f"TVA déductible - {facture.fournisseur.nom}",
+                    debit=facture.montant_tva,
+                    credit=Decimal('0.00'),
+                    entreprise=entreprise
+                )
+            
+            ecriture.recalculer_montant_devise()
+            
+            if not ecriture.est_equilibree:
+                ecriture.equilibrer_ecriture()
+                # On ne sauvegarde pas ici pour ne pas créer un conflit de save
         
-        compte_fournisseurs, created = PlanComptableOHADA.objects.get_or_create(
-            numero='401',
-            entreprise=entreprise,
-            defaults={
-                'classe': '4',
-                'intitule': 'Fournisseurs',
-                'type_compte': 'passif',
-                'description': 'Compte des dettes envers les fournisseurs'
-            }
-        )
-        
-        # Récupérer ou créer le journal des achats
-        journal_achats, created = JournalComptable.objects.get_or_create(
-            code='ACH',
-            entreprise=entreprise,
-            defaults={
-                'intitule': 'Journal des Achats',
-                'type_journal': 'achat'
-            }
-        )
-        
-        # Créer l'écriture comptable principale
-        ecriture = EcritureComptable(
-            journal=journal_achats,
-            date_ecriture=timezone.now(),
-            date_comptable=facture.date_facture,
-            libelle=f"Facture {facture.numero_facture} - {facture.fournisseur.nom}",
-            piece_justificative=facture.numero_facture,
-            entreprise=entreprise,
-            created_by=request.user,
-            facture_fournisseur_liee=facture
-        )
-        ecriture.save()
-        
-        # Ligne 1: Débit des achats (HT)
-        LigneEcriture.objects.create(
-            ecriture=ecriture,
-            compte=compte_achats,
-            libelle=f"Achats HT - {facture.fournisseur.nom}",
-            debit=facture.montant_ht,
-            credit=Decimal('0.00'),
-            entreprise=entreprise
-        )
-        
-        # Ligne 2: Débit de la TVA
-        LigneEcriture.objects.create(
-            ecriture=ecriture,
-            compte=compte_tva,
-            libelle=f"TVA {facture.montant_tva} - {facture.fournisseur.nom}",
-            debit=facture.montant_tva,
-            credit=Decimal('0.00'),
-            entreprise=entreprise
-        )
-        
-        # Ligne 3: Crédit des fournisseurs (TTC)
-        LigneEcriture.objects.create(
-            ecriture=ecriture,
-            compte=compte_fournisseurs,
-            libelle=f"Dette fournisseur - {facture.fournisseur.nom}",
-            debit=Decimal('0.00'),
-            credit=facture.montant_ttc,
-            entreprise=entreprise
-        )
-        
-        # Vérifier l'équilibre de l'écriture
-        total_debit = sum(float(ligne.debit) for ligne in ecriture.lignes.all())
-        total_credit = sum(float(ligne.credit) for ligne in ecriture.lignes.all())
-        
-        if abs(total_debit - total_credit) > Decimal('0.01'):
-            logger.warning(f"Écriture déséquilibrée: débit={total_debit}, crédit={total_credit}")
-        
+        logger.info(f"Écriture comptable créée avec succès pour la facture {facture.numero_facture}")
         return ecriture
         
     except Exception as e:
-        logger.error(f"Erreur création écritures comptables: {e}", exc_info=True)
+        logger.error(f"ERREUR CRITIQUE création écritures comptables: {e}", exc_info=True)
+        
+        if 'ecriture' in locals() and hasattr(ecriture, 'pk') and ecriture.pk:
+            try:
+                ecriture.delete()
+                logger.info("Écriture incomplète supprimée après erreur")
+            except Exception as delete_error:
+                logger.error(f"Erreur lors de la suppression de l'écriture: {delete_error}")
+        
         raise Exception(f"Erreur lors de la création des écritures comptables: {str(e)}")

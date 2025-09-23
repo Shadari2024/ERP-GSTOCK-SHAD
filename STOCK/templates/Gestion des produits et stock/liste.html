@@ -86,17 +86,6 @@
             </a>
         </div>
 
-        <div class="col">
-            <a href="{% url 'liste_ecarts' %}" class="app-card" data-aos="zoom-in" data-aos-delay="350"
-               data-bs-toggle="tooltip" data-bs-placement="top" title="Analyser les écarts entre le stock théorique et physique.">
-                <div class="app-icon bg-dark-light">
-                    <i class="bi bi-exclamation-triangle-fill"></i>
-                </div>
-                <div class="app-name">Écarts</div>
-                <div class="app-badge">Analyse</div>
-                <div class="app-hover-effect"></div>
-            </a>
-        </div>
 
         {% if request.user.is_superuser %}
         <div class="col">

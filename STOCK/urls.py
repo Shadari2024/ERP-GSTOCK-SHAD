@@ -17,14 +17,12 @@ urlpatterns = [
     path('produit/ajouter/', AjouterProduitView.as_view(), name='ajouter_produit'),
     # path('produits/', / ` produits_view, name='produits_par_categorie'),
     path('produits/', produits_list, name='produits_par_categorie'),
-    path('produits/etiquette_produit/<int:pk>/', ticket_produit_pdf, name='etiquette_produit'),
-    path('produits/search/', produits_search, name='produits_search'),
-    path('produits/details/<int:id>/', produit_detail, name='produit_detail'),
-  path('supprimer/<int:pk>/', DeleteProduitView.as_view(), name='supprimer_produit'),
-   path('produits/tickets/imprimer-stock/', imprimer_tickets_en_stock_pdf, name='imprimer_tickets_en_stock'),
+ path('produits/tickets/imprimer-stock/', imprimer_tickets_en_stock_pdf, name='imprimer_tickets_en_stock'),
     # ,
- 
-
+    path('produits/search/', produits_search, name='produits_search'),
+  path('supprimer/<int:pk>/', DeleteProduitView.as_view(), name='supprimer_produit'),
+    path('produits/etiquette_produit/<int:pk>/', ticket_produit_pdf, name='etiquette_produit'),
+path('produit/<int:pk>/suppression-bloquee/', DeleteProduitView.as_view(), name='produit_delete_blocked'),
     
       # --- Nouvelles URLs pour les dettes ---
 
@@ -36,20 +34,15 @@ urlpatterns = [
     path('statistiques/', statistiques, name='statistiquesVente'),
   
     
-    path('cloture-caisse/', cloturer_caisse, name='cloturer_caisse'),
-    path('rapport-cloture/<int:pk>/', rapport_cloture, name='rapport_cloture'),
-    path('rapport/<int:pk>/',rapport_cloture, name='rapport_cloture'),
+
     path('parametres/', modifier_parametres, name='modifier_parametres'),
     path("parametres/", afficher_parametres, name="afficher_parametres"),
-    path("principal/", principal, name="principal"),
+
     path('', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
     # path('logout/', logout_view, name='logout'),
-    path('dashboard/', dashboard, name='dashboard'),
-    path('liste_ecart/', liste_ecarts, name='liste_ecarts'),
-    path('mavue/pdf/',ma_vue, name='pdf_commande'),
-    path('bilan/',afficher_bilan, name='bilan_du_jour'),
+
     path('statistiques/produits/',tableau_de_bord, name='statistiques_produits'),
-    path('commandes/nouvelle/', nouvelle_commande, name='nouvelle_commande'),
+
     path('stats/commandes/', commande_stats, name='commande_stats'),
     path('inventaitre/', inventaire, name='inventaitre_liste'),
     path('inventaire/etat-stock/', etat_stock, name='etat_stock'),
@@ -62,17 +55,12 @@ urlpatterns = [
      path('test-ecriture/', test_creation_ecriture, name='test_ecriture'),
     path("rapports/",rapport, name="rapport"),
     path("rapports/mouvements/",rapport_mouvements, name="rapport_mouvements"),
-    path('ticket/<int:commande_id>/',ticket_caisse, name='ticket_caisse'),
+
     path("clotures-du-jour/", clotures_du_jour, name="clotures_du_jour"),
     path("clotures-du-jour/pdf/", telecharger_rapport_cloture_pdf, name="rapport_cloture_pdf"),
  
     #user
-    path('utilisateurs/', liste_utilisateurs, name='liste_utilisateurs'),
-    path('utilisateurs/modifier/<int:user_id>/', modifier_utilisateur, name='modifier_utilisateur'),
-    path('utilisateurs/desactiver/<int:user_id>/', desactiver_utilisateur, name='desactiver_utilisateur'),
-    path('utilisateurs/activer/<int:user_id>/', activer_utilisateur, name='activer_utilisateur'),
-    path('utilisateurs/reset/<int:user_id>/', reset_password, name='reset_password'),
-    path('utilisateurs/ajouter/', ajouter_utilisateur, name='ajouter_utilisateur'),
+   
     path('rapports/produits-alerte/pdf/', rapport_alertes_pdf, name='rapport_produits_alerte_pdf'),
     path('rapports/alerte/', rapport_alertes_pdf, name='rapport_alert'),
     path('rapports/ecarts-inventaire/', rapport_ecarts_inventaire_pdf, name='rapport_ecarts_pd'),
@@ -85,21 +73,7 @@ urlpatterns = [
     path('admin/telecharger-sauvegarde/', telecharger_sauvegarde, name='telecharger_sauvegarde'),
     path('creer-facture/<int:commande_id>/',creer_facture, name='creer_facture'),
     
-    #  # Fournisseurs
-    # path('acces-refuse/',acces_refuse, name='acces_refuse'),
-    # path('fournisseurs/',FournisseurListView.as_view(), name='fournisseur_list'),
-    # path(']',FournisseurCreateView.as_view(), name='fournisseur_create'),
-    #  # Achats
-    # path('achats/',AchatListView.as_view(), name='achat_list'),
-    # path('achats/nouveau/',AchatCreateView.as_view(), name='achat_create'),
-    # path('achats/<int:pk>/',AchatDetailView.as_view(), name='achat_detail'),
-    # path('achats/<int:pk>/delete/', AchatDeleteView.as_view(), name='achat_delete'),
-    # path('facture/<int:pk>/',detail_facture, name='detail_facture'),
-    # path('achats/<int:pk>/update/', AchatUpdateView.as_view(), name='achat_update'),
-    # path('fournisseurs/<int:pk>/', FournisseurDetailView.as_view(), name='fournisseur_detail'),
-    # path('fournisseurs/<int:pk>/modifier/', FournisseurUpdateView.as_view(), name='fournisseur_update'),
-    # path('fournisseurs/<int:pk>/supprimer/', FournisseurDeleteView.as_view(), name='fournisseur_delete'),
-    # path('achat/<int:pk>/pdf/', achat_pdf_view, name='achat_pdf'),
+   
     
     # URL corrigée pour enregistrer un paiement (en POST seulement)
     path('enregistrer-paiement/<int:facture_id>/',enregistrer_paiement, name='enregistrer_paiement'),
@@ -109,7 +83,6 @@ urlpatterns = [
     path('facture/<int:facture_id>/actions/', actions_facture, name='actions_facture'),
     path('facture/<int:pk>/', detail_facture, name='detail_facture'),
     path('paiements/',liste_paiements, name='liste_paiements'),
- 
     path('notifications/', liste_notifications, name='notifications'),
     
     
@@ -119,7 +92,7 @@ urlpatterns = [
     path('retour/<int:retour_id>/', detail_retour, name='detail_retour'),
     path('retour/<int:retour_id>/traiter/', traiter_retour, name='traiter_retour'),
     path('api/commandes/<int:commande_id>/lignes/', get_lignes_commande, name='get_lignes_commande'),
-    
+
     
     path('api/lignes_commande/<int:commande_id>/',get_lignes_commande, name='get_lignes_commande'),
     path('paramettre/param',parametre,name="Liste_parametres"),
@@ -203,7 +176,7 @@ urlpatterns = [
     path('devises/taux/ajouter/',ajouter_taux, name='ajouter_taux'),
     path('devises/taux/maj-auto/',maj_taux_auto, name='maj_taux_auto'),
     path('devises-disponibles/',obtenir_devises_disponibles, name='devises_disponibles'),
-    path('api/taux-change/', taux_change_api, name='taux_change_api'),
+
     path('Historique/taux-change/', historique_taux, name='historique_taux'),
     path('changer-devise/',changer_devise, name='changer_devise'),
     path('api/taux-change/', obtenir_taux_change, name='obtenir_taux_change'),

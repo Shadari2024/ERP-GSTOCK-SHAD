@@ -2,7 +2,7 @@
 
 <div class="sidebar d-flex flex-column flex-shrink-0 p-3 bg-body-tertiary" data-bs-theme="dark">
     <!-- Brand/Logo -->
-    <a href="{% url 'dashboard' %}" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none">
+    <a href="" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-decoration-none">
         <span class="fs-4">
             <i class="bi bi-layers me-2"></i>
             <span class="d-none d-sm-inline">{% trans "Tableau de bord" %}</span>
@@ -36,7 +36,7 @@
     <ul class="nav nav-pills flex-column mb-auto">
         <!-- Dashboard -->
         <li class="nav-item">
-            <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% else %}link-body-emphasis{% endif %}" aria-current="page">
+            <a href="" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% else %}link-body-emphasis{% endif %}" aria-current="page">
                 <i class="bi bi-speedometer2 me-2"></i>
                 <span class="d-none d-sm-inline">{% trans "Tableau de bord" %}</span>
             </a>

@@ -2,6 +2,7 @@
 {% load static %}
 {% load math_filters %}
 {% load filter_abs %}
+
 {% block title %}Compte de Résultat{% endblock %}
 
 {% block breadcrumb %}
@@ -12,8 +13,8 @@
 
 {% block actions %}
 <div>
-    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#exportModal">
-        <i class="fas fa-download me-1"></i> Exporter
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exportModal">
+        <i class="fas fa-file-export me-1"></i> Exporter
     </button>
 </div>
 {% endblock %}
@@ -25,72 +26,71 @@
         <p class="card-subtitle text-muted">Période du {{ date_debut|date:"d/m/Y" }} au {{ date_fin|date:"d/m/Y" }}</p>
     </div>
     <div class="card-body">
-        <!-- Filtres -->
         <div class="row mb-4">
             <div class="col-md-3">
+                <label for="date-debut" class="form-label">Date de début</label>
                 <input type="date" class="form-control" id="date-debut" name="date_debut" 
                        value="{{ date_debut }}" placeholder="Date début">
             </div>
             <div class="col-md-3">
+                <label for="date-fin" class="form-label">Date de fin</label>
                 <input type="date" class="form-control" id="date-fin" name="date_fin" 
                        value="{{ date_fin }}" placeholder="Date fin">
             </div>
             <div class="col-md-3">
+                <label for="detail-level" class="form-label">Niveau de détail</label>
                 <select class="form-select" id="detail-level">
-                    <option value="complet">Détail complet</option>
-                    <option value="synthese">Synthèse</option>
+                    <option value="complet" {% if detail_level == 'complet' %}selected{% endif %}>Détail complet</option>
+                    <option value="synthese" {% if detail_level == 'synthese' %}selected{% endif %}>Synthèse</option>
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3 d-flex align-items-end">
                 <button type="button" id="filter-btn" class="btn btn-primary w-100">
-                    <i class="fas fa-filter me-1"></i> Appliquer
+                    <i class="fas fa-filter me-1"></i> Appliquer les filtres
                 </button>
             </div>
         </div>
 
-        <!-- Résumé du compte de résultat -->
-        <div class="row mb-4">
+        <div class="row g-3 mb-4">
             <div class="col-md-4">
-                <div class="card bg-primary text-white">
-                    <div class="card-body text-center py-2">
-                        <h6 class="card-title mb-0">{{ total_produits|floatformat:2 }} {{ devise_principale_symbole }}</h6>
-                        <small>Total Produits</small>
+                <div class="card border-primary">
+                    <div class="card-body text-center">
+                        <small class="text-muted">Total Produits</small>
+                        <h4 class="card-title text-primary mt-1">{{ total_produits|floatformat:2 }} {{ devise_principale_symbole }}</h4>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card bg-danger text-white">
-                    <div class="card-body text-center py-2">
-                        <h6 class="card-title mb-0">{{ total_charges|floatformat:2 }} {{ devise_principale_symbole }}</h6>
-                        <small>Total Charges</small>
+                <div class="card border-danger">
+                    <div class="card-body text-center">
+                        <small class="text-muted">Total Charges</small>
+                        <h4 class="card-title text-danger mt-1">{{ total_charges|floatformat:2 }} {{ devise_principale_symbole }}</h4>
                     </div>
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card {% if benefice %}bg-success{% else %}bg-warning{% endif %} text-white">
-                    <div class="card-body text-center py-2">
-                        <h6 class="card-title mb-0">{{ resultat|floatformat:2 }} {{ devise_principale_symbole }}</h6>
-                        <small>Résultat</small>
+                <div class="card {% if benefice %}border-success{% else %}border-warning{% endif %}">
+                    <div class="card-body text-center">
+                        <small class="text-muted">Résultat</small>
+                        <h4 class="card-title {% if benefice %}text-success{% else %}text-warning{% endif %} mt-1">{{ resultat|floatformat:2 }} {{ devise_principale_symbole }}</h4>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Compte de Résultat détaillé -->
         <div class="row">
-            <!-- PRODUITS -->
             <div class="col-md-6">
-                <div class="card mb-4">
+                <div class="card shadow-sm mb-4">
                     <div class="card-header bg-success text-white">
                         <h6 class="card-title mb-0">
-                            <i class="fas fa-arrow-up me-2"></i>PRODUITS
+                            <i class="fas fa-chart-line me-2"></i>Produits (Classe 7)
                         </h6>
                     </div>
                     <div class="card-body p-0">
-                        <table class="table table-striped mb-0">
-                            <thead class="table-dark">
+                        <table class="table table-hover table-sm mb-0">
+                            <thead class="table-light">
                                 <tr>
-                                    <th>Comptes de produits (Classe 7)</th>
+                                    <th>Compte</th>
                                     <th class="text-end">Montant ({{ devise_principale_symbole }})</th>
                                 </tr>
                             </thead>
@@ -103,35 +103,34 @@
                                 {% empty %}
                                 <tr>
                                     <td colspan="2" class="text-center text-muted py-3">
-                                        <i class="fas fa-search me-2"></i>Aucun produit pour la période
+                                        <i class="fas fa-info-circle me-2"></i>Aucun compte de produit pour cette période.
                                     </td>
                                 </tr>
                                 {% endfor %}
-                                
-                                <!-- Total Produits -->
-                                <tr class="table-success">
-                                    <td><strong>TOTAL PRODUITS</strong></td>
-                                    <td class="text-end"><strong>{{ total_produits|floatformat:2 }}</strong></td>
-                                </tr>
                             </tbody>
+                            <tfoot>
+                                <tr class="table-success fw-bold">
+                                    <td>TOTAL PRODUITS</td>
+                                    <td class="text-end">{{ total_produits|floatformat:2 }}</td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
             </div>
 
-            <!-- CHARGES -->
             <div class="col-md-6">
-                <div class="card mb-4">
+                <div class="card shadow-sm mb-4">
                     <div class="card-header bg-danger text-white">
                         <h6 class="card-title mb-0">
-                            <i class="fas fa-arrow-down me-2"></i>CHARGES
+                            <i class="fas fa-chart-pie me-2"></i>Charges (Classe 6)
                         </h6>
                     </div>
                     <div class="card-body p-0">
-                        <table class="table table-striped mb-0">
-                            <thead class="table-dark">
+                        <table class="table table-hover table-sm mb-0">
+                            <thead class="table-light">
                                 <tr>
-                                    <th>Comptes de charges (Classe 6)</th>
+                                    <th>Compte</th>
                                     <th class="text-end">Montant ({{ devise_principale_symbole }})</th>
                                 </tr>
                             </thead>
@@ -144,117 +143,108 @@
                                 {% empty %}
                                 <tr>
                                     <td colspan="2" class="text-center text-muted py-3">
-                                        <i class="fas fa-search me-2"></i>Aucune charge pour la période
+                                        <i class="fas fa-info-circle me-2"></i>Aucun compte de charge pour cette période.
                                     </td>
                                 </tr>
                                 {% endfor %}
-                                
-                                <!-- Total Charges -->
-                                <tr class="table-danger">
-                                    <td><strong>TOTAL CHARGES</strong></td>
-                                    <td class="text-end"><strong>{{ total_charges|floatformat:2 }}</strong></td>
-                                </tr>
                             </tbody>
+                            <tfoot>
+                                <tr class="table-danger fw-bold">
+                                    <td>TOTAL CHARGES</td>
+                                    <td class="text-end">{{ total_charges|floatformat:2 }}</td>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Résultat -->
-        <div class="card mb-4">
-            <div class="card-header {% if benefice %}bg-success{% else %}bg-warning{% endif %} text-white">
-                <h6 class="card-title mb-0">
-                    <i class="fas fa-calculator me-2"></i>RÉSULTAT DE L'EXERCICE
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="row text-center">
-                    <div class="col-md-4">
-                        <h5>{{ total_produits|floatformat:2 }} {{ devise_principale_symbole }}</h5>
-                        <p class="text-muted mb-0">Total Produits</p>
-                    </div>
-                    <div class="col-md-4">
-                        <h5>- {{ total_charges|floatformat:2 }} {{ devise_principale_symbole }}</h5>
-                        <p class="text-muted mb-0">Total Charges</p>
-                    </div>
-                    <div class="col-md-4">
-                        <h3 class="{% if benefice %}text-success{% else %}text-warning{% endif %}">
-                            = {{ resultat|floatformat:2 }} {{ devise_principale_symbole }}
-                        </h3>
-                        <p class="text-muted mb-0">
-                            {% if benefice %}
-                                <i class="fas fa-arrow-up text-success me-1"></i>Bénéfice
-                            {% else %}
-                                <i class="fas fa-arrow-down text-warning me-1"></i>Perte
-                            {% endif %}
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Analyse de la rentabilité -->
         <div class="row">
-            <div class="col-md-6">
-                <div class="card">
+            <div class="col-md-12">
+                <div class="card shadow-sm">
                     <div class="card-header">
-                        <h6 class="card-title mb-0">Indicateurs de rentabilité</h6>
+                        <h6 class="card-title mb-0">Analyse de la performance</h6>
                     </div>
                     <div class="card-body">
-                        <table class="table table-sm">
-                            <tr>
-                                <td>Marge brute</td>
-                                <td class="text-end">
-                                    {% if total_produits > 0 %}
-                                        {{ resultat|floatformat:2 }} {{ devise_principale_symbole }}
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Taux de marge</td>
-                                <td class="text-end">
-                                    {% if total_produits > 0 %}
-                                        {{ resultat|div:total_produits|multiply:100|floatformat:2 }}%
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Charges/Produits</td>
-                                <td class="text-end">
-                                    {% if total_produits > 0 %}
-                                        {{ total_charges|div:total_produits|multiply:100|floatformat:2 }}%
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="card-title mb-0">Répartition</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="progress mb-2" style="height: 20px;">
-                            <div class="progress-bar bg-success" style="width: {% if total_produits > 0 %}{{ total_produits|div:total_produits|multiply:100 }}%{% else %}0%{% endif %}">
-                                Produits: 100%
+                        <div class="row text-center mb-4">
+                            <div class="col-md-4">
+                                <span class="badge bg-primary rounded-pill">Total Produits</span>
+                                <h5 class="mt-2 text-primary">{{ total_produits|floatformat:2 }} {{ devise_principale_symbole }}</h5>
+                            </div>
+                            <div class="col-md-4">
+                                <span class="badge bg-danger rounded-pill">Total Charges</span>
+                                <h5 class="mt-2 text-danger">{{ total_charges|floatformat:2 }} {{ devise_principale_symbole }}</h5>
+                            </div>
+                            <div class="col-md-4">
+                                <span class="badge {% if benefice %}bg-success{% else %}bg-warning{% endif %} rounded-pill">Résultat</span>
+                                <h5 class="mt-2 {% if benefice %}text-success{% else %}text-warning{% endif %}">{{ resultat|floatformat:2 }} {{ devise_principale_symbole }}</h5>
                             </div>
                         </div>
-                        <div class="progress" style="height: 20px;">
-                            <div class="progress-bar bg-danger" style="width: {% if total_produits > 0 %}{{ total_charges|div:total_produits|multiply:100 }}%{% else %}0%{% endif %}">
-                                Charges: {% if total_produits > 0 %}{{ total_charges|div:total_produits|multiply:100|floatformat:0 }}%{% else %}0%{% endif %}
+
+                        <div class="d-flex justify-content-center mb-4">
+                            <div class="progress" style="height: 30px; width: 100%;">
+                                {% if total_produits > 0 %}
+                                    <div class="progress-bar bg-danger" role="progressbar" 
+                                         style="width: {{ total_charges|div:total_produits|multiply:100|floatformat:2 }}%;" 
+                                         aria-valuenow="{{ total_charges|div:total_produits|multiply:100|floatformat:2 }}" 
+                                         aria-valuemin="0" aria-valuemax="100">
+                                        Charges: {{ total_charges|div:total_produits|multiply:100|floatformat:2 }}%
+                                    </div>
+                                    <div class="progress-bar {% if benefice %}bg-success{% else %}bg-warning{% endif %}" role="progressbar" 
+                                         style="width: {{ resultat|absolute_value|div:total_produits|multiply:100|floatformat:2 }}%;" 
+                                         aria-valuenow="{{ resultat|absolute_value|div:total_produits|multiply:100|floatformat:2 }}" 
+                                         aria-valuemin="0" aria-valuemax="100">
+                                        Résultat: {{ resultat|absolute_value|div:total_produits|multiply:100|floatformat:2 }}%
+                                    </div>
+                                {% else %}
+                                    <div class="progress-bar bg-secondary" style="width: 100%;">
+                                        Aucune donnée pour la période.
+                                    </div>
+                                {% endif %}
                             </div>
-                           <div class="progress-bar {% if benefice %}bg-success{% else %}bg-warning{% endif %}" style="width: {% if total_produits > 0 %}{{ resultat|absolute_value|div:total_produits|multiply:100 }}%{% else %}0%{% endif %}">
-    Résultat: {% if total_produits > 0 %}{{ resultat|absolute_value|div:total_produits|multiply:100|floatformat:0 }}%{% else %}0%{% endif %}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="fw-bold text-muted">Indicateurs de performance</h6>
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        Ratio charges/produits
+                                        <span class="badge bg-secondary rounded-pill">
+                                            {% if total_produits > 0 %}
+                                                {{ total_charges|div:total_produits|multiply:100|floatformat:2 }}%
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </span>
+                                    </li>
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        Taux de marge nette
+                                        <span class="badge bg-secondary rounded-pill">
+                                            {% if total_produits > 0 %}
+                                                {{ resultat|div:total_produits|multiply:100|floatformat:2 }}%
+                                            {% else %}
+                                                N/A
+                                            {% endif %}
+                                        </span>
+                                    </li>
+                                </ul>
+                            </div>
+                            ...
+<div class="col-md-6">
+    <h6 class="fw-bold text-muted">Synthèse finale</h6>
+    <div class="alert {% if benefice %}alert-success{% else %}alert-warning{% endif %} mt-3 text-center">
+        <i class="fas fa-{% if benefice %}arrow-up{% else %}arrow-down{% endif %} me-2"></i>
+        {% if benefice %}
+            **Bénéfice net** de {{ resultat|floatformat:2 }} {{ devise_principale_symbole }}
+        {% else %}
+            **Perte nette** de {{ resultat|absolute_value|floatformat:2 }} {{ devise_principale_symbole }}
+        {% endif %}
+    </div>
 </div>
+
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -263,7 +253,6 @@
     </div>
 </div>
 
-<!-- Modal d'export -->
 <div class="modal fade" id="exportModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -299,7 +288,6 @@
 {% block extra_js %}
 <script>
     $(document).ready(function() {
-        // Appliquer les filtres
         $('#filter-btn').click(function() {
             const dateDebut = $('#date-debut').val();
             const dateFin = $('#date-fin').val();
@@ -314,14 +302,12 @@
             window.location.href = url;
         });
 
-        // Entrée dans les champs déclenche le filtre
         $('#date-debut, #date-fin').keypress(function(e) {
             if (e.which === 13) {
                 $('#filter-btn').click();
             }
         });
 
-        // Initialiser les dates si vides
         if (!$('#date-debut').val()) {
             const firstDay = new Date(new Date().getFullYear(), 0, 1);
             $('#date-debut').val(firstDay.toISOString().split('T')[0]);
@@ -337,47 +323,42 @@
         const dateDebut = '{{ date_debut }}';
         const dateFin = '{{ date_fin }}';
         
-        // Simulation d'export
-        alert(`Export ${format} du compte de résultat pour la période ${dateDebut} au ${dateFin} sera bientôt disponible.`);
-        $('#exportModal').modal('hide');
+        {% comment %} let exportUrl;
+        if (format === 'pdf') {
+            exportUrl = `{% url "comptabilite:compte_resultat_export_pdf" %}?date_debut=${dateDebut}&date_fin=${dateFin}`;
+        } else if (format === 'excel') {
+            exportUrl = `{% url "comptabilite:compte_resultat_export_excel" %}?date_debut=${dateDebut}&date_fin=${dateFin}`;
+        } else {
+            alert(`Le format d'exportation "${format}" n'est pas encore pris en charge.`);
+            return;
+        }
+
+        window.location.href = exportUrl; {% endcomment %}
     }
 </script>
 
 <style>
-    .table th {
-        background-color: #2c3e50;
-        color: white;
-        font-weight: 600;
-    }
-    
-    .table-dark th {
-        background-color: #34495e;
-    }
-    
     .card {
-        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border-radius: 0.75rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
-    
+    .card-header {
+        border-radius: 0.75rem 0.75rem 0 0 !important;
+    }
+    .table-hover tbody tr:hover {
+        background-color: #f1f1f1;
+    }
+    .badge {
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
     .progress {
-        background-color: #e9ecef;
-        border-radius: 0.375rem;
+        height: 30px;
+        border-radius: 15px;
     }
-    
     .progress-bar {
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-    
-    .bg-success {
-        background-color: #198754 !important;
-    }
-    
-    .bg-danger {
-        background-color: #dc3545 !important;
-    }
-    
-    .bg-warning {
-        background-color: #ffc107 !important;
+        font-size: 0.8rem;
+        font-weight: bold;
     }
 </style>
 {% endblock %}

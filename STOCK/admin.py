@@ -148,6 +148,3 @@ admin.site.register(Client, ClientAdmin)
 admin.site.register(InventairePhysique, InventairePhysiqueAdmin)
 
 admin.site.register(SuggestionReapprovisionnement)
-admin.site.register(ChatbotConversation)
-admin.site.register(ChatbotKnowledge)
-admin.site.register(BaseConnaissance)

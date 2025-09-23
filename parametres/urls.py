@@ -5,7 +5,8 @@ from .views import *
 app_name = 'parametres'
 
 urlpatterns = [
-
+ # Dashboard
+    path('',DashboardView.as_view(), name='dashboard'),
     path('entreprises/', EntrepriseListView.as_view(), name='entreprise_list'),
     path('entreprise/ajouter/', EntrepriseCreateView.as_view(), name='entreprise_create'),
     path('entreprise/<slug:slug>/', EntrepriseDetailView.as_view(), name='entreprise_detail'),

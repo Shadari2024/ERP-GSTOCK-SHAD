@@ -143,30 +143,32 @@
         </div>
 
         <!-- Équilibre de la balance -->
-        <div class="alert {% if total_debit == total_credit %}alert-success{% else %}alert-danger{% endif %} mt-4">
-            <div class="row">
-                <div class="col-md-6">
-                    <h6 class="alert-heading">
-                        <i class="fas fa-{% if total_debit == total_credit %}check-circle{% else %}exclamation-triangle{% endif %} me-2"></i>
-                        Équilibre de la Balance
-                    </h6>
-                    <p class="mb-0">
-                        {% if total_debit == total_credit %}
-                            La balance est équilibrée : Total Débit = Total Crédit
-                        {% else %}
-                            La balance n'est pas équilibrée : Différence de {{ desequilibre|floatformat:2 }} {{ devise_principale_symbole }}
-                        {% endif %}
-                    </p>
-                </div>
-                <div class="col-md-6 text-end">
-                    <strong>Total Débit:</strong> {{ total_debit|floatformat:2 }} {{ devise_principale_symbole }}<br>
-                    <strong>Total Crédit:</strong> {{ total_credit|floatformat:2 }} {{ devise_principale_symbole }}<br>
-                    <strong>Différence:</strong> <span class="{% if desequilibre == 0 %}text-success{% else %}text-danger{% endif %}">{{ desequilibre|floatformat:2 }} {{ devise_principale_symbole }}</span>
-                </div>
-            </div>
+<div class="alert {% if desequilibre == 0 %}alert-success{% else %}alert-danger{% endif %} mt-4">
+    <div class="row">
+        <div class="col-md-6">
+            <h6 class="alert-heading">
+                <i class="fas fa-{% if desequilibre == 0 %}check-circle{% else %}exclamation-triangle{% endif %} me-2"></i>
+                Équilibre de la Balance
+            </h6>
+            <p class="mb-0">
+                {% if desequilibre == 0 %}
+                    ✅ La balance est équilibrée : Total Débit = Total Crédit
+                {% else %}
+                    ⚠️ La balance n'est pas équilibrée : Différence de {{ desequilibre|floatformat:2 }} {{ devise_principale_symbole }}
+                {% endif %}
+            </p>
+        </div>
+        <div class="col-md-6 text-end">
+            <strong>Total Débit:</strong> {{ total_debit|floatformat:2 }} {{ devise_principale_symbole }}<br>
+            <strong>Total Crédit:</strong> {{ total_credit|floatformat:2 }} {{ devise_principale_symbole }}<br>
+            <strong>Différence:</strong>
+            <span class="{% if desequilibre == 0 %}text-success{% else %}text-danger{% endif %}">
+                {{ desequilibre|floatformat:2 }} {{ devise_principale_symbole }}
+            </span>
         </div>
     </div>
 </div>
+
 
 <!-- Modal d'export -->
 <div class="modal fade" id="exportModal" tabindex="-1">

@@ -1,36 +1,64 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top">
     <div class="container">
+        <!-- Logo -->
         <a class="navbar-brand" href="{% url 'vitrine:accueil' %}">
-            <i class="fas fa-cubes me-2"></i>CongoERP-shad
+            <i class="fas fa-cube me-2"></i>CongoERP
         </a>
+
+        <!-- Mobile Toggle -->
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
+
+        <!-- Navigation Items -->
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto">
+            <ul class="navbar-nav mx-auto">
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'vitrine:accueil' %}">Accueil</a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'accueil' %}active{% endif %}" 
+                       href="{% url 'vitrine:accueil' %}">Accueil</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'vitrine:features' %}">Fonctionnalités</a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'features' %}active{% endif %}" 
+                       href="{% url 'vitrine:features' %}">Fonctionnalités</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'vitrine:pricing' %}">Tarifs</a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'pricing' %}active{% endif %}" 
+                       href="{% url 'vitrine:pricing' %}">Tarifs</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{% url 'vitrine:contact' %}">Contact</a>
+                    <a class="nav-link {% if request.resolver_match.url_name == 'contact' %}active{% endif %}" 
+                       href="{% url 'vitrine:contact' %}">Contact</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#documentation">Documentation</a>
                 </li>
             </ul>
-            <div class="d-flex">
-                {% comment %} {% if user.is_authenticated %}
-                    {# Utiliser une URL absolue par défaut #}
-                    <a href="/dashboard/" class="btn btn-outline-light me-2">Tableau de bord</a>
-                    <a href="{% url 'logout' %}" class="btn btn-light">Déconnexion</a>
+
+            <!-- Auth Buttons -->
+            <div class="d-flex align-items-center gap-3">
+                {% if user.is_authenticated %}
+                    <a href="/dashboard/" class="btn btn-outline-light">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    <div class="dropdown">
+                        <a class="btn btn-gradient dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-2"></i>{{ user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-dark">
+                            <li><a class="dropdown-item" href="/dashboard/profile/"><i class="fas fa-user me-2"></i>Profil</a></li>
+                            <li><a class="dropdown-item" href="/dashboard/settings/"><i class="fas fa-cog me-2"></i>Paramètres</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="{% url 'security:deconnexion' %}"><i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
+                        </ul>
+                    </div>
                 {% else %}
-                    <a href="{% url 'login' %}" class="btn btn-outline-light me-2">Connexion</a>
-                    <a href="{% url 'vitrine:demo' %}" class="btn btn-primary">Démo gratuite</a>
-                {% endif %} {% endcomment %}
+                    <a href="{% url 'security:connexion' %}" class="btn btn-outline-light">Connexion</a>
+                    <a href="{% url 'vitrine:demo' %}" class="btn btn-gradient">Essai Gratuit</a>
+                {% endif %}
             </div>
         </div>
     </div>
 </nav>
+
+<!-- Spacer for fixed nav -->
+<div style="height: 80px;"></div>

@@ -1,106 +1,296 @@
 {% extends 'vitrine/base.html' %}
 {% load static %}
 
-{% block title %}Demande de Démo - CongoERP-shad{% endblock %}
+{% block title %}Démonstration Gratuite - CongoERP | ERP Cloud Moderne{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h2 class="mb-0">Demander une Démonstration</h2>
-                </div>
-                <div class="card-body">
-                    <p class="lead">Remplissez le formulaire ci-dessous pour demander une démonstration gratuite de CongoERP-shad. Notre équipe vous contactera dans les plus brefs délais.</p>
-                    
-                    <form method="post" novalidate>
-                        {% csrf_token %}
-                        
-                        {% if form.non_field_errors %}
-                            <div class="alert alert-danger">
-                                {% for error in form.non_field_errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.nom.id_for_label }}" class="form-label">{{ form.nom.label }}</label>
-                                {{ form.nom }}
-                                {% if form.nom.errors %}
-                                    <div class="text-danger">
-                                        {% for error in form.nom.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.entreprise.id_for_label }}" class="form-label">{{ form.entreprise.label }}</label>
-                                {{ form.entreprise }}
-                                {% if form.entreprise.errors %}
-                                    <div class="text-danger">
-                                        {% for error in form.entreprise.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
-                                {{ form.email }}
-                                {% if form.email.errors %}
-                                    <div class="text-danger">
-                                        {% for error in form.email.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.telephone.id_for_label }}" class="form-label">{{ form.telephone.label }}</label>
-                                {{ form.telephone }}
-                                {% if form.telephone.errors %}
-                                    <div class="text-danger">
-                                        {% for error in form.telephone.errors %}
-                                            {{ error }}
-                                        {% endfor %}
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.message.id_for_label }}" class="form-label">{{ form.message.label }}</label>
-                            {{ form.message }}
-                            {% if form.message.errors %}
-                                <div class="text-danger">
-                                    {% for error in form.message.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                            <div class="form-text">Décrivez brièvement vos besoins et attentes.</div>
-                        </div>
-                        
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">Envoyer la demande</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-            
-            <div class="text-center mt-4">
-                <p>Vous avez déjà un compte ? <a href="{% url 'login' %}">Connectez-vous ici</a></p>
+<!-- Hero Section Démo -->
+<section class="hero-section" style="min-height: 50vh;">
+    <div class="container">
+        <div class="row align-items-center text-center">
+            <div class="col-lg-8 mx-auto">
+                <span class="hero-badge animate__animated animate__fadeIn">
+                    <i class="fas fa-calendar-check me-2"></i>Démo Personnalisée
+                </span>
+                
+                <h1 class="display-4 fw-bold mt-4 mb-4 animate__animated animate__fadeInUp">
+                    Découvrez CongoERP
+                    <span class="text-gradient">en Action</span>
+                </h1>
+                
+                <p class="lead text-muted animate__animated animate__fadeInUp">
+                    Réservez une démonstration personnalisée et découvrez comment notre ERP 
+                    peut transformer la gestion de votre entreprise
+                </p>
             </div>
         </div>
     </div>
-</div>
+</section>
+
+<!-- Formulaire de Démo -->
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="row align-items-center">
+                    <!-- Informations -->
+                    <div class="col-lg-5 mb-5 mb-lg-0">
+                        <div class="pe-lg-4">
+                            <h2 class="fw-bold mb-4">Démo Personnalisée</h2>
+                            <p class="text-muted mb-4">
+                                Notre équipe vous présente les fonctionnalités adaptées à vos besoins spécifiques.
+                            </p>
+                            
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="feature-icon me-3" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-clock fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">30 Minutes</h6>
+                                    <small class="text-muted">Démonstration ciblée</small>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="feature-icon me-3" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-user-tie fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Expert Dédié</h6>
+                                    <small class="text-muted">Conseiller spécialisé</small>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex align-items-center mb-4">
+                                <div class="feature-icon me-3" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-play-circle fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Live Demo</h6>
+                                    <small class="text-muted">Plateforme en temps réel</small>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-dark rounded p-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-2 text-primary"></i>
+                                    Aucun engagement • Adapté à votre secteur
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Formulaire -->
+                    <div class="col-lg-7">
+                        <div class="card border-0 shadow-lg">
+                            <div class="card-header bg-gradient-primary text-white py-4">
+                                <h3 class="mb-0 text-center">
+                                    <i class="fas fa-rocket me-2"></i>Demander une Démo
+                                </h3>
+                            </div>
+                            <div class="card-body p-4">
+                                <form method="post" novalidate class="needs-validation">
+                                    {% csrf_token %}
+                                    
+                                    {% if form.non_field_errors %}
+                                        <div class="alert alert-danger">
+                                            {% for error in form.non_field_errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="{{ form.nom.id_for_label }}" class="form-label fw-semibold">
+                                                <i class="fas fa-user me-2 text-primary"></i>{{ form.nom.label }}
+                                            </label>
+                                            {{ form.nom }}
+                                            {% if form.nom.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.nom.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="col-md-6 mb-3">
+                                            <label for="{{ form.entreprise.id_for_label }}" class="form-label fw-semibold">
+                                                <i class="fas fa-building me-2 text-primary"></i>{{ form.entreprise.label }}
+                                            </label>
+                                            {{ form.entreprise }}
+                                            {% if form.entreprise.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.entreprise.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="{{ form.email.id_for_label }}" class="form-label fw-semibold">
+                                                <i class="fas fa-envelope me-2 text-primary"></i>{{ form.email.label }}
+                                            </label>
+                                            {{ form.email }}
+                                            {% if form.email.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.email.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <div class="col-md-6 mb-3">
+                                            <label for="{{ form.telephone.id_for_label }}" class="form-label fw-semibold">
+                                                <i class="fas fa-phone me-2 text-primary"></i>{{ form.telephone.label }}
+                                            </label>
+                                            {{ form.telephone }}
+                                            {% if form.telephone.errors %}
+                                                <div class="invalid-feedback d-block">
+                                                    {% for error in form.telephone.errors %}
+                                                        {{ error }}
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-4">
+                                        <label for="{{ form.message.id_for_label }}" class="form-label fw-semibold">
+                                            <i class="fas fa-comment me-2 text-primary"></i>{{ form.message.label }}
+                                        </label>
+                                        {{ form.message }}
+                                        {% if form.message.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {% for error in form.message.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        <div class="form-text text-muted">
+                                            Décrivez vos besoins spécifiques, votre secteur d'activité, ou les fonctionnalités qui vous intéressent.
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="d-grid">
+                                        <button type="submit" class="btn btn-gradient btn-lg py-3">
+                                            <i class="fas fa-paper-plane me-2"></i>Envoyer la Demande
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="text-center mt-3">
+                                        <small class="text-muted">
+                                            <i class="fas fa-lock me-1"></i>Vos données sont sécurisées et confidentielles
+                                        </small>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Informations de Contact -->
+<section class="py-5 bg-darker">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="feature-icon mx-auto mb-3" style="width: 70px; height: 70px;">
+                    <i class="fas fa-envelope fa-2x"></i>
+                </div>
+                <h5 class="fw-bold">Email</h5>
+                <p class="text-muted">shadarijerome13@gmail.com</p>
+            </div>
+            
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="feature-icon mx-auto mb-3" style="width: 70px; height: 70px;">
+                    <i class="fas fa-phone fa-2x"></i>
+                </div>
+                <h5 class="fw-bold">Téléphone</h5>
+                <p class="text-muted">+243 995 611 980<br>+243 899 521 051</p>
+            </div>
+            
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="feature-icon mx-auto mb-3" style="width: 70px; height: 70px;">
+                    <i class="fas fa-clock fa-2x"></i>
+                </div>
+                <h5 class="fw-bold">Disponibilité</h5>
+                <p class="text-muted">Lun - Ven: 8h - 18h<br>Réponse sous 24h</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .form-control {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        color: var(--text-light);
+        padding: 12px 15px;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        background: var(--card-bg);
+        border-color: #667eea;
+        color: var(--text-light);
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .form-label {
+        color: var(--text-light);
+        margin-bottom: 8px;
+    }
+    
+    .form-text {
+        color: var(--text-muted) !important;
+    }
+    
+    .invalid-feedback {
+        color: #f56565;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+    
+    .card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 15px;
+    }
+    
+    .was-validated .form-control:invalid {
+        border-color: #f56565;
+    }
+    
+    .was-validated .form-control:valid {
+        border-color: #48bb78;
+    }
+</style>
+
+<script>
+    // Validation du formulaire
+    document.addEventListener('DOMContentLoaded', function() {
+        const forms = document.querySelectorAll('.needs-validation');
+        
+        Array.from(forms).forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                
+                form.classList.add('was-validated');
+            }, false);
+        });
+    });
+</script>
 {% endblock %}

@@ -1,27 +1,127 @@
 {% extends 'vitrine/base.html' %}
 {% load static %}
 
-{% block title %}Demande Envoyée - CongoERP-shad{% endblock %}
+{% block title %}Demande Envoyée - CongoERP{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card shadow text-center">
-                <div class="card-body py-5">
-                    <div class="mb-4">
-                        <i class="fas fa-check-circle fa-5x text-success"></i>
+<section class="hero-section d-flex align-items-center" style="min-height: 80vh;">
+    <div class="container">
+        <div class="row justify-content-center text-center">
+            <div class="col-lg-8">
+                <div class="success-animation mb-4">
+                    <i class="fas fa-check-circle text-success" style="font-size: 5rem;"></i>
+                </div>
+                
+                <h1 class="display-4 fw-bold mb-4 animate__animated animate__fadeInUp">Demande Envoyée !</h1>
+                
+                <!-- 🔥 AFFICHAGE DU MESSAGE DE SUCCÈS -->
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-success alert-dismissible fade show mb-4 animate__animated animate__fadeInUp">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-check-circle me-3 fa-lg"></i>
+                                <div>
+                                    <h4 class="alert-heading mb-2">Succès !</h4>
+                                    <p class="mb-0">{{ message }}</p>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <!-- Message par défaut si pas de message Django -->
+                    <div class="alert alert-success mb-4 animate__animated animate__fadeInUp">
+                        <h4 class="alert-heading">
+                            <i class="fas fa-check-circle me-2"></i>Succès
+                        </h4>
+                        Votre demande de démonstration a été envoyée avec succès à <strong>shadarijerome13@gmail.com</strong>
                     </div>
-                    <h2 class="card-title mb-3">Demande Envoyée avec Succès!</h2>
-                    <p class="lead mb-4">Merci pour votre intérêt pour CongoERP-shad. Notre équipe commerciale vous contactera dans les plus brefs délais pour organiser votre démonstration personnalisée.</p>
-                    <p class="text-muted mb-4">Vous recevrez également un email de confirmation avec les détails de votre demande.</p>
-                    <div class="d-flex justify-content-center gap-3">
-                        <a href="{% url 'vitrine:accueil' %}" class="btn btn-primary">Retour à l'accueil</a>
-                        <a href="{% url 'vitrine:features' %}" class="btn btn-outline-primary">Découvrir les fonctionnalités</a>
+                {% endif %}
+                
+                <p class="lead text-muted mb-4 animate__animated animate__fadeInUp animate__delay-1s">
+                    Notre équipe vous contactera dans les plus brefs délais aux coordonnées que vous avez fournies.
+                </p>
+                
+                <div class="bg-dark rounded p-4 mb-4 animate__animated animate__fadeInUp animate__delay-2s">
+                    <h5 class="fw-bold mb-3">Prochaines étapes :</h5>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-envelope text-primary me-3"></i>
+                        <span>Confirmation email sous 24h</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-phone text-primary me-3"></i>
+                        <span>Appel de qualification au +243 995 611 980</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-calendar-check text-primary me-3"></i>
+                        <span>Planification de la démo personnalisée</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-rocket text-primary me-3"></i>
+                        <span>Accès à votre espace de test</span>
+                    </div>
+                </div>
+                
+                <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center animate__animated animate__fadeInUp animate__delay-3s">
+                    <a href="{% url 'vitrine:accueil' %}" class="btn btn-gradient btn-lg">
+                        <i class="fas fa-home me-2"></i>Retour à l'accueil
+                    </a>
+                    <a href="{% url 'vitrine:features' %}" class="btn btn-outline-light btn-lg">
+                        <i class="fas fa-rocket me-2"></i>Voir les fonctionnalités
+                    </a>
+                    <a href="{% url 'vitrine:demo' %}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-plus me-2"></i>Nouvelle demande
+                    </a>
+                </div>
+                
+                <!-- Informations de contact supplémentaires -->
+                <div class="mt-5 p-4 bg-darker rounded animate__animated animate__fadeInUp animate__delay-4s">
+                    <h6 class="fw-bold mb-3">En attendant notre contact :</h6>
+                    <div class="row text-center">
+                        <div class="col-md-4 mb-3">
+                            <i class="fas fa-envelope text-primary me-2"></i>
+                            <span>shadarijerome13@gmail.com</span>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <i class="fas fa-phone text-primary me-2"></i>
+                            <span>+243 995 611 980</span>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <i class="fas fa-clock text-primary me-2"></i>
+                            <span>Lun-Ven: 8h-18h</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
+
+<style>
+    .success-animation {
+        animation: bounceIn 1s ease-in-out;
+    }
+    
+    @keyframes bounceIn {
+        0% { transform: scale(0.3); opacity: 0; }
+        50% { transform: scale(1.1); }
+        70% { transform: scale(0.9); }
+        100% { transform: scale(1); opacity: 1; }
+    }
+    
+    .bg-darker {
+        background: var(--darker-bg);
+        border: 1px solid var(--border-color);
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animation séquentielle des éléments
+        const elements = document.querySelectorAll('.animate__animated');
+        elements.forEach((element, index) => {
+            element.style.animationDelay = `${index * 0.2}s`;
+        });
+    });
+</script>
 {% endblock %}

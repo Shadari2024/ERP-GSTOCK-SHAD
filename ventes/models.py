@@ -591,7 +591,7 @@ class LigneBonLivraison(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.produit.designation} - {self.quantite} x {self.prix_unitaire}" # Use produit.designation
+        return f"{self.produit.nom} - {self.quantite} x {self.prix_unitaire}"
 
 
 # --- NEW HISTORY AND AUDIT LOG MODELS FOR BONLIVRAISON ---
@@ -837,11 +837,29 @@ class Facture(models.Model):
         
         self.save(update_fields=['statut', 'montant_restant', 'updated_at'])
 
+    @property
+    def get_statut_badge(self):
+        """Retourne la classe Bootstrap pour le badge de statut"""
+        status_classes = {
+            'brouillon': 'secondary',
+            'validee': 'primary',
+            'paye': 'success',
+            'paye_partiel': 'warning',
+            'annule': 'danger'
+        }
+        return status_classes.get(self.statut, 'secondary')
+    
+    @property
+    def echeance(self):
+        """Alias pour date_echeance"""
+        return self.date_echeance
+    
     def get_absolute_url(self):
         return reverse('ventes:facture_detail', kwargs={'pk': self.pk})
     
     def __str__(self):
         return f"Facture {self.numero} - {self.client} - {self.total_ttc} {self.devise}"
+    
 class LigneFacture(models.Model):
     facture = models.ForeignKey(Facture, related_name='items', on_delete=models.CASCADE)
     produit = models.ForeignKey('STOCK.Produit', on_delete=models.PROTECT)  # Changé de 'article' à 'produit'
@@ -1053,6 +1071,13 @@ class VentePOS(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     remise = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     notes = models.TextField(blank=True, null=True)
+      # AJOUTEZ cette relation
+    # entreprise = models.ForeignKey(
+    #     'parametres.Entreprise', 
+    #     on_delete=models.CASCADE,
+    #     verbose_name="Entreprise",
+    #     related_name='ventes_pos'
+    # )
 
     @property
     def total_ht(self):

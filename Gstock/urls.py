@@ -2,15 +2,26 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.views.generic import RedirectView
-from security.views import dashboard_redirect
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from django.shortcuts import redirect
+
+# 🔥 CORRECTION : Redirection vers la vitrine
+def redirect_to_vitrine(request):
+    """Redirige explicitement vers la page d'accueil de la vitrine"""
+    print("🔍 REDIRECTION: Racine → /vitrine/")
+    return redirect('/vitrine/')
 
 urlpatterns = [
-       #path('admin/', admin.site.urls),
-    # path('admin/', RedirectView.as_view(url='/dashboard/admin', permanent=True)),
-    path('', dashboard_redirect, name='root_redirect'),
-    path('', include('security.urls')),
+    # 🔥 CORRECTION : Redirection de la racine vers la vitrine
+    path("", redirect_to_vitrine, name='root_redirect'),
+    
+    # 🔥 CORRECTION : Inclure les URLs de la vitrine
+    path('vitrine/', include('vitrine.urls', namespace='vitrine')),
+    
+    # Routes dashboard séparées
+    path('dashboard/', include('security.urls')),
+
+    # Autres applications
     path('parametres/', include('parametres.urls')),
     path('Achats/', include('achats.urls')),
     path('ventes/', include('ventes.urls')),
@@ -19,8 +30,8 @@ urlpatterns = [
     path('comptabilite/', include('comptabilite.urls')),
     path('crm/', include('crm.urls')),
     path('grh/', include('grh.urls', namespace='grh')),
-    path('vitrine/', include('vitrine.urls', namespace='vitrine')),
-     path('bi/', include('bi.urls', namespace='bi')),
+    path('bi/', include('bi.urls', namespace='bi')),
+    path('api/', include('api.urls')),
 ]
 
 if settings.DEBUG:

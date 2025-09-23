@@ -122,9 +122,11 @@ SESSION_COOKIE_AGE = 86400  # 1 jour en secondes
 ADMIN_SITE_LOGOUT_REDIRECT_URL = 'security:connexion'
 
 # URLs
-LOGIN_URL = 'security:connexion'
-LOGIN_REDIRECT_URL = 'security:dashboard_redirect'  # Utilisez la vue de redirection
-LOGOUT_REDIRECT_URL = 'security:connexion'
+# 🔥 CORRECTION : Modifier les paramètres d'authentification
+LOGIN_URL = '/dashboard/connexion/'  # Garder pour les vues qui nécessitent une connexion
+LOGIN_REDIRECT_URL = '/dashboard/redirect/'  # Après connexion réussie
+LOGOUT_REDIRECT_URL = '/vitrine/'  # 🔥 CORRECTION : Après déconnexion, aller vers la vitrine
+
 
 # Configuration des sauvegardes
 BACKUP_DIR = os.path.join(BASE_DIR, 'backups')
@@ -165,6 +167,8 @@ INSTALLED_APPS = [
     'django_filters', 
     'cloudinary_storage',
     'cloudinary',
+    'rest_framework.authtoken',
+    'dj_rest_auth',
   
   
 ]
@@ -175,33 +179,28 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # Doit être placé tôt
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'security.middleware.VerificationAccesMiddleware',  # Après l'authentification
-    'security.middleware.JournalisationMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # ✅ juste après SecurityMiddleware
+    
+    # 🔥 CORRECTION : VOTRE MIDDLEWARE EN PREMIER (après l'authentification)
+    'security.middleware.VerificationAccesMiddleware',
+    
+    # 🔥 CORRECTION : Middleware d'entreprise APRÈS votre middleware
     'parametres.middlewares.CurrentEntrepriseMiddleware',
     'parametres.middlewares.EnsureSAASConfigMiddleware',
-    'ventes.middleware.PosAccessMiddleware',
     
+    # Autres middlewares
+    'security.middleware.JournalisationMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'ventes.middleware.PosAccessMiddleware',
+    'api.middleware.NoHTMLRedirectMiddleware',
 ]
 
-# Autoriser toutes les origines pour le développement (à restreindre en production)
-CORS_ALLOW_ALL_ORIGINS = True
 
-REST_FRAMEWORK = {
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ],
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
-        'rest_framework.authentication.BasicAuthentication',
-    ],
-}
 ROOT_URLCONF = 'Gstock.urls'
 TEMPLATES = [
     {
@@ -228,17 +227,16 @@ WSGI_APPLICATION = 'Gstock.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
-
 # ...existing code...
 # DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',  # Correction ici
-#     }
+#      'default': {
+#          'ENGINE': 'django.db.backends.sqlite3',
+#          'NAME': BASE_DIR / 'db.sqlite3',  # Correction ici
+#      }
 # }
 
 DATABASES = {
-    'default':dj_database_url.parse(config('DATABASE_URL'))
+   'default':dj_database_url.parse(config('DATABASE_URL'))
 }
 
 
@@ -323,6 +321,50 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 BL_NUMBER_FORMAT = "BL-{year}-{seq:04d}"
 BL_NUMBER_MAX_ATTEMPTS = 10
 
+
+
+# Configuration REST Framework
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',  # Priorité à Token
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',  # Force JSON response
+    ],
+}
+
+# Configuration CORS
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'authorization',
+    'content-type',
+    'x-csrftoken',
+    'accept',
+    'accept-encoding',
+    'x-requested-with',
+]
+
+# # Désactiver la redirection pour les requêtes API
+# LOGIN_URL = '/admin/login/'  # Redirection seulement pour l'admin
+# # Configuration CORS pour l'app mobile
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:19006",  # Expo web
+    "http://localhost:19000",  # Expo dev
+    "http://localhost:8081",   # React Native debugger
+    "exp://192.168.249.224:8081", # Expo sur réseau local
+]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = DEBUG  # Seulement en développement
+
+# Configuration des tokens
+REST_AUTH_TOKEN_MODEL = 'rest_framework.authtoken.models.Token'
+REST_AUTH_TOKEN_CREATOR = 'dj_rest_auth.utils.default_create_token'
 
 
 # settings.py

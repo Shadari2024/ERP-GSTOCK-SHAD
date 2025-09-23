@@ -1,0 +1,118 @@
+{% extends "comptabilite/base.html" %}
+{% load static %}
+
+{% block title %}Calculatrice Comptable{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active" aria-current="page">Calculatrice</li>
+{% endblock %}
+
+{% block page_title %}Calculatrice Comptable{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">Calcul du Résultat Net</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="revenus" class="form-label">Total des Produits</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="revenus" placeholder="Saisir le total des produits">
+                        <span class="input-group-text">$</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="charges" class="form-label">Total des Charges</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="charges" placeholder="Saisir le total des charges">
+                        <span class="input-group-text">$</span>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-primary w-100" onclick="calculerResultatNet()">
+                    <i class="fas fa-calculator me-2"></i>Calculer le Résultat Net
+                </button>
+                <div class="mt-4 p-3 border rounded">
+                    <h6 class="mb-0">Résultat net : <span id="resultat-net" class="fw-bold">0.00 $</span></h6>
+                    <small id="type-resultat" class="text-muted"></small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">Calcul de la TVA</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="montant-ht" class="form-label">Montant Hors Taxe (HT)</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="montant-ht" placeholder="Montant HT">
+                        <span class="input-group-text">$</span>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="taux-tva" class="form-label">Taux de TVA (%)</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="taux-tva" value="18" placeholder="Taux de TVA">
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-success w-100" onclick="calculerTVA()">
+                    <i class="fas fa-calculator me-2"></i>Calculer la TVA
+                </button>
+                <div class="mt-4 p-3 border rounded">
+                    <p class="mb-1">Montant de la TVA : <span id="tva-montant" class="fw-bold">0.00 $</span></p>
+                    <p class="mb-0">Montant Toutes Taxes Comprises (TTC) : <span id="ttc-montant" class="fw-bold">0.00 $</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function calculerResultatNet() {
+        const revenus = parseFloat(document.getElementById('revenus').value) || 0;
+        const charges = parseFloat(document.getElementById('charges').value) || 0;
+        
+        const resultat = revenus - charges;
+        
+        document.getElementById('resultat-net').textContent = resultat.toFixed(2) + ' $';
+        
+        const typeResultat = document.getElementById('type-resultat');
+        if (resultat > 0) {
+            typeResultat.textContent = 'Bénéfice';
+            typeResultat.className = 'text-success';
+        } else if (resultat < 0) {
+            typeResultat.textContent = 'Perte';
+            typeResultat.className = 'text-danger';
+        } else {
+            typeResultat.textContent = 'Bilan équilibré';
+            typeResultat.className = 'text-muted';
+        }
+    }
+
+    function calculerTVA() {
+        const montantHT = parseFloat(document.getElementById('montant-ht').value) || 0;
+        const tauxTVA = parseFloat(document.getElementById('taux-tva').value) || 0;
+        
+        const tva = montantHT * (tauxTVA / 100);
+        const ttc = montantHT + tva;
+        
+        document.getElementById('tva-montant').textContent = tva.toFixed(2) + ' $';
+        document.getElementById('ttc-montant').textContent = ttc.toFixed(2) + ' $';
+    }
+
+    // Lier les calculs aux changements dans les champs de saisie pour une meilleure UX
+    document.getElementById('revenus').addEventListener('input', calculerResultatNet);
+    document.getElementById('charges').addEventListener('input', calculerResultatNet);
+    document.getElementById('montant-ht').addEventListener('input', calculerTVA);
+    document.getElementById('taux-tva').addEventListener('input', calculerTVA);
+</script>
+{% endblock %}

@@ -36,6 +36,15 @@ from django.core.exceptions import ValidationError
 from decimal import Decimal
 from datetime import timedelta
 from django.db.models import Sum, F, ExpressionWrapper, DecimalField
+# STOCK/models.py
+from django.db import models, transaction
+from django.utils import timezone
+from django.conf import settings
+from decimal import Decimal
+
+# Import des modèles externes
+from parametres.models import Entreprise
+from comptabilite.models import EcritureComptable, PlanComptableOHADA, JournalComptable, LigneEcriture
 
 
 
@@ -648,16 +657,6 @@ class MouvementStock(models.Model):
         """Retourne la valeur monétaire du mouvement"""
         return self.quantite * self.prix_unitaire_moment
 
-# STOCK/models.py
-from django.db import models, transaction
-from django.utils import timezone
-from django.conf import settings
-from decimal import Decimal
-
-# Import des modèles externes
-from parametres.models import Entreprise
-from STOCK.models import Produit, MouvementStock
-from comptabilite.models import EcritureComptable, PlanComptableOHADA, JournalComptable, LigneEcriture
 
 # Votre modèle InventairePhysique
 class InventairePhysique(models.Model):
@@ -737,66 +736,4 @@ class SuggestionReapprovisionnement(models.Model):
     def __str__(self):
         return f"{self.produit.nom} - {self.date_suggestion} : {self.quantite_suggeree}"
     
-    
-# STOCK/models.py
-class ChatbotConversation(models.Model):
-    """Conversations chatbot avec isolation SaaS"""
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='chatbot_conversations'
-    )
-    entreprise = models.ForeignKey(
-        'parametres.Entreprise',
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True
-    )
-    query = models.TextField(verbose_name=_("Requête"))
-    response = models.JSONField(verbose_name=_("Réponse"))
-    metadata = models.JSONField(
-        default=dict,
-        verbose_name=_("Métadonnées techniques")
-    )
-    timestamp = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name=_("Horodatage")
-    )
-
-    class Meta:
-        verbose_name = _('Conversation Chatbot')
-        verbose_name_plural = _('Conversations Chatbot')
-        ordering = ['-timestamp']
-        indexes = [
-            models.Index(fields=['user']),
-            models.Index(fields=['entreprise']),
-            models.Index(fields=['timestamp']),
-        ]
-
-    def __str__(self):
-        return f"Chatbot - {self.user.username} - {self.timestamp}"
-
-class ChatbotKnowledge(models.Model):
-    QUESTION_TYPE_CHOICES = [
-        ('stock', 'Stock'),
-        ('vente', 'Ventes'),
-        ('client', 'Clients'),
-        ('produit', 'Produits'),
-    ]
-    
-    question_pattern = models.CharField(max_length=255)
-    response_template = models.TextField()
-    query_type = models.CharField(max_length=20, choices=QUESTION_TYPE_CHOICES)
-    required_permissions = models.CharField(max_length=100, blank=True)
-    
-    
-    
-class BaseConnaissance(models.Model):
-    question = models.TextField(unique=True)
-    reponse = models.TextField()
-    
-    def __str__(self):
-        return self.question[:50]
-    
-    
-
+   

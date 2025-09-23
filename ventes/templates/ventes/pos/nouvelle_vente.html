@@ -628,6 +628,7 @@
 
 {% block extra_js %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="{% static 'js/main.js' %}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/i18n/fr.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/quagga@0.12.1/dist/quagga.min.js"></script>
@@ -714,31 +715,31 @@ template.find('input, select').each(function() {
  $(document).on('click', '.supprimer-ligne', function() {
     const ligne = $(this).closest('.ligne-vente');
     
-    // Marquer comme supprimé plutôt que de supprimer immédiatement
+    // Marquer comme supprimé pour que Django comprenne
     const deleteInput = ligne.find('input[id$="-DELETE"]');
     if (deleteInput.length) {
         deleteInput.val('on');
     } else {
-        const produitField = ligne.find('select[name$="-produit"]'); // ✅ select au lieu de input
+        const produitField = ligne.find('select[name$="-produit"]');
         if (produitField.length) {
             const deleteName = produitField.attr('name').replace('-produit', '-DELETE');
             ligne.append('<input type="hidden" name="' + deleteName + '" value="on">');
         }
     }
-    
-    // Cacher la ligne avec animation
-    ligne.addClass('deleted');
-    
-    // Jouer le son de suppression
+
+    // Animation de disparition
+    ligne.addClass('removing');
     removeSound.play();
-    
-    // Mettre à jour les indices après un délai pour l'animation
+
+    // ✅ Après animation, supprimer du DOM pour éviter qu'elle soit réindexée
     setTimeout(() => {
+        ligne.remove();
         updateFormsetIndices();
         updateArticleCount();
         calculerTotal();
-    }, 500);
+    }, 500); // délai = durée de l'animation CSS
 });
+
 
 
         // Incrémentation/décrémentation des quantités

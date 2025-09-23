@@ -6,20 +6,7 @@
 
 {% block content %}
 <div class="container-fluid px-4">
-    <!-- En-tête professionnel -->
-    <div class="row mb-4 border-bottom pb-3 align-items-center">
-        <div class="col-md-6">
-            <div class="d-flex align-items-center">
-                {% if parametres and parametres.logo %}
-                <img src="{{ parametres.logo.url }}" style="max-height: 80px;" class="me-3" alt="Logo {{ parametres.nom_societe|default:'entreprise' }}">
-                {% endif %}
-                <div>
-                    <h3 class="mb-1 text-primary">{{ parametres.nom_societe|default:"Entreprise" }}</h3>
-                    <p class="small mb-1 text-muted"><i class="fas fa-map-marker-alt me-1"></i> {{ parametres.adresse|default:"Adresse non spécifiée" }}</p>
-                    <p class="small mb-1 text-muted"><i class="fas fa-phone me-1"></i> {{ parametres.telephone|default:"-" }}</p>
-                </div>
-            </div>
-        </div>
+
         
         <div class="col-md-6 text-end">
             <div class="d-inline-block text-start border p-2 rounded bg-light">

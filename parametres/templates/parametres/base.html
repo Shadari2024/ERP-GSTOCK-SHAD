@@ -1,33 +1,587 @@
-<!DOCTYPE html>
 {% load static i18n %}
-<html lang="fr">
+
+<!DOCTYPE html>
+<html lang="fr" data-bs-theme="auto">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Gestion SAAS{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <title>{% block title %}ERP Pro - Gestion SAAS{% endblock %}</title>
+    
+    <!-- CSS Libraries -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    
+    <style>
+        :root {
+            --primary-color: #2c7be5;
+            --secondary-color: #6c757d;
+            --success-color: #00d97e;
+            --danger-color: #e63757;
+            --warning-color: #f6c343;
+            --info-color: #39afd1;
+            --dark-bg: #0f172a;
+            --card-bg: #1e293b;
+            --sidebar-bg: #111827;
+            --header-bg: #1a2536;
+            --border-color: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --sidebar-width: 280px;
+            --sidebar-collapsed: 80px;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--dark-bg) 0%, #1e293b 100%);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Header Navigation */
+        .navbar-main {
+            background: linear-gradient(135deg, var(--header-bg) 0%, #1e293b 100%);
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
+            padding: 0.75rem 1rem;
+            height: 70px;
+            position: fixed;
+            top: 0;
+            left: var(--sidebar-width);
+            right: 0;
+            z-index: 1030;
+            transition: left 0.3s ease;
+        }
+
+        .sidebar-collapsed .navbar-main {
+            left: var(--sidebar-collapsed);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, var(--primary-color), #1e90ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Sidebar Enhanced */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 1040;
+            background: linear-gradient(180deg, var(--sidebar-bg) 0%, #1a2536 100%);
+            border-right: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            overflow-y: auto;
+        }
+
+        .sidebar-collapsed .sidebar {
+            width: var(--sidebar-collapsed);
+        }
+
+        .sidebar-content {
+            padding: 2rem 1rem;
+        }
+
+        .sidebar-header {
+            padding: 0 1rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1rem;
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-weight: 700;
+            font-size: 1.25rem;
+        }
+
+        .brand-logo i {
+            font-size: 1.75rem;
+            background: linear-gradient(135deg, var(--primary-color), #1e90ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Navigation Items */
+        .nav-section {
+            margin-bottom: 2rem;
+        }
+
+        .section-title {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 0 1rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            margin-bottom: 0.25rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: linear-gradient(135deg, rgba(44, 123, 229, 0.15), rgba(30, 144, 255, 0.1));
+            color: var(--primary-color);
+            border-left-color: var(--primary-color);
+            transform: translateX(5px);
+        }
+
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .nav-text {
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar-collapsed .nav-text {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            margin-top: 70px;
+            padding: 2rem;
+            transition: margin-left 0.3s ease;
+            min-height: calc(100vh - 70px);
+        }
+
+        .sidebar-collapsed .main-content {
+            margin-left: var(--sidebar-collapsed);
+        }
+
+        /* Cards */
+        .erp-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            margin-bottom: 1.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .erp-card-header {
+            background: linear-gradient(135deg, rgba(44, 123, 229, 0.1), rgba(30, 144, 255, 0.1));
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.25rem;
+            font-weight: 600;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .erp-card-body {
+            padding: 1.5rem;
+        }
+
+        /* Buttons */
+        .btn-erp {
+            border-radius: 8px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            background: linear-gradient(135deg, var(--primary-color), #1e90ff);
+            box-shadow: 0 4px 15px rgba(44, 123, 229, 0.4);
+        }
+
+        .btn-erp:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(44, 123, 229, 0.6);
+        }
+
+        /* Toggle Button */
+        .sidebar-toggle {
+            position: fixed;
+            bottom: 2rem;
+            left: calc(var(--sidebar-width) - 2rem);
+            z-index: 1050;
+            background: var(--primary-color);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            box-shadow: 0 4px 15px rgba(44, 123, 229, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-collapsed .sidebar-toggle {
+            left: calc(var(--sidebar-collapsed) - 2rem);
+            transform: rotate(180deg);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar-mobile-open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .navbar-main {
+                left: 0;
+            }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--dark-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 3px;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+    </style>
+    
     {% block extra_css %}{% endblock %}
 </head>
 <body>
-    {% include 'parametres/includes/_messages.html' %}
-    
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <nav class="col-md-2 d-none d-md-block bg-light sidebar">
-                {% include 'parametres/includes/_sidebar.html' %}
-            </nav>
-            
-            <!-- Main content -->
-            <main class="col-md-9 ms-sm-auto px-md-4 py-4">
-                {% block content %}{% endblock %}
-            </main>
-        </div>
-    </div>
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-content">
+            <!-- Header -->
+            <div class="sidebar-header">
+                <a href="{% url 'parametres:dashboard' %}" class="brand-logo">
+                    <i class="fas fa-cubes"></i>
+                    <span class="nav-text">ERP PRO</span>
+                </a>
+            </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+            <!-- Navigation Sections -->
+            <div class="nav-section">
+                <div class="section-title">Navigation</div>
+                
+                <div class="nav-item">
+                    <a href="{% url 'parametres:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span class="nav-text">Tableau de bord</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Paramètres Section -->
+            <div class="nav-section">
+                <div class="section-title">Paramètres</div>
+                
+                <div class="nav-item">
+                    <a href="{% url 'parametres:entreprise_list' %}" class="nav-link {% if 'entreprise' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-building"></i>
+                        <span class="nav-text">Entreprises</span>
+                    </a>
+                </div>
+
+                <div class="nav-item">
+                    <a href="{% url 'parametres:devise_list' %}" class="nav-link {% if 'devise' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span class="nav-text">Devises</span>
+                    </a>
+                </div>
+
+                <div class="nav-item">
+                    <a href="{% url 'parametres:tauxchange_list' %}" class="nav-link {% if 'tauxchange' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-chart-line"></i>
+                        <span class="nav-text">Taux de change</span>
+                    </a>
+                </div>
+
+                <div class="nav-item">
+                    <a href="{% url 'parametres:abonnement_list' %}" class="nav-link {% if 'abonnement' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-credit-card"></i>
+                        <span class="nav-text">Abonnements</span>
+                    </a>
+                </div>
+
+                <div class="nav-item">
+                    <a href="{% url 'parametres:plantarification_list' %}" class="nav-link {% if 'plantarification' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-tags"></i>
+                        <span class="nav-text">Plans tarifaires</span>
+                    </a>
+                </div>
+
+                <div class="nav-item">
+                    <a href="{% url 'parametres:module_list' %}" class="nav-link {% if 'module' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="fas fa-puzzle-piece"></i>
+                        <span class="nav-text">Modules</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Sécurité Section -->
+            <div class="nav-section">
+                <div class="section-title">Sécurité</div>
+                
+                <div class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-users"></i>
+                        <span class="nav-text">Utilisateurs</span>
+                    </a>
+                </div>
+
+                <div class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-user-shield"></i>
+                        <span class="nav-text">Rôles</span>
+                    </a>
+                </div>
+
+                <div class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-clipboard-list"></i>
+                        <span class="nav-text">Journal d'audit</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Système Section -->
+            <div class="nav-section">
+                <div class="section-title">Système</div>
+                
+                <div class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-database"></i>
+                        <span class="nav-text">Sauvegarde</span>
+                    </a>
+                </div>
+
+                <div class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-sliders-h"></i>
+                        <span class="nav-text">Configuration</span>
+                    </a>
+                </div>
+
+                <div class="nav-item">
+                    <a href="#" class="nav-link">
+                        <i class="fas fa-history"></i>
+                        <span class="nav-text">Logs système</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Profile -->
+        <div class="sidebar-footer mt-auto p-3 border-top border-secondary">
+            <div class="dropdown">
+                <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" data-bs-toggle="dropdown">
+                    <img src="{% static 'images/avatar-default.png' %}" alt="User" width="32" height="32" class="rounded-circle me-2">
+                    <div class="nav-text">
+                        <strong>{% firstof user.get_full_name user.username %}</strong>
+                        <small class="d-block text-muted">Administrateur</small>
+                    </div>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark">
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profil</a></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Paramètres</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#"><i class="fas fa-sign-out-alt me-2"></i>Déconnexion</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Toggle Button -->
+    <button class="sidebar-toggle" id="sidebarToggle">
+        <i class="fas fa-chevron-left"></i>
+    </button>
+
+    <!-- Main Navigation -->
+    <nav class="navbar navbar-main">
+        <div class="container-fluid">
+            <div class="d-flex align-items-center">
+                <button class="btn btn-outline-primary me-3 d-md-none" id="mobileMenuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <span class="navbar-text">
+                    <i class="fas fa-cog me-2"></i>
+                    Module Paramètres
+                </span>
+            </div>
+
+            <div class="d-flex align-items-center">
+                <!-- Notifications -->
+                <div class="dropdown me-3">
+                    <button class="btn btn-outline-light position-relative" data-bs-toggle="dropdown">
+                        <i class="fas fa-bell"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            3
+                        </span>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <h6 class="dropdown-header">Notifications</h6>
+                        <a class="dropdown-item" href="#">Nouvel abonnement</a>
+                        <a class="dropdown-item" href="#">Mise à jour disponible</a>
+                        <a class="dropdown-item" href="#">Rapport mensuel</a>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="dropdown">
+                    <button class="btn btn-erp dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="fas fa-plus me-2"></i>Actions rapides
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <a class="dropdown-item" href="{% url 'parametres:entreprise_create' %}">
+                            <i class="fas fa-building me-2"></i>Nouvelle entreprise
+                        </a>
+                        <a class="dropdown-item" href="{% url 'parametres:abonnement_create' %}">
+                            <i class="fas fa-credit-card me-2"></i>Nouvel abonnement
+                        </a>
+                        <a class="dropdown-item" href="#">
+                            <i class="fas fa-cog me-2"></i>Configuration
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Breadcrumb -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb erp-card">
+                <li class="breadcrumb-item"><a href="{% url 'parametres:dashboard' %}"><i class="fas fa-home"></i></a></li>
+                {% block breadcrumb %}{% endblock %}
+            </ol>
+        </nav>
+
+        <!-- Page Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h2 mb-1">
+                    <i class="fas fa-{% block page_icon %}cog{% endblock %} me-2"></i>
+                    {% block page_title %}Paramètres{% endblock %}
+                </h1>
+                <p class="text-muted mb-0">{% block page_subtitle %}Gestion des paramètres du système{% endblock %}</p>
+            </div>
+            {% block actions %}{% endblock %}
+        </div>
+
+        <!-- Messages -->
+        {% if messages %}
+        <div class="mb-4 animate__animated animate__fadeInDown">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Content -->
+        <div class="animate-fade-in-up">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+        // Sidebar Toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+            const body = document.body;
+
+            // Desktop toggle
+            sidebarToggle.addEventListener('click', function() {
+                body.classList.toggle('sidebar-collapsed');
+            });
+
+            // Mobile toggle
+            mobileMenuToggle.addEventListener('click', function() {
+                body.classList.toggle('sidebar-mobile-open');
+            });
+
+            // Theme management
+            const storedTheme = localStorage.getItem('theme') || 'auto';
+            document.documentElement.setAttribute('data-bs-theme', storedTheme);
+
+            // Auto-hide sidebar on mobile when clicking outside
+            document.addEventListener('click', function(e) {
+                if (window.innerWidth < 768 && 
+                    !e.target.closest('.sidebar') && 
+                    !e.target.closest('#mobileMenuToggle')) {
+                    body.classList.remove('sidebar-mobile-open');
+                }
+            });
+
+            // Initialize DataTables
+            $('.datatable').DataTable({
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/fr-FR.json'
+                },
+                responsive: true,
+                autoWidth: false
+            });
+        });
+    </script>
+
     {% block extra_js %}{% endblock %}
-    {% static 'js/abonnement.js' %} 
 </body>
 </html>

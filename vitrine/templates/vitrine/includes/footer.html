@@ -1,40 +1,78 @@
-<footer class="bg-dark text-white py-5 mt-5">
+<footer class="footer py-5">
     <div class="container">
-        <div class="row">
-            <div class="col-lg-4 mb-4">
-                <h5>CongoERP-shad</h5>
-                <p class="text-muted">Solution ERP complète pour les entreprises congolaises. Gestion intégrée de tous vos processus métier.</p>
-            </div>
-            <div class="col-lg-2 mb-4">
-                <h5>Modules</h5>
-                <ul class="list-unstyled">
-                    <li><a href="#" class="text-muted text-decoration-none">Achats</a></li>
-                    <li><a href="#" class="text-muted text-decoration-none">Ventes</a></li>
-                    <li><a href="#" class="text-muted text-decoration-none">Stock</a></li>
-                    <li><a href="#" class="text-muted text-decoration-none">Comptabilité</a></li>
-                </ul>
-            </div>
-            <div class="col-lg-2 mb-4">
-                <h5>Entreprise</h5>
-                <ul class="list-unstyled">
-                    <li><a href="{% url 'vitrine:features' %}" class="text-muted text-decoration-none">Fonctionnalités</a></li>
-                    <li><a href="{% url 'vitrine:pricing' %}" class="text-muted text-decoration-none">Tarifs</a></li>
-                    <li><a href="{% url 'vitrine:demo' %}" class="text-muted text-decoration-none">Démo</a></li>
-                    <li><a href="{% url 'vitrine:contact' %}" class="text-muted text-decoration-none">Contact</a></li>
-                </ul>
-            </div>
-            <div class="col-lg-4 mb-4">
-                <h5>Contact</h5>
-                <p class="text-muted">
-                    <i class="fas fa-map-marker-alt me-2"></i> Kinshasa, RD Congo<br>
-                    <i class="fas fa-phone me-2"></i> +243 000 000 000<br>
-                    <i class="fas fa-envelope me-2"></i> info@congoerp.cd
+        <div class="row g-5">
+            <!-- Company Info -->
+            <div class="col-lg-4">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="fas fa-cube fa-2x text-primary me-3"></i>
+                    <h5 class="fw-bold mb-0">CongoERP</h5>
+                </div>
+                <p class="text-muted mb-3">
+                    Solution ERP cloud moderne spécialement conçue pour les entreprises africaines. 
+                    Gestion simplifiée, résultats optimisés.
                 </p>
+                <div class="social-links">
+                    <a href="#" class="text-muted me-3"><i class="fab fa-facebook fa-lg"></i></a>
+                    <a href="#" class="text-muted me-3"><i class="fab fa-twitter fa-lg"></i></a>
+                    <a href="#" class="text-muted me-3"><i class="fab fa-linkedin fa-lg"></i></a>
+                    <a href="#" class="text-muted"><i class="fab fa-youtube fa-lg"></i></a>
+                </div>
+            </div>
+
+            <!-- Quick Links -->
+            <div class="col-lg-2 col-md-6">
+                <h6 class="fw-bold mb-3">Produit</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2"><a href="{% url 'vitrine:features' %}" class="text-muted text-decoration-none">Fonctionnalités</a></li>
+                    <li class="mb-2"><a href="{% url 'vitrine:pricing' %}" class="text-muted text-decoration-none">Tarifs</a></li>
+                    <li class="mb-2"><a href="{% url 'vitrine:demo' %}" class="text-muted text-decoration-none">Démo</a></li>
+                    <li class="mb-2"><a href="#documentation" class="text-muted text-decoration-none">Documentation</a></li>
+                </ul>
+            </div>
+
+            <!-- Support -->
+            <div class="col-lg-2 col-md-6">
+                <h6 class="fw-bold mb-3">Support</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2"><a href="#" class="text-muted text-decoration-none">Centre d'aide</a></li>
+                    <li class="mb-2"><a href="#" class="text-muted text-decoration-none">Contact</a></li>
+                    <li class="mb-2"><a href="#" class="text-muted text-decoration-none">Statut</a></li>
+                    <li class="mb-2"><a href="#" class="text-muted text-decoration-none">Blog</a></li>
+                </ul>
+            </div>
+
+            <!-- Legal -->
+            <div class="col-lg-2 col-md-6">
+                <h6 class="fw-bold mb-3">Légal</h6>
+                <ul class="list-unstyled">
+                    <li class="mb-2"><a href="#" class="text-muted text-decoration-none">Mentions légales</a></li>
+                    <li class="mb-2"><a href="#" class="text-muted text-decoration-none">Confidentialité</a></li>
+                    <li class="mb-2"><a href="#" class="text-muted text-decoration-none">CGU</a></li>
+                    <li class="mb-2"><a href="#" class="text-muted text-decoration-none">Cookies</a></li>
+                </ul>
+            </div>
+
+            <!-- Contact -->
+            <div class="col-lg-2 col-md-6">
+                <h6 class="fw-bold mb-3">Contact</h6>
+                <ul class="list-unstyled text-muted">
+                    <li class="mb-2"><i class="fas fa-map-marker-alt me-2"></i>Kinshasa, RDC</li>
+                    <li class="mb-2"><i class="fas fa-phone me-2"></i>+243 000 000</li>
+                    <li class="mb-2"><i class="fas fa-envelope me-2"></i>info@congoerp.cd</li>
+                </ul>
             </div>
         </div>
-        <hr class="my-4">
-        <div class="text-center">
-            <p class="text-muted mb-0">&copy; 2025 CongoERP-shad. Tous droits réservés.</p>
+
+        <hr class="my-4 border-secondary">
+
+        <!-- Bottom -->
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <p class="text-muted mb-0">&copy; 2025 CongoERP. Tous droits réservés.</p>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <span class="text-muted small">Made with <i class="fas fa-heart text-danger"></i> in Congo</span>
+            </div>
         </div>
     </div>
 </footer>

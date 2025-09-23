@@ -38,5 +38,8 @@ path('journaux/<int:pk>/', views.JournalComptableDetailView.as_view(), name='jou
     
     # États Financiers
     path('bilan/', views.BilanView.as_view(), name='bilan'),
+    path('bilan/export-pdf/', views.BilanExportPDFView.as_view(), name='bilan-export-pdf'),
+    path('bilan/export-excel/',views. BilanExportExcelView.as_view(), name='bilan-export-excel'),
     path('compte-resultat/', views.CompteResultatView.as_view(), name='compte_resultat'),
+     path('Outils/', views.CalculatriceComptableView.as_view(), name='caluclatrice_comptable'),
 ]

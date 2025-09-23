@@ -40,7 +40,9 @@ Cython==3.0.12
 defusedxml==0.7.1
 distro==1.9.0
 dj-database-url==3.0.1
+dj-rest-auth==7.0.1
 Django==5.1.2
+django-allauth==65.11.2
 django-apscheduler==0.7.0
 django-celery-beat==2.8.1
 django-choices-field==2.3.0
@@ -49,6 +51,7 @@ django-cors-headers==4.7.0
 django-countries==7.6.1
 django-crispy-forms==2.4
 django-crontab==0.7.1
+django-environ==0.12.0
 django-filter==25.1
 django-jsignature==0.12
 django-model-utils==5.0.0
@@ -149,5 +152,6 @@ weasyprint==65.0
 webencodings==0.5.1
 whitenoise==6.10.0
 xhtml2pdf==0.2.17
+xlsxwriter==3.2.9
 yarl==1.20.1
 zopfli==0.2.3.post1

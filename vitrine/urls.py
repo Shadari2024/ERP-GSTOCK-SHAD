@@ -1,3 +1,4 @@
+# CORRECTION - urls.py
 from django.urls import path
 from . import views
 
@@ -9,5 +10,6 @@ urlpatterns = [
     path('pricing/', views.PricingView.as_view(), name='pricing'),
     path('contact/', views.ContactView.as_view(), name='contact'),
     path('demo/', views.DemandeDemoCreateView.as_view(), name='demo'),
-    path('demo/success/', views.DemandeDemoCreateView.as_view(), name='demo_success'),
+    # 🔥 CORRECTION : Utiliser DemoSuccessView pour la page de succès
+    path('demo/success/', views.DemoSuccessView.as_view(), name='demo_success'),
 ]

@@ -1,68 +1,386 @@
 {% extends 'vitrine/base.html' %}
 {% load static %}
 
-{% block title %}Contact - CongoERP-shad{% endblock %}
+{% block title %}Contact - CongoERP | Support & Assistance{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row">
-        <div class="col-lg-8 mx-auto">
-            <div class="text-center mb-5">
-                <h1 class="fw-bold">Contactez-nous</h1>
-                <p class="lead">Nous sommes là pour répondre à toutes vos questions sur CongoERP-shad</p>
+<!-- Hero Section Contact -->
+<section class="hero-section" style="min-height: 40vh;">
+    <div class="container">
+        <div class="row align-items-center text-center">
+            <div class="col-lg-8 mx-auto">
+                <span class="hero-badge animate__animated animate__fadeIn">
+                    <i class="fas fa-headset me-2"></i>Support 24/7
+                </span>
+                
+                <h1 class="display-4 fw-bold mt-4 mb-4 animate__animated animate__fadeInUp">
+                    Contactez Notre 
+                    <span class="text-gradient">Équipe</span>
+                </h1>
+                
+                <p class="lead text-muted animate__animated animate__fadeInUp">
+                    Une question ? Un projet ? Notre équipe est à votre écoute pour vous accompagner 
+                    dans la réussite de votre entreprise.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Section Contact -->
+<section class="py-5">
+    <div class="container">
+        <div class="row">
+            <!-- Informations de Contact -->
+            <div class="col-lg-4 mb-5">
+                <div class="pe-lg-4">
+                    <h2 class="fw-bold mb-4">Nos Coordonnées</h2>
+                    <p class="text-muted mb-4">
+                        Contactez-nous par le moyen qui vous convient le mieux. 
+                        Notre équipe vous répond sous 24 heures.
+                    </p>
+                    
+                    <!-- Cartes de contact -->
+                    <div class="space-y-4">
+                        <!-- Email -->
+                        <div class="feature-card p-4 mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="feature-icon me-3" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-envelope fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Email Professionnel</h6>
+                                    <p class="text-muted mb-1">shadarijerome13@gmail.com</p>
+                                    <small class="text-primary">Réponse sous 24h</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Téléphone -->
+                        <div class="feature-card p-4 mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="feature-icon me-3" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-phone fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Téléphone/WhatsApp</h6>
+                                    <p class="text-muted mb-1">+243 995 611 980</p>
+                                    <p class="text-muted mb-1">+243 899 521 051</p>
+                                    <small class="text-primary">Disponible sur WhatsApp</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Réseaux Sociaux -->
+                        <div class="feature-card p-4 mb-3">
+                            <div class="d-flex align-items-center">
+                                <div class="feature-icon me-3" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-share-alt fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Réseaux Sociaux</h6>
+                                    <div class="d-flex gap-3 mt-2">
+                                        <a href="https://web.facebook.com/lambert.yumbulwa/" 
+                                           target="_blank" 
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fab fa-facebook me-1"></i>Facebook
+                                        </a>
+                                        <a href="https://tiktok.com/@shadarijerome" 
+                                           target="_blank" 
+                                           class="btn btn-outline-dark btn-sm">
+                                            <i class="fab fa-tiktok me-1"></i>TikTok
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Support -->
+                        <div class="feature-card p-4">
+                            <div class="d-flex align-items-center">
+                                <div class="feature-icon me-3" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-clock fa-lg"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Horaires de Support</h6>
+                                    <p class="text-muted mb-1">Lundi - Vendredi: 8h00 - 18h00</p>
+                                    <p class="text-muted mb-1">Samedi: 9h00 - 13h00</p>
+                                    <small class="text-warning">Urgences: 7j/7</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             
-            <div class="row">
-                <div class="col-md-6 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body text-center">
-                            <i class="fas fa-envelope fa-3x text-primary mb-3"></i>
-                            <h5>Email</h5>
-                            <p>info@congoerp.cd</p>
-                            <p>support@congoerp.cd</p>
-                        </div>
+            <!-- Formulaire de Contact -->
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-lg">
+                    <div class="card-header bg-gradient-primary text-white py-4">
+                        <h3 class="mb-0 text-center">
+                            <i class="fas fa-paper-plane me-2"></i>Envoyer un Message
+                        </h3>
+                    </div>
+                    <div class="card-body p-4">
+                        <form method="post" novalidate class="needs-validation">
+                            {% csrf_token %}
+                            
+                            {% if messages %}
+                                {% for message in messages %}
+                                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-semibold">
+                                        <i class="fas fa-user me-2 text-primary"></i>Nom complet
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           name="nom" 
+                                           required 
+                                           placeholder="Votre nom complet">
+                                    <div class="invalid-feedback">
+                                        Veuillez entrer votre nom.
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-semibold">
+                                        <i class="fas fa-building me-2 text-primary"></i>Entreprise
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           name="entreprise" 
+                                           placeholder="Nom de votre entreprise">
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-semibold">
+                                        <i class="fas fa-envelope me-2 text-primary"></i>Adresse email
+                                    </label>
+                                    <input type="email" 
+                                           class="form-control" 
+                                           name="email" 
+                                           required 
+                                           placeholder="votre@email.com">
+                                    <div class="invalid-feedback">
+                                        Veuillez entrer une adresse email valide.
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-semibold">
+                                        <i class="fas fa-phone me-2 text-primary"></i>Téléphone
+                                    </label>
+                                    <input type="tel" 
+                                           class="form-control" 
+                                           name="telephone" 
+                                           placeholder="+243 XXX XXX XXX">
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-tag me-2 text-primary"></i>Sujet
+                                </label>
+                                <select class="form-control" name="sujet" required>
+                                    <option value="">Choisissez un sujet</option>
+                                    <option value="demo">Demande de démonstration</option>
+                                    <option value="support">Support technique</option>
+                                    <option value="devis">Demande de devis</option>
+                                    <option value="partenariat">Partenariat</option>
+                                    <option value="autre">Autre</option>
+                                </select>
+                                <div class="invalid-feedback">
+                                    Veuillez sélectionner un sujet.
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="form-label fw-semibold">
+                                    <i class="fas fa-comment me-2 text-primary"></i>Message
+                                </label>
+                                <textarea class="form-control" 
+                                          name="message" 
+                                          rows="5" 
+                                          required 
+                                          placeholder="Décrivez votre demande en détail..."></textarea>
+                                <div class="invalid-feedback">
+                                    Veuillez entrer votre message.
+                                </div>
+                                <div class="form-text text-muted">
+                                    Décrivez précisément votre besoin pour une réponse optimale.
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-gradient btn-lg py-3">
+                                    <i class="fas fa-paper-plane me-2"></i>Envoyer le Message
+                                </button>
+                            </div>
+                            
+                            <div class="text-center mt-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-lock me-1"></i>
+                                    Vos données sont confidentielles et ne seront pas partagées.
+                                </small>
+                            </div>
+                        </form>
                     </div>
                 </div>
                 
-                <div class="col-md-6 mb-4">
-                    <div class="card h-100">
-                        <div class="card-body text-center">
-                            <i class="fas fa-phone fa-3x text-primary mb-3"></i>
-                            <h5>Téléphone</h5>
-                            <p>+243 000 000 000</p>
-                            <p>+243 000 000 001</p>
+                <!-- Informations supplémentaires -->
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="bg-dark rounded p-3 text-center">
+                            <i class="fas fa-rocket text-primary fa-2x mb-2"></i>
+                            <h6 class="fw-bold">Démo Rapide</h6>
+                            <small class="text-muted">
+                                Obtenez une démonstration personnalisée sous 48h
+                            </small>
                         </div>
                     </div>
-                </div>
-            </div>
-            
-            <div class="card shadow mt-4">
-                <div class="card-body">
-                    <h4 class="card-title mb-4">Envoyez-nous un message</h4>
-                    <form>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Nom complet</label>
-                                <input type="text" class="form-control" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Email</label>
-                                <input type="email" class="form-control" required>
-                            </div>
+                    <div class="col-md-6">
+                        <div class="bg-dark rounded p-3 text-center">
+                            <i class="fas fa-graduation-cap text-primary fa-2x mb-2"></i>
+                            <h6 class="fw-bold">Formation Incluse</h6>
+                            <small class="text-muted">
+                                Formation complète pour votre équipe
+                            </small>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Sujet</label>
-                            <input type="text" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Message</label>
-                            <textarea class="form-control" rows="5" required></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Envoyer le message</button>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
+
+<!-- Section Urgence -->
+<section class="py-5 bg-darker">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h2 class="fw-bold mb-3">Support Urgence</h2>
+                <p class="text-muted mb-4">
+                    En cas de problème urgent avec votre système, contactez-nous directement 
+                    par WhatsApp pour une intervention rapide.
+                </p>
+                <div class="d-flex flex-wrap gap-3">
+                    <a href="https://wa.me/243995611980" 
+                       target="_blank" 
+                       class="btn btn-success btn-lg">
+                        <i class="fab fa-whatsapp me-2"></i>WhatsApp Urgence
+                    </a>
+                    <a href="tel:+243995611980" class="btn btn-primary btn-lg">
+                        <i class="fas fa-phone me-2"></i>Appel Direct
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-4 text-center">
+                <div class="feature-icon mx-auto mb-3" style="width: 100px; height: 100px;">
+                    <i class="fas fa-bolt fa-3x"></i>
+                </div>
+                <h5 class="fw-bold">Réponse Immédiate</h5>
+                <small class="text-muted">Pour les urgences critiques</small>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-5">
+    <div class="container text-center">
+        <h2 class="display-5 fw-bold mb-3">Prêt à Démarrer ?</h2>
+        <p class="lead text-muted mb-4">
+            Rejoignez les entreprises qui nous font déjà confiance
+        </p>
+        <div class="d-flex flex-wrap gap-3 justify-content-center">
+            <a href="{% url 'vitrine:demo' %}" class="btn btn-gradient btn-lg">
+                <i class="fas fa-calendar me-2"></i>Demander une Démo
+            </a>
+            <a href="{% url 'vitrine:pricing' %}" class="btn btn-outline-light btn-lg">
+                <i class="fas fa-tags me-2"></i>Voir les Tarifs
+            </a>
+        </div>
+    </div>
+</section>
+
+<style>
+    .space-y-4 > * + * {
+        margin-top: 1rem;
+    }
+    
+    .form-control {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        color: var(--text-light);
+        padding: 12px 15px;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus {
+        background: var(--card-bg);
+        border-color: #667eea;
+        color: var(--text-light);
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .form-label {
+        color: var(--text-light);
+        margin-bottom: 8px;
+    }
+    
+    .form-text {
+        color: var(--text-muted) !important;
+    }
+    
+    .card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 15px;
+    }
+    
+    .bg-darker {
+        background: var(--darker-bg);
+    }
+</style>
+
+<script>
+    // Validation du formulaire
+    document.addEventListener('DOMContentLoaded', function() {
+        const forms = document.querySelectorAll('.needs-validation');
+        
+        Array.from(forms).forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                
+                form.classList.add('was-validated');
+            }, false);
+        });
+        
+        // Animation des éléments
+        const animateOnScroll = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('animate__animated', 'animate__fadeInUp');
+                }
+            });
+        }, { threshold: 0.1 });
+        
+        document.querySelectorAll('.feature-card').forEach(card => {
+            animateOnScroll.observe(card);
+        });
+    });
+</script>
 {% endblock %}

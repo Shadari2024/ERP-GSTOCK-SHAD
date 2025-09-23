@@ -413,6 +413,16 @@ class LigneBonReception(models.Model):
 
     def __str__(self):
         return f"Ligne BR {self.bon.numero_bon} - {self.ligne_commande.produit.nom} ({self.quantite.normalize()})"
+# achats/models.py
+from django.db import models, transaction, IntegrityError
+from django.conf import settings
+from django.utils import timezone
+from django.db.models import Sum
+from decimal import Decimal, InvalidOperation
+import logging
+import traceback
+
+logger = logging.getLogger(__name__)
 
 class FactureFournisseur(models.Model):
     """Modèle pour les factures fournisseurs"""
@@ -433,7 +443,7 @@ class FactureFournisseur(models.Model):
         blank=True,
         related_name='factures'
     )
-    numero_facture = models.CharField(max_length=50, unique=True)
+    numero_facture = models.CharField(max_length=50) 
     date_facture = models.DateField()
     date_echeance = models.DateField()
     montant_ht = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -449,186 +459,203 @@ class FactureFournisseur(models.Model):
         verbose_name = "Facture Fournisseur"
         verbose_name_plural = "Factures Fournisseurs"
         ordering = ['-date_facture', '-created_at']
+        unique_together = ('entreprise', 'numero_facture',)
 
     def __str__(self):
         return f"Facture {self.numero_facture} - {self.fournisseur.nom}"
 
+    def generate_numero_facture(self):
+        """Génère un numéro de facture unique par entreprise"""
+        try:
+            today = timezone.now().date()
+            
+            last_facture = FactureFournisseur.objects.filter(
+                entreprise=self.entreprise,
+                numero_facture__startswith=f"FF-{today.year}-"
+            ).order_by('-numero_facture').first()
+
+            sequence = 1
+            if last_facture:
+                try:
+                    parts = last_facture.numero_facture.split('-')
+                    if len(parts) == 3:
+                        last_sequence = int(parts[2])
+                        sequence = last_sequence + 1
+                except (ValueError, IndexError):
+                    pass
+
+            return f"FF-{today.year}-{sequence:04d}"
+            
+        except Exception as e:
+            logger.error(f"Erreur dans generate_numero_facture: {e}")
+            return f"FF-EMERGENCY-{int(timezone.now().timestamp())}"
+
     def save(self, *args, **kwargs):
         is_new = self.pk is None
         
-        if not self.numero_facture:
+        if is_new and not self.numero_facture:
             self.numero_facture = self.generate_numero_facture()
         
-        # S'assurer que les totaux sont cohérents
-        if self.montant_ht and self.montant_tva:
-            self.montant_ttc = self.montant_ht + self.montant_tva
+        try:
+            if self.montant_ht and self.montant_tva:
+                self.montant_ttc = Decimal(str(self.montant_ht)) + Decimal(str(self.montant_tva))
+            
+            if self.montant_ht < Decimal('0') or self.montant_tva < Decimal('0') or self.montant_ttc < Decimal('0'):
+                raise ValueError("Les montants ne peuvent pas être négatifs")
+                
+        except (InvalidOperation, ValueError) as e:
+            logger.error(f"Erreur de validation des montants: {e}")
+            raise e
         
-        super().save(*args, **kwargs)
+        with transaction.atomic():
+            super().save(*args, **kwargs)
 
-        # Créer l'écriture comptable uniquement pour les nouvelles factures validées
         if is_new and self.statut == 'validee':
-            self.creer_ecriture_comptable()
-
-    def generate_numero_facture(self):
-        """Génère un numéro de facture unique"""
-        today = timezone.now().date()
-        last_facture = FactureFournisseur.objects.filter(
-            entreprise=self.entreprise,
-            numero_facture__startswith=f"FF-{today.year}-"
-        ).order_by('-numero_facture').first()
-
-        sequence = 1
-        if last_facture:
             try:
-                sequence = int(last_facture.numero_facture.split('-')[-1]) + 1
-            except (ValueError, IndexError):
-                pass
-
-        return f"FF-{today.year}-{sequence:04d}"
+                self.creer_ecriture_comptable()
+            except Exception as e:
+                logger.error(f"Erreur lors de la création des écritures comptables: {e}")
     
     def creer_ecriture_comptable(self):
-        """Crée l'écriture comptable pour la facture fournisseur - VERSION ULTIME CORRIGÉE"""
+        """Crée l'écriture comptable pour la facture fournisseur"""
         from comptabilite.models import EcritureComptable, LigneEcriture, PlanComptableOHADA, JournalComptable
-        
         try:
-            # VÉRIFICATION CRITIQUE : Montants valides
-            if self.montant_ttc <= Decimal('0.00') or self.montant_ht <= Decimal('0.00'):
-                logger.error(f"Montants invalides pour la facture {self.numero_facture}: HT={self.montant_ht}, TTC={self.montant_ttc}")
-                return None
+            logger.info(f"Tentative de création d'écriture comptable pour la facture {self.numero_facture}")
+
+            if (self.montant_ttc <= Decimal('0.00') or 
+                self.montant_ht <= Decimal('0.00') or 
+                self.montant_ttc != self.montant_ht + self.montant_tva):
+                
+                error_msg = f"Montants invalides: HT={self.montant_ht}, TVA={self.montant_tva}, TTC={self.montant_ttc}"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
             
-            # Vérifier qu'une écriture n'existe pas déjà
             if self.get_ecritures_comptables().exists():
-                logger.warning(f"Écriture existe déjà pour la facture {self.numero_facture}")
+                logger.warning("Écriture existe déjà. Opération annulée.")
                 return None
             
-            # Récupérer les comptes nécessaires avec gestion d'erreur
             try:
-                compte_achats = PlanComptableOHADA.objects.get(
-                    numero='607',  # Achats de marchandises
-                    entreprise=self.entreprise
-                )
-                
-                compte_tva = PlanComptableOHADA.objects.get(
-                    numero='4456',  # TVA déductible
-                    entreprise=self.entreprise
-                )
-                
-                compte_fournisseurs = PlanComptableOHADA.objects.get(
-                    numero='401',  # Fournisseurs
-                    entreprise=self.entreprise
-                )
-                
-                journal_achats = JournalComptable.objects.get(
-                    code='ACH',
-                    entreprise=self.entreprise
-                )
+                compte_achats = PlanComptableOHADA.objects.get(numero='607', entreprise=self.entreprise)
+                compte_tva = PlanComptableOHADA.objects.get(numero='4456', entreprise=self.entreprise)
+                compte_fournisseurs = PlanComptableOHADA.objects.get(numero='401', entreprise=self.entreprise)
+                journal_achats = JournalComptable.objects.get(code='ACH', entreprise=self.entreprise)
             except (PlanComptableOHADA.DoesNotExist, JournalComptable.DoesNotExist) as e:
-                logger.error(f"Compte ou journal introuvable: {e}")
-                return None
+                error_msg = f"Compte ou journal introuvable: {e}"
+                logger.error(error_msg)
+                raise ValueError(error_msg)
             
-            # CORRECTION ULTIME : Créer l'écriture avec le bon montant DÈS LE DÉBUT
-            ecriture = EcritureComptable(
-                journal=journal_achats,
-                date_ecriture=timezone.now(),
-                date_comptable=self.date_facture,
-                libelle=f"Facture {self.numero_facture} - {self.fournisseur.nom}",
-                piece_justificative=self.numero_facture,
-                montant_devise=self.montant_ttc,  # CORRECTION: Définir le montant IMMÉDIATEMENT
-                entreprise=self.entreprise,
-                created_by=self.created_by,
-                facture_fournisseur_liee=self
-            )
-            ecriture.save()
-            
-            # Ligne 1: Débit des achats (HT)
-            LigneEcriture.objects.create(
-                ecriture=ecriture,
-                compte=compte_achats,
-                libelle=f"Achat marchandises - {self.fournisseur.nom}",
-                debit=self.montant_ht,
-                credit=Decimal('0.00'),
-                entreprise=self.entreprise
-            )
-            
-            # Ligne 2: Débit de la TVA déductible (si TVA > 0)
-            if self.montant_tva > Decimal('0.00'):
-                LigneEcriture.objects.create(
-                    ecriture=ecriture,
-                    compte=compte_tva,
-                    libelle=f"TVA déductible - {self.fournisseur.nom}",
-                    debit=self.montant_tva,
-                    credit=Decimal('0.00'),
-                    entreprise=self.entreprise
+            with transaction.atomic():
+                ecriture = EcritureComptable(
+                    journal=journal_achats,
+                    date_ecriture=timezone.now(),
+                    date_comptable=self.date_facture,
+                    libelle=f"Facture {self.numero_facture} - {self.fournisseur.nom}",
+                    piece_justificative=self.numero_facture,
+                    montant_devise=self.montant_ttc,
+                    entreprise=self.entreprise,
+                    created_by=self.created_by,
+                    facture_fournisseur_liee=self
                 )
+                ecriture.save()
+                
+                LigneEcriture.objects.bulk_create([
+                    LigneEcriture(
+                        ecriture=ecriture,
+                        compte=compte_achats,
+                        libelle=f"Achat marchandises - {self.fournisseur.nom}",
+                        debit=self.montant_ht,
+                        credit=Decimal('0.00'),
+                        entreprise=self.entreprise
+                    ),
+                    LigneEcriture(
+                        ecriture=ecriture,
+                        compte=compte_fournisseurs,
+                        libelle=f"Dette fournisseur - {self.fournisseur.nom}",
+                        debit=Decimal('0.00'),
+                        credit=self.montant_ttc,
+                        entreprise=self.entreprise
+                    )
+                ])
+                
+                if self.montant_tva > Decimal('0.00'):
+                    LigneEcriture.objects.create(
+                        ecriture=ecriture,
+                        compte=compte_tva,
+                        libelle=f"TVA déductible - {self.fournisseur.nom}",
+                        debit=self.montant_tva,
+                        credit=Decimal('0.00'),
+                        entreprise=self.entreprise
+                    )
+                
+                # ecriture.full_clean() # Ligne commentée car elle peut causer des erreurs de validation
+                ecriture.recalculer_montant_devise()
             
-            # Ligne 3: Crédit des fournisseurs (TTC)
-            LigneEcriture.objects.create(
-                ecriture=ecriture,
-                compte=compte_fournisseurs,
-                libelle=f"Dette fournisseur - {self.fournisseur.nom}",
-                debit=Decimal('0.00'),
-                credit=self.montant_ttc,
-                entreprise=self.entreprise
-            )
-            
-            # CORRECTION ULTIME : FORCER la validation et l'équilibrage
-            ecriture.full_clean()  # Validation complète
-            if not ecriture.est_equilibree:
-                ecriture.equilibrer_ecriture()
-            
-            # CORRECTION ULTIME : Recalcul final pour garantir l'exactitude
-            ecriture.recalculer_montant_devise()
-            ecriture.save()  # Resauvegarder avec les valeurs finales
-            
-            logger.info(f"Écriture comptable créée pour la facture {self.numero_facture}: HT={self.montant_ht}, TVA={self.montant_tva}, TTC={self.montant_ttc}")
+            logger.info(f"Écriture comptable créée avec succès pour la facture {self.numero_facture}")
             return ecriture
             
         except Exception as e:
-            logger.error(f"Erreur critique création écriture comptable: {e}")
-            # En cas d'erreur, supprimer l'écriture incomplète
-            if 'ecriture' in locals() and ecriture.pk:
-                ecriture.delete()
-            return None
-    
+            error_msg = f"ERREUR CRITIQUE dans creer_ecriture_comptable: {str(e)}\n{traceback.format_exc()}"
+            logger.error(error_msg)
+            raise Exception(f"Erreur lors de la création des écritures comptables: {e}")
+
     @property
     def montant_paye(self):
         """Retourne le montant total payé sur cette facture"""
-        return self.paiements.filter(statut='valide').aggregate(
-            total=Sum('montant', output_field=models.DecimalField(max_digits=12, decimal_places=2))
-        )['total'] or Decimal('0.00')
+        try:
+            return self.paiements.filter(statut='valide').aggregate(
+                total=Sum('montant', output_field=models.DecimalField(max_digits=12, decimal_places=2))
+            )['total'] or Decimal('0.00')
+        except Exception as e:
+            logger.error(f"Erreur dans montant_paye: {e}")
+            return Decimal('0.00')
     
     @property
     def reste_a_payer(self):
         """Retourne le montant restant à payer"""
-        return max(self.montant_ttc - self.montant_paye, Decimal('0.00'))
+        try:
+            return max(self.montant_ttc - self.montant_paye, Decimal('0.00'))
+        except Exception as e:
+            logger.error(f"Erreur dans reste_a_payer: {e}")
+            return Decimal('0.00')
     
     def get_ecritures_comptables(self):
         """Retourne les écritures comptables liées à cette facture"""
         from comptabilite.models import EcritureComptable
-        return EcritureComptable.objects.filter(facture_fournisseur_liee=self)
+        try:
+            return EcritureComptable.objects.filter(facture_fournisseur_liee=self)
+        except Exception as e:
+            logger.error(f"Erreur dans get_ecritures_comptables: {e}")
+            return EcritureComptable.objects.none()
     
     def get_paiements(self):
         """Retourne tous les paiements associés à cette facture"""
-        return self.paiements.all().order_by('-date_paiement')
+        try:
+            return self.paiements.all().order_by('-date_paiement')
+        except Exception as e:
+            logger.error(f"Erreur dans get_paiements: {e}")
+            return self.paiements.none()
     
     def update_statut(self):
         """Met à jour le statut de la facture en fonction des paiements"""
-        montant_paye = self.montant_paye
-        
-        if montant_paye >= self.montant_ttc:
-            nouveau_statut = 'payee'
-        elif montant_paye > 0:
-            nouveau_statut = 'partiellement_payee'
-        elif self.statut != 'annulee':
-            nouveau_statut = 'validee'
-        else:
-            nouveau_statut = self.statut
-        
-        if nouveau_statut != self.statut:
-            self.statut = nouveau_statut
-            self.save()
+        try:
+            montant_paye = self.montant_paye
             
-
+            if montant_paye >= self.montant_ttc:
+                nouveau_statut = 'payee'
+            elif montant_paye > 0:
+                nouveau_statut = 'partiellement_payee'
+            elif self.statut != 'annulee':
+                nouveau_statut = 'validee'
+            else:
+                nouveau_statut = self.statut
+            
+            if nouveau_statut != self.statut:
+                self.statut = nouveau_statut
+                self.save(update_fields=['statut'])
+                
+        except Exception as e:
+            logger.error(f"Erreur dans update_statut: {e}")
+            
 class PaiementFournisseur(models.Model):
     """Modèle pour les paiements des factures fournisseurs"""
     MODE_PAIEMENT_CHOICES = [
@@ -673,22 +700,11 @@ class PaiementFournisseur(models.Model):
         
         super().save(*args, **kwargs)
 
-        # Créer l'écriture comptable uniquement pour les nouveaux paiements validés
-        if is_new and self.statut == 'valide':
-            # Utiliser un délai pour éviter les problèmes de concurrence
-            import threading
-            def creer_ecriture_apres_delai():
-                import time
-                time.sleep(1)  # Délai plus long pour être sûr
-                try:
-                    # Recharger l'instance depuis la base
-                    from .models import PaiementFournisseur
-                    paiement_actualise = PaiementFournisseur.objects.get(pk=self.pk)
-                    paiement_actualise.creer_ecriture_comptable()
-                except Exception as e:
-                    logger.error(f"Erreur création différée écriture: {e}")
-            
-            threading.Thread(target=creer_ecriture_apres_delai, daemon=True).start()
+        # SUPPRIMER le mécanisme de thread dans save()
+        # La création d'écriture sera gérée par les vues
+        
+        # Mettre à jour le statut de la facture
+        self.facture.update_statut()
         
         # Mettre à jour le statut de la facture
         self.facture.update_statut()

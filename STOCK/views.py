@@ -102,52 +102,33 @@ import matplotlib
 matplotlib.use('Agg')  # Mode non-interactif
 import matplotlib.pyplot as plt
 
+    #ajouter produit 
+# Mettez à jour vos imports
+from django.shortcuts import render, redirect, get_object_or_404
+from django.views import View
+from django.contrib.auth.decorators import login_required, permission_required
+from django.utils.decorators import method_decorator
+from django.contrib import messages
+from decimal import Decimal
+from django.db import transaction
+
+# Assurez-vous d'importer votre modèle ConfigurationSAAS
+from parametres.models import ConfigurationSAAS
+# Assurez-vous d'importer votre mixin
+from parametres.mixins import EntrepriseAccessMixin
+
+# Mettez à jour vos imports de modèles
+from .models import Produit, Categorie
 
 
 from django.http import JsonResponse
 from .models import TauxChange, Parametre  # ajuste l'import selon ton app
 from django.contrib.auth.decorators import login_required
-
-@login_required
-def taux_change_api(request):
-    devise_cible = request.GET.get('devise', 'USD').upper()  # sécurité : normalise la saisie
-    try:
-        parametres = Parametre.objects.get(user=request.user)
-        devise_principale = parametres.devise_principale.upper()
-    except Parametre.DoesNotExist:
-        devise_principale = 'FC'  # valeur par défaut
-
-    # Si la devise demandée est identique à la devise principale
-    if devise_cible == devise_principale:
-        return JsonResponse({'taux': 1.0})
-
-    try:
-        # Chercher un taux direct
-        taux = TauxChange.objects.get(
-            devise_source=devise_principale,
-            devise_cible=devise_cible
-        ).taux
-        return JsonResponse({'taux': float(taux)})
-
-    except TauxChange.DoesNotExist:
-        try:
-            # Chercher un taux inverse et l'inverser
-            taux_inverse = TauxChange.objects.get(
-                devise_source=devise_cible,
-                devise_cible=devise_principale
-            ).taux
-            return JsonResponse({'taux': round(1.0 / float(taux_inverse), 6)})
-
-        except TauxChange.DoesNotExist:
-            return JsonResponse({'error': 'Taux non disponible entre %s et %s' % (
-                devise_principale, devise_cible)}, status=404)
-
 from django.views import View
 from django.shortcuts import render, redirect
 from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required, permission_required
 from django.utils.decorators import method_decorator
-
 from django.views import View
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
@@ -648,7 +629,7 @@ class FormulaireCat(EntrepriseAccessMixin, View):
     
     def get(self, request):
         # Vérification des permissions
-        if not request.user.has_perm('STOCK.view_categorie'):
+        if not request.user.has_perm('STOCK.add_categorie'):
             messages.error(request, "Vous n'avez pas la permission de voir les catégories")
             return redirect('acces_refuse')
         
@@ -762,23 +743,6 @@ class DeleteCatView(EntrepriseAccessMixin, View):
             messages.error(request, f"Erreur : {str(e)}")
         
         return redirect('liste_cat')
-    #ajouter produit 
-# Mettez à jour vos imports
-from django.shortcuts import render, redirect, get_object_or_404
-from django.views import View
-from django.contrib.auth.decorators import login_required, permission_required
-from django.utils.decorators import method_decorator
-from django.contrib import messages
-from decimal import Decimal
-from django.db import transaction
-
-# Assurez-vous d'importer votre modèle ConfigurationSAAS
-from parametres.models import ConfigurationSAAS
-# Assurez-vous d'importer votre mixin
-from parametres.mixins import EntrepriseAccessMixin
-
-# Mettez à jour vos imports de modèles
-from .models import Produit, Categorie
 
 
 @method_decorator([
@@ -921,6 +885,7 @@ def ticket_produit_pdf(request, pk):
         'taux_usd': taux_usd.taux if taux_usd else None,
         'prix_vente_usd': prix_vente_usd,
         'logo_base64': logo_base64,
+        
         'code_barre_base64': code_barre_base64,
     })
 
@@ -932,7 +897,6 @@ def ticket_produit_pdf(request, pk):
     return response
 
 from django.core.files.storage import default_storage
-
 def imprimer_tickets_en_stock_pdf(request):
     """Génère un PDF contenant un ticket par produit en stock."""
     
@@ -1001,6 +965,7 @@ def imprimer_tickets_en_stock_pdf(request):
     
     HTML(string=html).write_pdf(response)
     return response
+
 
 
  #affiche produit
@@ -1118,129 +1083,75 @@ def produits_search(request):
         })
 
     return JsonResponse({'results': results})
-from django.conf import settings
-import os
-import barcode
-from barcode.writer import ImageWriter
-from io import BytesIO
-from decimal import Decimal
-from django.conf import settings
-from django.shortcuts import render, get_object_or_404
-from django.contrib.auth.decorators import login_required, permission_required
-from django.core.files.base import ContentFile
-from django.db.models import F, Avg
-from .models import Produit, Categorie # Assurez-vous d'importer vos modèles
 
-
-
+# STOCK/views.py
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.db import models
+from django.http import HttpResponseForbidden
+from django.utils.translation import gettext_lazy as _
+# STOCK/views.py
 
 @method_decorator([
     login_required,
     permission_required('STOCK.delete_produit', raise_exception=True)
 ], name='dispatch')
-class DeleteProduitView(EntrepriseAccessMixin, View):
+class DeleteProduitView(View):
+    template_name = 'produit/produit_delete_blocked.html'
+    
+    def get(self, request, pk):
+        # FILTRE ENTREPRISE - ESSENTIEL EN SaaS
+        produit = get_object_or_404(Produit, pk=pk, entreprise=request.user.entreprise)
+        references = self.get_references(produit)
+        
+        if not references:
+            return render(request, 'produit/produit_confirm_delete.html', {'produit': produit})
+        
+        context = {
+            'produit': produit,
+            'references': references,
+            'total_references': sum(references.values())
+        }
+        return render(request, self.template_name, context)
+    
     def post(self, request, pk):
-        produit = get_object_or_404(
-            Produit, 
-            pk=pk, 
-            entreprise=request.entreprise
-        )
+        # FILTRE ENTREPRISE - ESSENTIEL EN SaaS
+        produit = get_object_or_404(Produit, pk=pk, entreprise=request.user.entreprise)
+        references = self.get_references(produit)
+        
+        if references:
+            messages.error(request, _("Impossible de supprimer ce produit car il est utilisé dans d'autres documents."))
+            return redirect('produit_delete_blocked', pk=produit.pk)
         
         try:
+            produit_nom = produit.nom
             produit.delete()
-            messages.success(request, f"Le produit '{produit.nom}' a été supprimé avec succès.")
+            messages.success(request, _(f"Le produit '{produit_nom}' a été supprimé avec succès."))
         except Exception as e:
-            messages.error(request, f"Erreur lors de la suppression du produit : {e}")
+            messages.error(request, _(f"Erreur lors de la suppression : {e}"))
             
         return redirect('produits_par_categorie')
-
-
-
-
-
-
-
-@login_required
-@permission_required('STOCK.view_produit', raise_exception=True)
-def produit_detail(request, id):
-    """
-    Vue détaillée d'un produit, avec gestion des permissions et conversion de devise.
-    """
-    # Récupération du produit avec filtre entreprise pour la sécurité
-    produit = get_object_or_404(Produit, id=id, entreprise=request.entreprise)
     
-    # DEBUG: Ajoutez ces prints pour voir ce qui se passe
-    print(f"=== DEBUG PRODUIT {produit.id} ===")
-    print(f"Photo: {produit.photo}")
-    print(f"Photo name: {produit.photo.name if produit.photo else 'None'}")
-    print(f"Photo path: {produit.photo.path if produit.photo else 'None'}")
-    print(f"Photo URL: {produit.photo.url if produit.photo else 'None'}")
-    print(f"Code-barres: {produit.code_barre}")
-    print(f"Code-barres name: {produit.code_barre.name if produit.code_barre else 'None'}")
+    def get_references(self, produit):
+        """Retourne le détail des références du produit AVEC FILTRES ENTREPRISE"""
+        return {
+            'lignes_factures': self.count_relations(produit, 'lignefacture_set', 'facture__entreprise'),
+            'lignes_commandes': self.count_relations(produit, 'lignecommande_set', 'commande__entreprise'),
+            'lignes_devis': self.count_relations(produit, 'lignedevis_set', 'devis__entreprise'),
+            'lignes_bons_livraison': self.count_relations(produit, 'lignebonlivraison_set', 'bon_livraison__entreprise'),
+            'lignes_ventes_pos': self.count_relations(produit, 'ligneventepos_set', 'vente__session__point_de_vente__entreprise'),
+            'lignes_commandes_achat': self.count_relations(produit, 'lignecommandeachat_set', 'commande__entreprise'),  # CORRIGÉ ICI
+        }
     
-    # Vérifiez l'existence physique des fichiers
-    import os
-    if produit.photo:
-        print(f"Photo exists: {os.path.exists(produit.photo.path)}")
-    if produit.code_barre:
-        print(f"Code-barres exists: {os.path.exists(produit.code_barre.path)}")
-    
-    
-    # Initialisation des variables pour la devise et la configuration
-    devise_principale = None
-    taux_change = None
-    devises_disponibles = []
-    
-    try:
-        config_saas = ConfigurationSAAS.objects.get(entreprise=request.entreprise)
-        devise_principale = config_saas.devise_principale
-        devises_disponibles = config_saas.devises_acceptees.all()
-        
-        # Conversion de devise si l'utilisateur a la permission et une devise est demandée
-        if request.user.has_perm('STOCK.view_tauxchange'):
-            devise_demandee = request.GET.get('devise', devise_principale.code)
-            if devise_demandee != devise_principale.code:
-                taux = config_saas.tauxchanges.filter(
-                    devise_cible__code=devise_demandee,
-                    est_actif=True
-                ).order_by('-date_application').first()
-                
-                if taux:
-                    taux_change = {
-                        'code': devise_demandee,
-                        'taux': taux.taux,
-                        'symbole': taux.devise_cible.symbole
-                    }
-                    produit.prix_vente_converti = Decimal(produit.prix_vente) * Decimal(taux.taux)
-                    # Le prix d'achat n'est converti que si l'utilisateur peut le voir
-                    if hasattr(produit, 'prix_achat') and request.user.has_perm('STOCK.view_prix_achat'):
-                        produit.prix_achat_converti = Decimal(produit.prix_achat) * Decimal(taux.taux)
-    except ConfigurationSAAS.DoesNotExist:
-        # En cas d'absence de configuration, on peut définir des valeurs par défaut
-        pass # Les variables sont déjà initialisées à None ou []
-
-    # Vérification des permissions pour le contexte du template
-    show_prix_achat = request.user.has_perm('STOCK.view_prix_achat')
-    can_convert_devise = request.user.has_perm('STOCK.view_tauxchange')
-    
-    context = {
-        'produit': produit,
-        'can_edit': request.user.has_perm('STOCK.change_produit'),
-        'can_delete': request.user.has_perm('STOCK.delete_produit'),
-        'can_view_price': request.user.has_perm('STOCK.view_prix_produit'),
-        'show_prix_achat': show_prix_achat,
-        'current_entreprise': request.entreprise,
-        'devise_principale': {
-            'code': devise_principale.code if devise_principale else 'USD',
-            'symbole': devise_principale.symbole if devise_principale else '$'
-        },
-        'taux_change': taux_change,
-        'can_convert_devise': can_convert_devise,
-        'devises_disponibles': devises_disponibles,
-    }
-    
-    return render(request, 'produit/fiche_produit.html', context)
-# E:\PROJET FSJ SOLUTION\venv\Scripts\ERP-GSTOCK-CLEAN\STOCK\views.py
+    def count_relations(self, produit, relation_name, entreprise_field):
+        """Compte les relations en vérifiant l'entreprise"""
+        try:
+            related_manager = getattr(produit, relation_name)
+            return related_manager.filter(**{entreprise_field: produit.entreprise}).count()
+        except (AttributeError, ValueError) as e:
+            # Gestion d'erreur si la relation n'existe pas
+            print(f"Erreur relation {relation_name}: {e}")
+ 
 
 from django.shortcuts import render
 from django.db.models import Sum
@@ -1254,7 +1165,7 @@ from ventes.models import Commande, Facture, BonLivraison
 # Assurez-vous d'importer les modèles de stock
 from STOCK.models import MouvementStock, Produit
 @login_required
-@permission_required('STOCK.view_commande', raise_exception=True)
+@permission_required('STOCK.view_produit', raise_exception=True)
 def ventes_du_jour(request):
     """
     Vue SAAS pour afficher les ventes du jour avec gestion multi-devises
@@ -1375,10 +1286,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib import messages
 import logging
 
-logger = logging.getLogger(__name__)
 
-@login_required
-@permission_required('security.historique_vente', raise_exception=True)
 def historique_ventes(request):
     """
     Vue SAAS pour l'historique des ventes avec gestion multi-devises
@@ -1704,454 +1612,8 @@ def bilan_caisse_du_jour(vendeur):
         "nb_commandes": nb_commandes,
         "commandes": commandes
     }
-from django.db.models import Sum, Count
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib import messages
-from django.shortcuts import render, redirect
-from django.utils import timezone
-from decimal import Decimal
-from django.conf import settings
-from django.core.mail import send_mail
+   
 
-@login_required
-@permission_required('security.gerer_caisse', raise_exception=True)
-def cloturer_caisse(request):
-    if not hasattr(request, 'entreprise') or not request.entreprise:
-        messages.error(request, "Entreprise non définie")
-        return redirect('security:acces_refuse')
-
-    today = timezone.now().date()
-    user = request.user
-    
-    # Vérification si clôture déjà effectuée
-    if ClotureCaisse.objects.filter(
-        vendeur=user, 
-        date_jour=today,
-        entreprise=request.entreprise
-    ).exists():
-        messages.warning(request, "La caisse a déjà été clôturée aujourd'hui.")
-        return redirect('dashboard')
-    
-    # Récupération des ventes du jour
-    ventes_du_jour = CommandeClient.objects.filter(
-        vendeur=user,
-        vente_au_comptoir=True,
-        date_commande__date=today,
-        vente_confirmee=True,
-        entreprise=request.entreprise
-    )
-    
-    total_ventes = ventes_du_jour.aggregate(
-        total=Sum('montant_total'),
-        count=Count('id')
-    )
-    total_vendu = total_ventes['total'] or Decimal('0.00')
-    
-    if request.method == 'POST':
-        try:
-            with transaction.atomic():
-                montant_espece = Decimal(request.POST.get('montant_espece', '0'))
-                montant_carte = Decimal(request.POST.get('montant_carte', '0'))
-                commentaire = request.POST.get('commentaire', '')
-                
-                if montant_espece < 0 or montant_carte < 0:
-                    raise ValueError("Les montants ne peuvent pas être négatifs")
-                    
-                total_declare = montant_espece + montant_carte
-                tolerance = Decimal('0.01')
-                
-                # Création de la clôture
-                cloture = ClotureCaisse.objects.create(
-                    vendeur=user,
-                    date_jour=today,
-                    montant_total=total_vendu,
-                    nombre_ventes=total_ventes['count'] or 0,
-                    montant_espece=montant_espece,
-                    montant_carte=montant_carte,
-                    commentaire=commentaire,
-                    validee=True,
-                    entreprise=request.entreprise
-                )
-                
-                # Gestion des écarts
-                ecart_montant = abs(total_vendu - total_declare)
-                if ecart_montant > tolerance:
-                    type_ecart = 'manquant' if total_vendu > total_declare else 'excedent'
-                    
-                    # Enregistrement de l'écart
-                    ecart = EcartCaisse.objects.create(
-                        cloture=cloture,
-                        montant=ecart_montant,
-                        type_ecart=type_ecart,
-                        commentaire=f"Écart détecté lors de la clôture. {commentaire}",
-                        entreprise=request.entreprise
-                    )
-                    
-                    # Notification admin
-                    email_content = f"""
-                    <h3>Nouvel écart de caisse enregistré</h3>
-                    <p><strong>Entreprise:</strong> {request.entreprise.nom}</p>
-                    <p><strong>Vendeur:</strong> {user.get_full_name()} ({user.username})</p>
-                    <p><strong>Type:</strong> {ecart.get_type_ecart_display()}</p>
-                    <p><strong>Montant:</strong> {ecart.montant} {request.entreprise.devise_principale.symbole}</p>
-                    <p><strong>Clôture:</strong> #{cloture.id} du {cloture.date_jour}</p>
-                    <p><strong>Détails:</strong></p>
-                    <ul>
-                        <li>Total système: {total_vendu} {request.entreprise.devise_principale.symbole}</li>
-                        <li>Total déclaré: {total_declare} {request.entreprise.devise_principale.symbole}</li>
-                        <li>Espèces: {montant_espece} {request.entreprise.devise_principale.symbole}</li>
-                        <li>Carte: {montant_carte} {request.entreprise.devise_principale.symbole}</li>
-                    </ul>
-                    """
-                    
-                    send_mail(
-                        subject=f"[{request.entreprise.nom}] ECART CAISSE - {ecart.get_type_ecart_display()} de {ecart.montant}{request.entreprise.devise_principale.symbole}",
-                        message="",
-                        from_email=settings.DEFAULT_FROM_EMAIL,
-                        recipient_list=[admin[1] for admin in settings.ADMINS],
-                        html_message=email_content,
-                        fail_silently=False,
-                    )
-                    
-                    ecart.notifie_admin = True
-                    ecart.save()
-                    
-                    messages.warning(
-                        request,
-                        f"Clôture validée avec écart {type_ecart} de {ecart_montant}{request.entreprise.devise_principale.symbole} enregistré."
-                    )
-                else:
-                    messages.success(request, "Clôture validée sans écart.")
-                
-                return redirect('rapport_cloture', pk=cloture.id)
-                
-        except Exception as e:
-            messages.error(request, f"Erreur: {str(e)}")
-            return redirect('cloturer_caisse')
-    
-    context = {
-        'total_ventes': total_vendu,
-        'nombre_ventes': total_ventes['count'] or 0,
-        'today': today.strftime("%d/%m/%Y"),
-        'entreprise': request.entreprise,
-        'devise': request.entreprise.devise_principale.symbole if hasattr(request.entreprise, 'devise_principale') else 'FC'
-    }
-    
-    return render(request, 'vente/cloturer_caisse.html', context)
-
-@login_required
-@user_passes_test(lambda u: u.is_superuser)
-def liste_ecarts(request):
-    if not hasattr(request, 'entreprise') or not request.entreprise:
-        messages.error(request, "Entreprise non définie")
-        return redirect('security:acces_refuse')
-
-    ecarts = EcartCaisse.objects.filter(
-        entreprise=request.entreprise
-    ).select_related('cloture', 'cloture__vendeur').order_by('-date_decouverte')
-    
-    return render(request, 'vente/liste_ecarts.html', {
-        'ecarts': ecarts,
-        'entreprise': request.entreprise
-    })
-    
-@login_required
-def rapport_cloture(request, pk):
-    if not hasattr(request, 'entreprise') or not request.entreprise:
-        messages.error(request, "Entreprise non définie")
-        return redirect('security:acces_refuse')
-
-    cloture = get_object_or_404(
-        ClotureCaisse.objects.select_related('vendeur'),
-        pk=pk,
-        entreprise=request.entreprise
-    )
-    
-    return render(request, 'vente/rapport_cloture.html', {
-        'cloture': cloture,
-        'entreprise': request.entreprise,
-        'devise': request.entreprise.devise_principale.symbole if hasattr(request.entreprise, 'devise_principale') else 'FC'
-    })
-
-#bila
-@login_required
-def bilan_du_jour(request):
-    vendeur = request.user
-    today = timezone.now().date()
-
-    commandes = CommandeClient.objects.filter(
-        vente_au_comptoir=True,
-        vente_confirmee=True,
-        vendeur=vendeur,
-        date_commande__date=today
-    )
-
-    total = commandes.aggregate(Sum("montant_total"))["montant_total__sum"] or 0
-    nb_commandes = commandes.count()
-
-    moyen_commande = total / nb_commandes if nb_commandes > 0 else 0
-
-    derniere_commande = commandes.order_by("-date_commande").first()
-
-    lignes = LigneCommandeClient.objects.filter(commande__in=commandes)
-
-    produits_vendus = {}
-    for ligne in lignes:
-        produit = ligne.produit
-        if produit.id not in produits_vendus:
-            produits_vendus[produit.id] = {
-                "nom": produit.nom,
-                "quantite": 0,
-                "montant": 0,
-            }
-        produits_vendus[produit.id]["quantite"] += ligne.quantite
-        produits_vendus[produit.id]["montant"] += ligne.sous_total()
-
-    produits_vendus_list = sorted([
-        {
-            "nom": infos["nom"],
-            "quantite": infos["quantite"],
-            "montant": infos["montant"]
-        }
-        for infos in produits_vendus.values()
-    ], key=lambda x: x["montant"], reverse=True)
-
-    context = {
-        "vendeur": vendeur,
-        "date": today,
-        "total": total,
-        "nb_commandes": nb_commandes,
-        "moyen_commande": moyen_commande,
-        "derniere_commande": derniere_commande.date_commande if derniere_commande else None,
-        "commandes": commandes,
-        "produits_vendus": produits_vendus_list
-    }
-
-    return render(request, "vente/bilan_du_jour.html", context)
-    
-def afficher_bilan(request):
-    bilan = bilan_caisse_du_jour(request.user)
-    nb = bilan["nb_commandes"]
-    total = bilan["total"]
-    bilan["moyen_commande"] = total / nb if nb > 0 else 0
-    bilan["vendeur"] = request.user
-    bilan["date"] = timezone.now().date()
-    return render(request, "vente/bilan_du_jour.html", bilan)
-
-    
-    
-def ticket_caisse(request, commande_id):
-    commande = get_object_or_404(Commande, pk=commande_id)
-    
-    # Récupérer les paramètres de l'entreprise
-    try:
-        parametre = Parametre.objects.first()
-    except Parametre.DoesNotExist:
-        # Créer un objet par défaut si aucun paramètre n'existe
-        parametre = Parametre(
-            nom_societe="Ma Société",
-            adresse="Adresse non définie",
-            telephone="0000000000",
-            email="contact@example.com"
-        )
-    
-    context = {
-        'commande': commande,
-        'parametre': parametre
-    }
-    return render(request, 'ticket_caisse.html', context)   
-from .models import Parametre
-
-    
-def ma_vue(request, commande_id):
-    commande = get_object_or_404(Commande, pk=commande_id)
-    parametre = Parametre.objects.first()  # ou la méthode appropriée pour récupérer les paramètres
-    return render(request, 'template.html', {'commande': commande, 'parametre': parametre})
-# def afficher_P(request):
-#     parametres = Parametre.objects.first()
-#     return render(request, "parametres/parametres.html", {
-#         "parA": parametres
-#     })
-
-def principal(request):
-    parametres = Parametre.objects.first()
-    return render(request, "stat/principale.html")
-
-
-
-#tableau de bord
-def dashboard(request):
-    today = timezone.now().date()
-
-    ventes_jour = CommandeClient.objects.filter(date__date=today)
-    total_journalier = ventes_jour.aggregate(total=Sum('montant'))['total'] or 0
-    total_transactions = ventes_jour.count()
-
-    # Top vendeur
-    meilleurs = ventes_jour.values('vendeur__username') \
-        .annotate(total=Sum('montant')) \
-        .order_by('-total')
-    meilleur_vendeur = {'nom': meilleurs[0]['vendeur__username']} if meilleurs else {'nom': 'Aucun'}
-
-    # Produits populaires
-    produits_populaires = ventes_jour.values('produit__nom') \
-        .annotate(total_vendu=Sum('quantite')) \
-        .order_by('-total_vendu')[:5]
-
-    context = {
-        'total_journalier': total_journalier,
-        'total_transactions': total_transactions,
-        'meilleur_vendeur': meilleur_vendeur,
-        'produits_populaires': [{'nom': p['produit__nom'], 'total_vendu': p['total_vendu']} for p in produits_populaires],
-        'now': timezone.now(),
-    }
-    return render(request, 'stat/dashboard.html', context)
-
-
-
-def dashboard(request):
-    return render(request, 'stat/statistiquesVente.html')
-
-# def logout_view(request):
-#     logout(request)
-#     messages.info(request, "Vous êtes maintenant connécté ")
-#     return redirect('login')  # Redirection vers la page de login
-
-
-# #role
-
-# Fonctions de vérification de rôle
-def est_admin(user):
-    return user.groups.filter(name='Admin').exists()
-
-def est_caissier(user):
-    return user.groups.filter(name='Caissier').exists()
-
-def est_stock(user):
-    return user.groups.filter(name='Stock').exists()
-
-# Vue pour les caissiers
-@login_required
-@user_passes_test(est_caissier)
-def vue_pour_caissier(request):
-    return render(request, "vente/vente_comptoire.html")
-
-# Vue pour le responsable stock
-@login_required
-@user_passes_test(est_stock)
-def vue_stock(request):
-    return render(request, "stock/liste_produits.html")
-
-#vue utilisateurs
-def is_admin(user):
-    return user.groups.filter(name="Admin").exists()
-
-@user_passes_test(is_admin)
-def liste_utilisateurs(request):
-    utilisateurs = User.objects.all()
-    return render(request, 'utilisateurs/liste.html', {'utilisateurs': utilisateurs})
-
-#modifier article
-@user_passes_test(is_admin)
-def modifier_utilisateur(request, user_id):
-    user = User.objects.get(pk=user_id)
-    groupes = Group.objects.all()
-
-    if request.method == "POST":
-        selected_group_id = request.POST.get("groupe")
-        group = Group.objects.get(id=selected_group_id)
-        user.groups.clear()
-        user.groups.add(group)
-        user.save()
-        return redirect('liste_utilisateurs')
-
-    return render(request, 'utilisateurs/modifier.html', {'user': user, 'groupes': groupes})
-
-@user_passes_test(is_admin)
-def desactiver_utilisateur(request, user_id):
-    user = User.objects.get(pk=user_id)
-    user.is_active = False
-    user.save()
-    return redirect('liste_utilisateurs')
-
-@user_passes_test(is_admin)
-def activer_utilisateur(request, user_id):
-    user = User.objects.get(pk=user_id)
-    user.is_active = True
-    user.save()
-    return redirect('liste_utilisateurs')
-
-
-def reset_password(request, user_id):
-    user = User.objects.get(pk=user_id)
-    nouveau_mot_de_passe = get_random_string(10)
-
-    user.password = make_password(nouveau_mot_de_passe)
-    user.save()
-
-    sujet = "Réinitialisation de votre mot de passe"
-    message = f"""
-Bonjour {user.get_full_name() or user.username},
-
-Votre mot de passe a été réinitialisé.
-
-Nom d'utilisateur : {user.username}
-Mot de passe : {nouveau_mot_de_passe}
-
-Merci de changer votre mot de passe après connexion.
-
-Cordialement,
-L'équipe support
-    """.strip()
-
-    send_mail(sujet, message, settings.DEFAULT_FROM_EMAIL, [user.email])
-
-    messages.success(request, f"Mot de passe réinitialisé et envoyé à {user.email}")
-    return redirect('liste_utilisateurs')
-
-#ajouter user
-def ajouter_utilisateur(request):
-    groupes = Group.objects.all()
-
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-        groupe_id = request.POST.get('groupe')
-
-        if User.objects.filter(username=username).exists():
-            messages.error(request, "Ce nom d'utilisateur existe déjà.")
-            return redirect('ajouter_utilisateur')
-
-        user = User.objects.create(
-            username=username,
-            email=email,
-            password=make_password(password),
-        )
-
-        if groupe_id:
-            group = Group.objects.get(id=groupe_id)
-            user.groups.add(group)
-
-        messages.success(request, "Utilisateur créé avec succès.")
-        return redirect('liste_utilisateurs')
-
-    return render(request, 'utilisateurs/ajouter_utilisateur.html', {'groupes': groupes})
-
-#categorie par commande
-def nouvelle_commande(request):
-    # Récupérer tous les produits et catégories
-    produits = Produit.objects.select_related('categorie').all()
-    categories = Categorie.objects.all()
-    clients = Client.objects.all()
-    
-    context = {
-        'produits': produits,
-        'categories': categories,
-        'clients': clients,
-    }
-    
-    return render(request, 'commande/creer_commande.html', context)
 from django.core.paginator import Paginator
 from django.utils import timezone
 from datetime import datetime, timedelta
@@ -3907,7 +3369,7 @@ class AjoutMultipleProduitsView(EntrepriseAccessMixin, View):
             }, status=500)
 @method_decorator([
     login_required,
-    permission_required('stock.change_produit', raise_exception=True)
+    permission_required('STOCK.change_produit', raise_exception=True)
 ], name='dispatch')
 class ModifierProduitView(EntrepriseAccessMixin, View):
     template_name = 'produit/modifier_produit.html'
@@ -4183,22 +3645,34 @@ import openpyxl
 from openpyxl.styles import Font
 from django.http import HttpResponse
 from .models import Produit
+import openpyxl
 
 def exporter_produits_excel(request):
+    # Récupérer l'entreprise de l'utilisateur connecté
+    entreprise = request.entreprise
+    
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Produits en stock"
 
-    # En-têtes
-    headers = ['ID', 'Nom', 'Catégorie', 'Prix Achat', 'Prix Vente', 'Stock','Seuil_alerte']
+    # Récupérer la devise principale
+    try:
+        config_saas = ConfigurationSAAS.objects.get(entreprise=entreprise)
+        devise_symbole = config_saas.devise_principale.symbole if config_saas.devise_principale else '$'
+    except ConfigurationSAAS.DoesNotExist:
+        devise_symbole = '$'
+
+    # En-têtes avec devise
+    headers = ['ID', 'Nom', 'Catégorie', f'Prix Achat ({devise_symbole})', 
+               f'Prix Vente ({devise_symbole})', 'Stock', 'Seuil alerte']
     ws.append(headers)
 
     # Style pour l'entête
     for col in range(1, len(headers) + 1):
         ws.cell(row=1, column=col).font = Font(bold=True)
 
-    # Données
-    produits = Produit.objects.filter(stock__gt=0)
+    # Données filtrées par entreprise
+    produits = Produit.objects.filter(entreprise=entreprise, stock__gt=0)
 
     for p in produits:
         ws.append([
@@ -4407,436 +3881,6 @@ def actions_facture(request, facture_id):
 
 
 
-
-
-
-# from django.db import IntegrityError  # Ajoutez cette ligne
-# from django.db import models  # Si pas déjà présent
-# from django.db import transaction  # Si pas déjà présent
-# from django.views.generic import ListView, CreateView, UpdateView, DetailView
-# from django.urls import reverse_lazy
-# from django.contrib.messages.views import SuccessMessageMixin
-
-# from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
-# from django.db.models import Q
-
-# class FournisseurListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
-#     model = Fournisseur
-#     template_name = 'achats/fournisseur_list.html'
-#     context_object_name = 'fournisseurs'
-#     paginate_by = 25
-#     permission_required = 'STOCK.view_fournisseur'
-
-#     def get_queryset(self):
-#         if not hasattr(self.request, 'entreprise'):
-#             raise PermissionDenied("Entreprise non définie")
-        
-#         queryset = super().get_queryset().filter(entreprise=self.request.entreprise)
-        
-#         # Filtres
-#         search_query = self.request.GET.get('search')
-#         type_filter = self.request.GET.get('type')
-        
-#         if search_query:
-#             queryset = queryset.filter(
-#                 Q(nom__icontains=search_query) | 
-#                 Q(telephone__icontains=search_query) |
-#                 Q(email__icontains=search_query)
-#             )
-        
-#         if type_filter:
-#             queryset = queryset.filter(type=type_filter)
-            
-#         return queryset.order_by('-created_at')
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context.update({
-#             'search_query': self.request.GET.get('search', ''),
-#             'selected_type': self.request.GET.get('type', ''),
-#             'can_add': self.request.user.has_perm('STOCK.add_fournisseur'),
-#             'can_export': self.request.user.has_perm('STOCK.export_fournisseurs'),
-#             'type_choices': Fournisseur.TYPE_FOURNISSEUR,
-#             'entreprise': self.request.entreprise
-#         })
-#         return context
-
-#     def handle_no_permission(self):
-#         messages.error(self.request, "Accès refusé")
-#         return redirect('security:acces_refuse')
-
-# class FournisseurCreateView(LoginRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, CreateView):
-#     model = Fournisseur
-#     template_name = 'achats/fournisseur_form.html'
-#     fields = [
-#         'nom', 'type', 'telephone', 'email', 
-#         'adresse', 'ville', 'pays', 'code_postal',
-#         'taux_tva', 'delai_livraison', 'notes'
-#     ]
-#     success_url = reverse_lazy('fournisseur_list')
-#     success_message = "Fournisseur créé avec succès"
-#     permission_required = 'STOCK.add_fournisseur'
-    
-#     def form_valid(self, form):
-#         form.instance.entreprise = self.request.entreprise
-#         form.instance.created_by = self.request.user
-#         try:
-#             return super().form_valid(form)
-#         except IntegrityError:
-#             form.add_error('telephone', 'Un fournisseur avec ce numéro existe déjà')
-#             return self.form_invalid(form)
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context['title'] = "Ajouter un nouveau fournisseur"
-#         context['entreprise'] = self.request.entreprise
-#         return context
-
-# class FournisseurDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
-#     model = Fournisseur
-#     template_name = 'achats/fournisseur_detail.html'
-#     context_object_name = 'fournisseur'
-#     permission_required = 'STOCK.view_fournisseur'
-    
-#     def get_queryset(self):
-#         return super().get_queryset().filter(entreprise=self.request.entreprise)
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context['can_edit'] = self.request.user.has_perm('STOCK.change_fournisseur')
-#         context['can_delete'] = self.request.user.has_perm('STOCK.delete_fournisseur')
-#         context['entreprise'] = self.request.entreprise
-#         return context
-
-# class FournisseurUpdateView(LoginRequiredMixin, PermissionRequiredMixin, SuccessMessageMixin, UpdateView):
-#     model = Fournisseur
-#     template_name = 'achats/fournisseur_form.html'
-#     fields = [
-#         'nom', 'type', 'telephone', 'email', 
-#         'adresse', 'ville', 'pays', 'code_postal',
-#         'taux_tva', 'delai_livraison', 'notes'
-#     ]
-#     success_url = reverse_lazy('fournisseur_list')
-#     success_message = "Fournisseur modifié avec succès"
-#     permission_required = 'STOCK.change_fournisseur'
-    
-#     def get_queryset(self):
-#         return super().get_queryset().filter(entreprise=self.request.entreprise)
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context['title'] = f"Modifier {self.object.nom}"
-#         context['entreprise'] = self.request.entreprise
-#         return context
-
-# class FournisseurDeleteView(LoginRequiredMixin, PermissionRequiredMixin, DeleteView):
-#     model = Fournisseur
-#     template_name = 'achats/fournisseur_confirm_delete.html'
-#     success_url = reverse_lazy('fournisseur_list')
-#     permission_required = 'STOCK.delete_fournisseur'
-    
-#     def get_queryset(self):
-#         return super().get_queryset().filter(entreprise=self.request.entreprise)
-
-#     def post(self, request, *args, **kwargs):
-#         try:
-#             response = super().post(request, *args, **kwargs)
-#             messages.success(request, "Fournisseur supprimé avec succès")
-#             return response
-#         except models.ProtectedError:
-#             messages.error(
-#                 request,
-#                 "Impossible de supprimer ce fournisseur car il est associé à des commandes"
-#             )
-#             return redirect('fournisseur_detail', pk=kwargs['pk'])
-
-# from django.shortcuts import render
-
-# def acces_refuse(request):
-#     return render(request, 'acces_refuse.html', status=403)
-
-
-
-# class AchatCreateView(EntrepriseAccessMixin, SuccessMessageMixin, CreateView):
-#     model = Achat
-#     template_name = 'achats/achat_form.html'
-#     fields = ['fournisseur', 'produit', 'quantite', 'prix_unitaire', 'date_achat', 'numero_facture', 'notes']
-#     success_message = "Achat enregistré avec succès"
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         try:
-#             context['devise_principale'] = ConfigurationSAAS.objects.get(
-#                 entreprise=self.request.entreprise
-#             ).devise_principale
-#         except ConfigurationSAAS.DoesNotExist:
-#             messages.warning(self.request, "Configuration devise manquante")
-#         return context
-
-#     @transaction.atomic
-#     def form_valid(self, form):
-#         form.instance.entreprise = self.request.entreprise
-#         form.instance.created_by = self.request.user
-#         form.instance.date_achat = form.instance.date_achat or timezone.now().date()
-        
-#         # Définition du montant original (identique au prix unitaire dans ce cas simple)
-#         form.instance.montant_original = form.cleaned_data['prix_unitaire']
-        
-#         # Mise à jour atomique du stock
-#         Produit.objects.filter(pk=form.instance.produit.pk).update(
-#             stock=F('stock') + form.instance.quantite
-#         )
-
-#         return super().form_valid(form)
-
-#     def get_success_url(self):
-#         return reverse_lazy('achat_detail', kwargs={'pk': self.object.pk})
-
-#     def get_form(self, form_class=None):
-#         form = super().get_form(form_class)
-        
-#         # Filtrage strict par entreprise
-#         form.fields['fournisseur'].queryset = Fournisseur.objects.filter(
-#             entreprise=self.request.entreprise
-#         ).order_by('nom')
-        
-#         form.fields['produit'].queryset = Produit.objects.filter(
-#             entreprise=self.request.entreprise,
-#             actif=True
-#         ).order_by('nom')
-
-#         # Configuration des champs
-#         decimal_fields = ['prix_unitaire', 'quantite']
-#         for field in decimal_fields:
-#             form.fields[field].widget.attrs.update({
-#                 'class': 'form-control',
-#                 'min': '0.01',
-#                 'step': '0.01' if field == 'prix_unitaire' else '1'
-#             })
-        
-#         form.fields['date_achat'].widget.attrs.update({
-#             'class': 'form-control datepicker'
-#         })
-
-#         return form
-# class AchatDetailView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMixin, DetailView):
-#     model = Achat
-#     template_name = 'achats/achat_detail.html'
-#     permission_required = 'STOCK.view_achat'
-
-#     def get_object(self, queryset=None):
-#         obj = super().get_object(queryset)
-#         if obj.entreprise != self.request.entreprise:
-#             raise Http404("Cet achat n'existe pas ou vous n'y avez pas accès")
-#         return obj
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         achat = self.object
-#         entreprise = self.request.entreprise  # Récupération de l'entreprise
-
-#         try:
-#             config = ConfigurationSAAS.objects.get(entreprise=entreprise)
-#             devise_principale = config.devise_principale
-#             symbole_devise = devise_principale.symbole if devise_principale else '$'
-#             taux_tva = config.taux_tva
-#         except (ConfigurationSAAS.DoesNotExist, AttributeError):
-#             symbole_devise = '$'
-#             taux_tva = Decimal('16.00')
-
-#         # Calcul des montants
-#         montant_ht = achat.total_achat
-#         montant_tva = montant_ht * taux_tva / 100
-#         montant_ttc = montant_ht + montant_tva
-
-#         context.update({
-#             'entreprise': entreprise,  # Ajout de l'entreprise au contexte
-#             'stock_avant': achat.produit.stock - achat.quantite if achat.quantite else achat.produit.stock,
-#             'auteur_achat': achat.created_by,
-#             'symbole_devise': symbole_devise,
-#             'taux_tva': taux_tva,
-#             'montant_tva': montant_tva,
-#             'montant_ttc': montant_ttc,
-#             'can_edit': self.request.user.has_perm('STOCK.change_achat'),
-#             'can_delete': self.request.user.has_perm('STOCK.delete_achat'),
-#             'can_create_transaction': self.request.user.has_perm('COMPTA.add_transaction'),
-#         })
-#         return context
-#     def handle_no_permission(self):
-#         messages.error(self.request, "Accès refusé")
-#         return redirect('security:acces_refuse')
-    
- 
-# class AchatDeleteView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMixin, DeleteView):
-#     model = Achat
-#     template_name = 'achats/achat_confirm_delete.html'
-#     permission_required = 'STOCK.delete_achat'
-#     success_url = reverse_lazy('achat_list')
-
-#     def get_object(self, queryset=None):
-#         obj = super().get_object(queryset)
-#         if obj.entreprise != self.request.entreprise:
-#             raise Http404("Cet achat n'existe pas ou vous n'y avez pas accès")
-#         return obj
-
-#     def delete(self, request, *args, **kwargs):
-#         messages.success(request, "L'achat a été supprimé avec succès.")
-#         return super().delete(request, *args, **kwargs)
-
-#     def handle_no_permission(self):
-#         messages.error(self.request, "Vous n'avez pas la permission de supprimer cet achat.")
-#         return redirect('security:acces_refuse')   
-# from django.views.generic.edit import UpdateView
-# from .forms import AchatForm
-
-# class AchatUpdateView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMixin, UpdateView):
-#     model = Achat
-#     form_class = AchatForm
-#     template_name = 'achats/achat_form.html'
-#     permission_required = 'STOCK.change_achat'
-
-#     def get_object(self, queryset=None):
-#         obj = super().get_object(queryset)
-#         if obj.entreprise != self.request.entreprise:
-#             raise Http404("Cet achat n'existe pas ou vous n'y avez pas accès")
-#         return obj
-
-#     def get_success_url(self):
-#         messages.success(self.request, "L'achat a été modifié avec succès.")
-#         return reverse('achat_detail', kwargs={'pk': self.object.pk})
-
-#     def get_form_kwargs(self):
-#         kwargs = super().get_form_kwargs()
-#         kwargs['entreprise'] = self.request.entreprise
-#         return kwargs
-
-#     def handle_no_permission(self):
-#         messages.error(self.request, "Vous n'avez pas la permission de modifier cet achat.")
-#         return redirect('security:acces_refuse')   
-# from weasyprint import HTML, CSS  
-#   # STOCK/views/achat_pdf_view.py
-
-
-
-# logger = logging.getLogger(__name__)
-
-# def achat_pdf_view(request, pk):
-#     # Récupération de l'achat avec vérification entreprise
-#     achat = get_object_or_404(Achat, pk=pk, entreprise=request.entreprise)
-
-#     try:
-#         config = ConfigurationSAAS.objects.get(entreprise=request.entreprise)
-#         taux_tva = config.taux_tva
-#         devise_principale = config.devise_principale
-#         symbole_devise = devise_principale.symbole if devise_principale else '$'
-#     except ConfigurationSAAS.DoesNotExist:
-#         taux_tva = Decimal('0.00')
-#         symbole_devise = '$'
-
-#     # Calcul des montants
-#     total_ht = Decimal(achat.quantite) * Decimal(achat.prix_unitaire)
-#     montant_tva = total_ht * taux_tva / 100
-#     total_ttc = total_ht + montant_tva
-
-#     context = {
-#         'achat': achat,
-#         'entreprise': request.entreprise,
-#         'total_ht': total_ht,
-#         'montant_tva': montant_tva,
-#         'total_ttc': total_ttc,
-#         'taux_tva': taux_tva,
-#         'symbole_devise': symbole_devise,
-#         'stock_avant': achat.produit.stock - achat.quantite,
-#         'auteur': achat.created_by,
-#         'date_generation': timezone.now(),
-#     }
-
-#     if hasattr(request.entreprise, 'logo') and request.entreprise.logo:
-#         context['logo_path'] = request.entreprise.logo.path
-
-#     # Charger le template sans les CSS @page problématiques
-#     template = get_template("achats/achat_pdf.html")
-#     html = template.render(context)
-
-#     # Définir le type de réponse (inline ou download)
-#     response_type = HttpResponse(content_type='application/pdf')
-#     if 'download' in request.GET:
-#         response_type['Content-Disposition'] = f'attachment; filename="achat_{achat.id}.pdf"'
-#     else:
-#         response_type['Content-Disposition'] = f'inline; filename="achat_{achat.id}.pdf"'
-
-#     # Génération du PDF
-#     pisa_status = pisa.CreatePDF(html, dest=response_type, encoding='UTF-8')
-
-#     if pisa_status.err:
-#         logger.error(f"Erreur lors de la génération du PDF: {pisa_status.err}")
-#         return HttpResponse("Une erreur est survenue lors de la génération du PDF.")
-    
-#     return response_type
-
-# class AchatListView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMixin, ListView):
-#     model = Achat
-#     template_name = 'achats/achat_list.html'
-#     context_object_name = 'achats'
-#     paginate_by = 15
-#     permission_required = 'STOCK.view_achat'
-
-#     def get_queryset(self):
-#         queryset = super().get_queryset().filter(entreprise=self.request.entreprise)
-#         queryset = queryset.select_related('fournisseur', 'produit')
-
-#         # Filtres
-#         date_debut = self.request.GET.get('date_debut')
-#         date_fin = self.request.GET.get('date_fin')
-#         fournisseur_id = self.request.GET.get('fournisseur')
-
-#         if date_debut:
-#             queryset = queryset.filter(date_achat__gte=date_debut)
-#         if date_fin:
-#             queryset = queryset.filter(date_achat__lte=date_fin)
-#         if fournisseur_id:
-#             queryset = queryset.filter(fournisseur_id=fournisseur_id)
-
-#         return queryset.order_by('-date_achat')
-
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-        
-#         # Récupération de la devise principale depuis ConfigurationSAAS
-#         try:
-#             config = ConfigurationSAAS.objects.get(entreprise=self.request.entreprise)
-#             devise_principale = config.devise_principale
-#             # Accès au symbole via la relation ForeignKey
-#             symbole_devise = devise_principale.symbole if devise_principale else '$'
-#             code_devise = devise_principale.code if devise_principale else 'USD'
-#         except (ConfigurationSAAS.DoesNotExist, AttributeError):
-#             code_devise = 'USD'
-#             symbole_devise = '$'
-
-#         # Récupération des totaux
-#         achats = context['achats']
-#         total_achats = sum(a.total_achat for a in achats)
-#         total_quantite = sum(a.quantite for a in achats)
-
-#         context.update({
-#             'total_achats': total_achats,
-#             'total_quantite': total_quantite,
-#             'achats_count': achats.count(),
-#             'fournisseurs': Fournisseur.objects.filter(entreprise=self.request.entreprise).order_by('nom'),
-#             'selected_fournisseur': self.request.GET.get('fournisseur', ''),
-#             'date_debut': self.request.GET.get('date_debut', ''),
-#             'date_fin': self.request.GET.get('date_fin', ''),
-#             'can_add': self.request.user.has_perm('STOCK.add_achat'),
-#             'can_export': self.request.user.has_perm('STOCK.export_achats'),
-#             'devise_principale': code_devise,
-#             'symbole_devise': symbole_devise,
-#         })
-#         return context
-
-#     def handle_no_permission(self):
-#         messages.error(self.request, "Accès refusé")
-#         return redirect('security:acces_refuse')
-   
 
 @login_required
 def liste_notifications(request):

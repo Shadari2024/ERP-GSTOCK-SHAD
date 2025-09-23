@@ -166,23 +166,102 @@ class PricingView(LoginRequiredMixin, EntrepriseAccessMixin, TemplateView):
         context['forfaits'] = forfaits
         context['devise_symbole'] = devise_symbole
         return context
+# views.py
+from django.views.generic import TemplateView, CreateView
+from django.urls import reverse_lazy
+from django.contrib import messages
+from .models import DemandeDemo
+from .forms import DemandeDemoForm
+# views.py - Ajoutez cette vue
+from django.core.mail import send_mail
+from django.conf import settings
 
 class ContactView(TemplateView):
     template_name = "vitrine/contact.html"
+    
+    def post(self, request, *args, **kwargs):
+        # Récupérer les données du formulaire
+        nom = request.POST.get('nom')
+        email = request.POST.get('email')
+        telephone = request.POST.get('telephone')
+        sujet = request.POST.get('sujet')
+        message = request.POST.get('message')
+        entreprise = request.POST.get('entreprise')
+        
+        # Envoyer l'email
+        try:
+            send_mail(
+                f"Contact CongoERP - {sujet}",
+                f"""
+                Nouveau message de contact:
+                
+                Nom: {nom}
+                Entreprise: {entreprise}
+                Email: {email}
+                Téléphone: {telephone}
+                Sujet: {sujet}
+                
+                Message:
+                {message}
+                """,
+                settings.DEFAULT_FROM_EMAIL,
+                ['shadarijerome13@gmail.com'],
+                fail_silently=False,
+            )
+            messages.success(request, "Votre message a été envoyé avec succès !")
+        except Exception as e:
+            messages.error(request, "Une erreur est survenue. Veuillez réessayer.")
+        
+        return self.get(request, *args, **kwargs)
 
 class DemandeDemoCreateView(CreateView):
     model = DemandeDemo
     form_class = DemandeDemoForm
     template_name = "vitrine/demo.html"
-    success_url = reverse_lazy('vitrine:demo_success')
+    
+    def get_success_url(self):
+        # 🔥 CORRECTION : Rediriger vers la page de succès
+        return reverse_lazy('vitrine:demo_success')
     
     def form_valid(self, form):
+        # Sauvegarder l'instance
         response = super().form_valid(form)
-        # Envoyer un email de notification ici si nécessaire
+        
+        # Envoyer l'email de notification
+        try:
+            self.object.envoyer_notification_admin()
+            print(f"Email envoyé à l'admin pour la demande de {self.object.nom}")
+        except Exception as e:
+            print(f"Erreur envoi email: {e}")
+        
+        # 🔥 CORRECTION : Ajouter le message AVANT la redirection
+        messages.success(
+            self.request, 
+            "Votre demande a été envoyée avec succès à shadarijerome13@gmail.com ! Nous vous contacterons rapidement."
+        )
+        
         return response
     
-    
-    
-    
+    def form_invalid(self, form):
+        messages.error(self.request, "Veuillez corriger les erreurs dans le formulaire.")
+        return super().form_invalid(form)
+
 class DemoSuccessView(TemplateView):
     template_name = "vitrine/demo_success.html"
+    
+    def get(self, request, *args, **kwargs):
+        # 🔥 CORRECTION : Vérifier s'il y a un message de succès
+        # Si non, rediriger vers la page de démo
+        storage = messages.get_messages(request)
+        has_success_message = any(message.tags == 'success' for message in storage)
+        
+        if not has_success_message:
+            return redirect('vitrine:demo')
+        
+        return super().get(request, *args, **kwargs)
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # 🔥 Ajouter des données supplémentaires si besoin
+        context['page_title'] = "Demande Envoyée - CongoERP"
+        return context

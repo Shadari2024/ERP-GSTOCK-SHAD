@@ -1895,6 +1895,16 @@ class EntrepriseAccessMixin:
         if obj.entreprise != self.request.entreprise:
             raise PermissionDenied("Vous n'avez pas la permission d'accéder à cet objet.")
         return obj
+    # ventes/views.py
+from django.db.models import Q, Sum, Count
+from django.utils import timezone
+from django.contrib import messages
+from django.core.paginator import Paginator
+from django.http import JsonResponse
+from django.shortcuts import render
+from .filters import FactureFilter
+from .models import Facture
+
 class FactureListView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMixin, ListView):
     model = Facture
     template_name = 'ventes/factures/liste.html'
@@ -1903,34 +1913,62 @@ class FactureListView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAcc
     paginate_by = 20
 
     def get_queryset(self):
-        # Utiliser date_facture au lieu de date
-        queryset = Facture.objects.filter(entreprise=self.request.user.entreprise).order_by('-date_facture', '-created_at')
+        queryset = Facture.objects.filter(entreprise=self.request.user.entreprise)
         
-        # Si vous utilisez un filtre, assurez-vous qu'il utilise aussi date_facture
-        if hasattr(self, 'filterset'):
-            self.filterset = FactureFilter(self.request.GET, queryset=queryset, request=self.request)
-            return self.filterset.qs
+        # Appliquer les filtres
+        self.filterset = FactureFilter(self.request.GET, queryset=queryset, request=self.request)
+        
+        # Tri par défaut
+        order_by = self.request.GET.get('order_by', '-date_facture')
+        if order_by in ['numero', 'date_facture', 'date_echeance', 'total_ttc', 'montant_restant']:
+            queryset = self.filterset.qs.order_by(order_by)
+        else:
+            queryset = self.filterset.qs.order_by('-date_facture', '-created_at')
         
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
-        # Initialiser le filtre si nécessaire
-        queryset = Facture.objects.filter(entreprise=self.request.user.entreprise)
-        self.filterset = FactureFilter(self.request.GET, queryset=queryset, request=self.request)
+        # Filtres
         context['filter'] = self.filterset
         
-        # Stats pour le dashboard
+        # Options de tri
+        context['order_by'] = self.request.GET.get('order_by', '-date_facture')
+        context['order_options'] = [
+            {'value': '-date_facture', 'label': 'Date (récent)'},
+            {'value': 'date_facture', 'label': 'Date (ancien)'},
+            {'value': '-total_ttc', 'label': 'Montant (haut)'},
+            {'value': 'total_ttc', 'label': 'Montant (bas)'},
+            {'value': 'numero', 'label': 'Numéro'},
+            {'value': '-montant_restant', 'label': 'Reste à payer (haut)'},
+        ]
+        
+        # Statistiques
+        today = timezone.now().date()
+        context['today'] = today
+        
+        # Stats globales
         context['total_impayes'] = Facture.objects.filter(
             entreprise=self.request.user.entreprise,
-            statut__in=['validee', 'paye_partiel']  # Corrigé pour correspondre à vos choix
+            statut__in=['validee', 'paye_partiel']
         ).aggregate(total=Sum('montant_restant'))['total'] or 0
         
         context['count_factures'] = {
             'brouillon': Facture.objects.filter(entreprise=self.request.user.entreprise, statut='brouillon').count(),
-            'validee': Facture.objects.filter(entreprise=self.request.user.entreprise, statut='validee').count(),  # Corrigé
+            'validee': Facture.objects.filter(entreprise=self.request.user.entreprise, statut='validee').count(),
             'paye': Facture.objects.filter(entreprise=self.request.user.entreprise, statut='paye').count(),
+            'annule': Facture.objects.filter(entreprise=self.request.user.entreprise, statut='annule').count(),
+        }
+        
+        # Stats des factures filtrées
+        filtered_queryset = self.filterset.qs
+        context['filtered_stats'] = {
+            'total_count': filtered_queryset.count(),
+            'total_amount': filtered_queryset.aggregate(total=Sum('total_ttc'))['total'] or 0,
+            'unpaid_amount': filtered_queryset.filter(
+                statut__in=['validee', 'paye_partiel']
+            ).aggregate(total=Sum('montant_restant'))['total'] or 0,
         }
         
         try:
@@ -1940,7 +1978,40 @@ class FactureListView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAcc
             context['devise_principale_symbole'] = ''
         
         return context
+
+    def get(self, request, *args, **kwargs):
+        # Vérifier si c'est une requête AJAX pour les exports
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            export_type = request.GET.get('export')
+            if export_type:
+                return self.handle_export(request, export_type)
+        
+        return super().get(request, *args, **kwargs)
     
+    def handle_export(self, request, export_type):
+        """Gérer l'export des données"""
+        queryset = self.get_queryset()
+        
+        if export_type == 'csv':
+            return self.export_csv(queryset)
+        elif export_type == 'excel':
+            return self.export_excel(queryset)
+        elif export_type == 'pdf':
+            return self.export_pdf(queryset)
+        
+        return JsonResponse({'error': 'Format non supporté'})
+    
+    def export_csv(self, queryset):
+        # Implémentation de l'export CSV
+        pass
+    
+    def export_excel(self, queryset):
+        # Implémentation de l'export Excel
+        pass
+    
+    def export_pdf(self, queryset):
+        # Implémentation de l'export PDF
+        pass
 from django.db import transaction
 from django.contrib import messages
 from django.shortcuts import redirect, get_object_or_404
@@ -2676,32 +2747,6 @@ class BonLivraisonConvertToFactureView(LoginRequiredMixin, PermissionRequiredMix
     
     
     
-    
-    
-    
-class FactureDetailView(LoginRequiredMixin, EntrepriseAccessMixin, DetailView):
-    model = Facture
-    template_name = 'ventes/factures/detail.html'
-    context_object_name = 'facture'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        facture = self.object
-        
-        # Données pour le template
-        context['lignes_facture'] = facture.items.all()
-        context['paiements'] = facture.paiements.all()
-        context['historique_statuts'] = facture.status_history.all().order_by('-changed_at')
-        context['audit_logs'] = facture.audit_logs.all().order_by('-performed_at')
-        
-        # Informations supplémentaires
-        try:
-            config_saas = ConfigurationSAAS.objects.get(entreprise=self.request.entreprise)
-            context['devise_symbole'] = config_saas.devise_principale.symbole if config_saas.devise_principale else '€'
-        except ConfigurationSAAS.DoesNotExist:
-            context['devise_symbole'] = '€'
-            
-        return context
 
 class FactureUpdateView(LoginRequiredMixin, PermissionRequiredMixin, EntrepriseAccessMixin, UpdateView):
     model = Facture
@@ -4912,125 +4957,62 @@ class NouvelleVenteSimpleView(LoginRequiredMixin, PermissionRequiredMixin, View)
 import logging
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
-from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
-import json
+from django.db.models import Q, Sum
+
 logger = logging.getLogger(__name__)
-# ventes/views.py (version étendue)
+
 @require_GET
-@csrf_exempt
 @login_required
 def api_search_by_barcode(request):
-    """API pour rechercher un produit par code-barres ou par nom"""
+    """API pour rechercher un produit par code-barres ou nom"""
     search_term = request.GET.get('barcode', '').strip()
     logger.info(f"Recherche: {search_term}")
-    
+
     if not search_term:
-        logger.warning("Terme de recherche vide reçu")
-        return JsonResponse({
-            'success': False,
-            'message': 'Terme de recherche requis'
-        }, status=400)
-    
+        return JsonResponse({'success': False, 'message': 'Terme de recherche requis'}, status=400)
+
     try:
         from STOCK.models import Produit
-        
-        # Vérification de l'entreprise
-        if not hasattr(request.user, 'entreprise') or not request.user.entreprise:
-            logger.error(f"Utilisateur {request.user} n'a pas d'entreprise associée")
-            return JsonResponse({
-                'success': False,
-                'message': 'Aucune entreprise associée à cet utilisateur'
-            }, status=400)
-        
-        logger.info(f"Recherche dans l'entreprise: {request.user.entreprise}")
-        
-        # Recherche d'abord par code-barre
+
+        entreprise = getattr(request.user, 'entreprise', None)
+        if not entreprise:
+            return JsonResponse({'success': False, 'message': 'Aucune entreprise associée à cet utilisateur'}, status=400)
+
         produits = Produit.objects.filter(
-            Q(code_barre_numero=search_term),
-            entreprise=request.user.entreprise,
+            Q(code_barre_numero=search_term) | Q(nom__icontains=search_term),
+            entreprise=entreprise,
             actif=True
-        )
-        
-        # Si aucun résultat par code-barre, recherche par nom
+        )[:5]
+
         if not produits.exists():
-            produits = Produit.objects.filter(
-                Q(nom__icontains=search_term),
-                entreprise=request.user.entreprise,
-                actif=True
-            )[:5]  # Limiter à 5 résultats pour la recherche par nom
-        
-        logger.info(f"{produits.count()} produit(s) trouvé(s) pour: {search_term}")
-        
-        if produits.exists():
-            # Si recherche par nom, retourner tous les résultats
-            if produits.count() > 1:
-                product_list = []
-                for produit in produits:
-                    photo_url = ''
-                    if produit.photo and hasattr(produit.photo, 'url'):
-                        photo_url = request.build_absolute_uri(produit.photo.url)
-                    
-                    product_list.append({
-                        'id': produit.id,
-                        'nom': produit.nom,
-                        'code_barre': produit.code_barre_numero or '',
-                        'prix_vente': float(produit.prix_vente) if produit.prix_vente else 0.0,
-                        'taux_tva': float(produit.taux_tva) if produit.taux_tva else 20.0,
-                        'stock': produit.stock,
-                        'photo_url': photo_url,
-                        'unite_mesure': produit.libelle or ''
-                    })
-                
-                return JsonResponse({
-                    'success': True,
-                    'multiple': True,
-                    'products': product_list,
-                    'message': f'{len(product_list)} produits trouvés'
-                })
-            else:
-                # Un seul produit trouvé
-                produit = produits.first()
-                photo_url = ''
-                if produit.photo and hasattr(produit.photo, 'url'):
-                    photo_url = request.build_absolute_uri(produit.photo.url)
-                
-                logger.info(f"Produit trouvé: {produit.nom} (ID: {produit.id})")
-                
-                return JsonResponse({
-                    'success': True,
-                    'multiple': False,
-                    'product': {
-                        'id': produit.id,
-                        'nom': produit.nom,
-                        'code_barre': produit.code_barre_numero or '',
-                        'prix_vente': float(produit.prix_vente) if produit.prix_vente else 0.0,
-                        'taux_tva': float(produit.taux_tva) if produit.taux_tva else 20.0,
-                        'stock': produit.stock,
-                        'photo_url': photo_url,
-                        'unite_mesure': produit.libelle or ''
-                    }
-                })
-        else:
-            logger.warning(f"Aucun produit trouvé pour: {search_term}")
-            return JsonResponse({
-                'success': False,
-                'message': 'Produit non trouvé'
-            }, status=404)
-            
-    except ImportError as e:
-        logger.error(f"Erreur d'importation: {str(e)}")
+            return JsonResponse({'success': False, 'message': 'Produit non trouvé'}, status=404)
+
+        product_list = []
+        for produit in produits:
+            product_list.append({
+                'id': produit.id,
+                'nom': produit.nom,
+                'code_barre': produit.code_barre_numero or '',
+                'prix_vente': float(produit.prix_vente or 0),
+                'taux_tva': float(produit.taux_tva or 0),
+                'stock': produit.stock,
+                'photo_url': request.build_absolute_uri(produit.photo.url) if produit.photo else '',
+                'unite_mesure': produit.libelle or ''
+            })
+
         return JsonResponse({
-            'success': False,
-            'message': 'Erreur: Module STOCK non trouvé'
-        }, status=500)
+            'success': True,
+            'multiple': produits.count() > 1,
+            'product': product_list[0] if produits.count() == 1 else None,
+            'products': product_list if produits.count() > 1 else [],
+            'message': f"{produits.count()} produit(s) trouvé(s)"
+        })
+
     except Exception as e:
-        logger.error(f"Erreur inattendue: {str(e)}")
-        return JsonResponse({
-            'success': False,
-            'message': f'Erreur serveur: {str(e)}'
-        }, status=500)
+        logger.exception("Erreur inattendue dans api_search_by_barcode")
+        return JsonResponse({'success': False, 'message': f'Erreur serveur: {str(e)}'}, status=500)
+
         
 class PaiementVenteView(LoginRequiredMixin, View):
     """Vue pour le paiement de la vente"""

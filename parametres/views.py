@@ -989,3 +989,65 @@ class DependanceModuleDeleteView(LoginRequiredMixin, PermissionRequiredMixin, De
         response = super().delete(request, *args, **kwargs)
         messages.success(self.request, "Dépendance supprimée avec succès!")
         return response
+    
+# parametres/views.py - Corrigez la classe DashboardView
+class DashboardView(LoginRequiredMixin, TemplateView):
+    template_name = 'parametres/dashboard.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Statistiques générales
+        context['total_entreprises'] = Entreprise.objects.count()
+        context['total_abonnements'] = Abonnement.objects.count()
+        context['abonnements_actifs'] = Abonnement.objects.filter(est_actif=True).count()
+        context['total_utilisateurs'] = User.objects.count()
+        
+        # Abonnements récents (7 derniers jours)
+        date_limite = timezone.now() - timedelta(days=7)
+        context['abonnements_recents'] = Abonnement.objects.filter(
+            date_debut__gte=date_limite
+        ).select_related('entreprise', 'plan_actuel')[:5]
+        
+        # Entreprises récentes - CORRECTION : Utilisez 'id' au lieu de 'date_creation'
+        context['entreprises_recentes'] = Entreprise.objects.order_by('-id')[:5]
+        
+        # Alertes
+        context['alertes'] = self.get_alertes()
+        
+        return context
+    
+    def get_alertes(self):
+        alertes = []
+        
+        # Abonnements expirant bientôt (dans les 15 jours)
+        date_expiration = timezone.now() + timedelta(days=15)
+        abonnements_expirant = Abonnement.objects.filter(
+            date_fin__lte=date_expiration,
+            est_actif=True
+        )
+        
+        for abonnement in abonnements_expirant:
+            alertes.append({
+                'type': 'warning',
+                'message': f"L'abonnement de {abonnement.entreprise.nom} expire le {abonnement.date_fin.strftime('%d/%m/%Y')}",
+                'lien': abonnement.get_absolute_url() if hasattr(abonnement, 'get_absolute_url') else '#'
+            })
+        
+        # Entreprises sans abonnement actif
+        entreprises_avec_abonnement = Entreprise.objects.filter(
+            abonnements__est_actif=True
+        ).distinct()
+        
+        entreprises_sans_abonnement = Entreprise.objects.exclude(
+            id__in=entreprises_avec_abonnement.values('id')
+        )
+        
+        for entreprise in entreprises_sans_abonnement[:5]:  # Limiter à 5 alertes
+            alertes.append({
+                'type': 'danger',
+                'message': f"{entreprise.nom} n'a pas d'abonnement actif",
+                'lien': reverse('parametres:abonnement_create') + f'?entreprise={entreprise.id}'
+            })
+        
+        return alertes

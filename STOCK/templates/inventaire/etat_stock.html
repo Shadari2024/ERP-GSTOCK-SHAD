@@ -63,7 +63,7 @@
                     </thead>
                     <tbody>
                         {% for produit in produits %}
-                        <tr class="{% if produit.stock <= produit.seuil_alerte %}table-warning{% endif %}" onclick="window.location='{% url 'produit_detail' produit.id %}'" style="cursor: pointer;">
+                        <tr class="{% if produit.stock <= produit.seuil_alerte %}table-warning{% endif %}" onclick="window.location='{% url 'voir_produit' produit.id %}'" style="cursor: pointer;">
                             <td class="ps-4">
                                 <div class="d-flex align-items-center">
                                     {% if produit.photo %}
