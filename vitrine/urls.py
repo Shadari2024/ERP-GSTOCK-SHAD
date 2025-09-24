@@ -1,7 +1,8 @@
 # CORRECTION - urls.py
 from django.urls import path
 from . import views
-
+from django.contrib.sitemaps.views import sitemap
+from .sitemap import sitemaps
 app_name = 'vitrine'
 
 urlpatterns = [
@@ -12,4 +13,9 @@ urlpatterns = [
     path('demo/', views.DemandeDemoCreateView.as_view(), name='demo'),
     # 🔥 CORRECTION : Utiliser DemoSuccessView pour la page de succès
     path('demo/success/', views.DemoSuccessView.as_view(), name='demo_success'),
+     # 🔥 SEO : Sitemap
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
+    
+    # 🔥 SEO : Robots.txt
+    path('robots.txt', views.RobotsTxtView.as_view(), name='robots_txt'),
 ]

@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /api/
+Disallow: /static/admin/
+
+# Sitemap
+Sitemap: https://congoerp-shad-954o.onrender.com/vitrine/sitemap.xml
+
+# Crawl delay
+Crawl-delay: 1
+
+# RDC specific
+Allow: /vitrine/
+Allow: /features/
+Allow: /pricing/
+Allow: /contact/
+Allow: /demo/

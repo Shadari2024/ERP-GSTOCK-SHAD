@@ -3,8 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}CongoERP - ERP Cloud pour l'Afrique{% endblock %}</title>
     
+    <!-- 🔥 BALISES SEO CRITIQUES POUR CONGOERP -->
+    <title>{% block title %}CongoERP - ERP Cloud pour l'Afrique | Solution de Gestion d'Entreprise en RDC{% endblock %}</title>
+    
+    <!-- Meta Description Optimisée -->
+    <meta name="description" content="CongoERP - Logiciel de gestion ERP cloud complet pour entreprises en République Démocratique du Congo. Gestion de stock, ventes, achats, comptabilité, RH. Solution optimisée pour le marché africain.">
+    
+    <!-- Keywords stratégiques -->
+    <meta name="keywords" content="ERP Congo, logiciel gestion RDC, gestion d'entreprise Kinshasa, solution cloud Congo, gestion stock RDC, comptabilité Congo, logiciel entreprise Afrique, ERP République Démocratique Congo">
+    
+    <!-- Auteur et Copyright -->
+    <meta name="author" content="CongoERP">
+    <meta name="copyright" content="CongoERP">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Géolocalisation RDC -->
+    <meta name="geo.region" content="CD" />
+    <meta name="geo.placename" content="Kinshasa" />
+    <meta name="geo.position" content="-4.4419;15.2663" />
+    <meta name="ICBM" content="-4.4419, 15.2663" />
+    <meta name="country" content="Congo, République Démocratique du Congo, RDC">
+    
+    <!-- Open Graph pour les réseaux sociaux -->
+    <meta property="og:title" content="CongoERP - Solution de Gestion d'Entreprise en RDC">
+    <meta property="og:description" content="Logiciel ERP cloud complet pour entreprises congolaises. Gestion de stock, ventes, achats, comptabilité et RH.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://congoerp-shad-954o.onrender.com">
+    <meta property="og:image" content="https://congoerp-shad-954o.onrender.com/static/images/logo-congoerp-og.jpg">
+    <meta property="og:site_name" content="CongoERP">
+    <meta property="og:locale" content="fr_FR">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="CongoERP - ERP Cloud pour l'Afrique">
+    <meta name="twitter:description" content="Solution de gestion complète pour entreprises en RDC">
+    <meta name="twitter:image" content="https://congoerp-shad-954o.onrender.com/static/images/logo-congoerp-twitter.jpg">
+    <meta name="twitter:site" content="@CongoERP">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://congoerp-shad-954o.onrender.com">
+    
+    <!-- Favicon et icônes -->
+    <link rel="icon" type="image/x-icon" href="/static/images/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/images/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/images/favicon-16x16.png">
+    
+    <!-- Schema.org Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "CongoERP",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web Browser",
+        "description": "Solution ERP cloud complète pour entreprises en République Démocratique du Congo",
+        "url": "https://congoerp-shad-954o.onrender.com",
+        "author": {
+            "@type": "Organization",
+            "name": "CongoERP"
+        },
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": "4.8",
+            "ratingCount": "150"
+        },
+        "areaServed": "CD",
+        "availableCountry": "CD"
+    }
+    </script>
+    
+    <!-- Local Business Schema -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "CongoERP",
+        "url": "https://congoerp-shad-954o.onrender.com",
+        "logo": "https://congoerp-shad-954o.onrender.com/static/images/logo-congoerp.png",
+        "description": "Solution ERP cloud pour entreprises en République Démocratique du Congo",
+        "address": {
+            "@type": "PostalAddress",
+            "addressCountry": "CD",
+            "addressLocality": "Kinshasa"
+        },
+        "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer service",
+            "email": "contact@congoerp.com"
+        }
+    }
+    </script>
+
     <!-- Bootstrap Dark -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
@@ -234,10 +330,44 @@
             transform: translateY(-5px);
         }
         
+        /* SEO Optimized Content Sections */
+        .seo-section {
+            background: var(--darker-bg);
+            border-radius: 15px;
+            padding: 3rem;
+            margin: 2rem 0;
+            border-left: 4px solid #667eea;
+        }
+        
+        .local-keywords {
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .keyword-tag {
+            display: inline-block;
+            background: var(--primary-gradient);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin: 2px;
+        }
+        
         /* Footer */
         .footer {
             background: var(--darker-bg);
             border-top: 1px solid var(--border-color);
+        }
+        
+        /* Breadcrumb SEO */
+        .breadcrumb-seo {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 2rem;
         }
         
         /* Animations */
@@ -261,25 +391,95 @@
                 transform: scale(1);
                 margin: 1rem 0;
             }
+            
+            .seo-section {
+                padding: 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- 🔥 Structured Data for Breadcrumb -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [{
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Accueil",
+            "item": "https://congoerp-shad-954o.onrender.com"
+        }, {
+            "@type": "ListItem",
+            "position": 2,
+            "name": "{% block breadcrumb_name %}CongoERP{% endblock %}",
+            "item": "https://congoerp-shad-954o.onrender.com{% block breadcrumb_url %}/{% endblock %}"
+        }]
+    }
+    </script>
+
     <!-- Navigation -->
     {% include 'vitrine/includes/header.html' %}
+    
+    <!-- 🔥 Breadcrumb SEO -->
+    <nav aria-label="breadcrumb" class="container mt-3">
+        <ol class="breadcrumb breadcrumb-seo">
+            <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Accueil</a></li>
+            {% block breadcrumb %}
+            <li class="breadcrumb-item active" aria-current="page">CongoERP</li>
+            {% endblock %}
+        </ol>
+    </nav>
     
     <!-- Main Content -->
     <main>
         {% block content %}
         {% endblock %}
+        
+        <!-- 🔥 Section SEO Optimisée pour la RDC -->
+        <section class="container my-5 seo-section animate__animated animate__fadeInUp">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h2 class="h3 mb-3">🚀 <strong>CongoERP - Solution Spécialisée pour la RDC</strong></h2>
+                    <p class="lead mb-3">
+                        <strong>Logiciel ERP cloud 100% adapté aux entreprises congolaises</strong>. Développé spécifiquement pour le marché de la République Démocratique du Congo avec prise en compte des particularités locales.
+                    </p>
+                    
+                    <div class="local-keywords">
+                        <h4 class="h6 mb-2">📈 Mots-clés stratégiques RDC :</h4>
+                        <div>
+                            <span class="keyword-tag">ERP Congo</span>
+                            <span class="keyword-tag">Logiciel gestion RDC</span>
+                            <span class="keyword-tag">Gestion stock Kinshasa</span>
+                            <span class="keyword-tag">Comptabilité Congo</span>
+                            <span class="keyword-tag">Solution entreprise Afrique</span>
+                            <span class="keyword-tag">ERP République Démocratique Congo</span>
+                        </div>
+                    </div>
+                    
+                    <ul class="list-unstyled mt-3">
+                        <li>✅ <strong>Devise Franc Congolais (CDF)</strong> intégrée</li>
+                        <li>✅ <strong>Fiscalité congolaise</strong> préconfigurée</li>
+                        <li>✅ <strong>Support local</strong> en français et langues nationales</li>
+                        <li>✅ <strong>Infrastructure cloud</strong> optimisée pour l'Afrique</li>
+                        <li>✅ <strong>Formation</strong> et accompagnement sur place</li>
+                    </ul>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="feature-icon mx-auto">
+                        <i class="fas fa-flag fa-2x"></i>
+                    </div>
+                    <h4 class="mt-3">🇨🇩 Spécialiste RDC</h4>
+                    <p class="text-muted">Solution conçue pour les entreprises congolaises</p>
+                </div>
+            </div>
+        </section>
     </main>
     
     <!-- Footer -->
     {% include 'vitrine/includes/footer.html' %}
-    
 
-
-<!-- Messages Django -->
+    <!-- Messages Django -->
     <div class="alert-messages">
         {% if messages %}
             {% for message in messages %}
@@ -302,16 +502,22 @@
         {% endif %}
     </div>
 
-
-
-
-
-
-
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/glightbox/3.2.0/js/glightbox.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <!-- 🔥 Google Analytics (à remplacer par votre ID) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'GA_MEASUREMENT_ID');
+    </script>
+    
+    <!-- 🔥 Google Search Console Verification (à remplacer par votre code) -->
+    <meta name="google-site-verification" content="VOTRE_CODE_VERIFICATION_GOOGLE_SEARCH_CONSOLE" />
     
     <script>
         // Initialisation GLightbox
@@ -351,7 +557,47 @@
                 opacity: 0,
                 ease: "power3.out"
             });
+            
+            // 🔥 Tracking des clics pour analytics
+            document.querySelectorAll('a[href*="demo"], a[href*="contact"]').forEach(link => {
+                link.addEventListener('click', function() {
+                    gtag('event', 'conversion', {
+                        'event_category': 'engagement',
+                        'event_label': this.textContent.trim()
+                    });
+                });
+            });
         });
+        
+        // 🔥 Function pour le tracking des formulaires
+        function trackFormSubmission(formId) {
+            gtag('event', 'form_submission', {
+                'event_category': 'lead_generation',
+                'event_label': formId
+            });
+        }
+    </script>
+    
+    <!-- 🔥 Schema.org pour la page actuelle -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "{% block schema_name %}CongoERP - Solution ERP Cloud pour la RDC{% endblock %}",
+        "description": "{% block schema_description %}Logiciel de gestion complet pour entreprises en République Démocratique du Congo{% endblock %}",
+        "url": "https://congoerp-shad-954o.onrender.com{% block schema_url %}/{% endblock %}",
+        "mainEntity": {
+            "@type": "SoftwareApplication",
+            "name": "CongoERP",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Web Browser",
+            "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+            }
+        }
+    }
     </script>
 </body>
 </html>

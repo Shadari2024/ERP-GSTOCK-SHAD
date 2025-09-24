@@ -1,5 +1,7 @@
 from django.shortcuts import render
 from django.views.generic import TemplateView, CreateView
+from django.shortcuts import redirect
+
 from django.urls import reverse_lazy
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.utils.translation import gettext_lazy as _
@@ -264,4 +266,18 @@ class DemoSuccessView(TemplateView):
         context = super().get_context_data(**kwargs)
         # 🔥 Ajouter des données supplémentaires si besoin
         context['page_title'] = "Demande Envoyée - CongoERP"
+        return context
+    
+    
+    
+from django.views.generic.base import TemplateView
+from django.http import HttpResponse
+
+class RobotsTxtView(TemplateView):
+    template_name = "vitrine/robots.txt"
+    content_type = "text/plain"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["domain"] = "https://congoerp-shad-954o.onrender.com"
         return context
